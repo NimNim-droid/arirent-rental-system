@@ -1,0 +1,47 @@
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+.env.backup
+.env.production
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# PHP / Laravel
+/vendor/
+/backend/vendor/
+/backend/storage/*.key
+/backend/storage/oauth*.key
+/backend/storage/logs/*
+!/backend/storage/logs/.gitkeep
+/backend/storage/framework/cache/*
+!/backend/storage/framework/cache/.gitkeep
+/backend/storage/framework/sessions/*
+!/backend/storage/framework/sessions/.gitkeep
+/backend/storage/framework/views/*
+!/backend/storage/framework/views/.gitkeep
+/backend/storage/app/public/*
+!/backend/storage/app/public/.gitkeep
+/backend/public/storage
+/backend/public/hot
+.phpunit.result.cache
+
+# Docker
+.docker/
+docker-compose.override.yml
