@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TenantController;
@@ -49,5 +50,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tenants/{id}/reject', [TenantController::class, 'reject']);
     Route::post('/tenants/{id}/vacate', [TenantController::class, 'vacate']);
     Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
+
+    // Billing & GCash Payment Management
+    Route::get('/bills', [BillController::class, 'index']);
+    Route::get('/bills/{id}', [BillController::class, 'show']);
+    Route::post('/bills', [BillController::class, 'store']);
+    Route::post('/bills/generate', [BillController::class, 'generate']);
+    Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
+    Route::post('/bills/{id}/verify', [BillController::class, 'verify']);
+    Route::delete('/bills/{id}', [BillController::class, 'destroy']);
 });
+
 
