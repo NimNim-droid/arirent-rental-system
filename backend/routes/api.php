@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\TenantController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -20,11 +23,31 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 
+// Public room and property browsing
+Route::get('/properties', [PropertyController::class, 'index']);
+Route::get('/properties/{id}', [PropertyController::class, 'show']);
+Route::get('/rooms', [RoomController::class, 'index']);
+
 // Protected routes (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
+    // Auth & Profile
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
+
+    // Properties & Rooms Management
+    Route::post('/properties', [PropertyController::class, 'store']);
+    Route::post('/rooms', [RoomController::class, 'store']);
+
+    // Tenants Management
+    Route::get('/tenants', [TenantController::class, 'index']);
+    Route::get('/tenants/{id}', [TenantController::class, 'show']);
+    Route::put('/tenants/{id}', [TenantController::class, 'update']);
+    Route::post('/tenants/{id}/approve', [TenantController::class, 'approve']);
+    Route::post('/tenants/{id}/reject', [TenantController::class, 'reject']);
+    Route::post('/tenants/{id}/vacate', [TenantController::class, 'vacate']);
+    Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
 });
+
