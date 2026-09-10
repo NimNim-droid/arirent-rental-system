@@ -4,44 +4,31 @@ import { Building2, ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Temporary mock authentication until backend is running
-    setTimeout(() => {
-      if (email.includes("admin") || email === "admin@arirent.com") {
-        const adminUser = {
-          id: "1",
-          name: "Property Manager",
-          email: email || "admin@arirent.com",
-          role: "admin",
-        };
-        localStorage.setItem("arirent_token", "demo-admin-token");
-        localStorage.setItem("arirent_current_user", JSON.stringify(adminUser));
-        navigate("/admin/dashboard");
-      } else {
-        const tenantUser = {
-          id: "2",
-          name: "Maria Santos",
-          email: email || "tenant@arirent.com",
-          role: "tenant",
-        };
-        localStorage.setItem("arirent_token", "demo-tenant-token");
-        localStorage.setItem("arirent_current_user", JSON.stringify(tenantUser));
-        navigate("/tenant/dashboard");
-      }
+    try {
+      await login({ email, password });
+      navigate("/admin/dashboard");
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to log in. Please try again."));
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const fillDemoAdmin = () => {
@@ -55,33 +42,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="relative min-h-screen bg-app flex items-center justify-center p-4 overflow-hidden">
+      {/* Theme toggle */}
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      {/* Ambient glows */}
+      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-32 h-96 w-96 rounded-full bg-purple-600/15 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-sky-600/10 blur-3xl" />
+
+      <div className="relative w-full max-w-md space-y-6 animate-fade-in-up">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-600 to-sky-400 text-white shadow-lg shadow-sky-500/25 mb-2">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-950/50 ring-1 ring-inset ring-white/10 mb-2">
             <Building2 className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Welcome to AriRent</h1>
-          <p className="text-sm font-medium text-slate-500">
+          <h1 className="text-2xl font-extrabold tracking-tight text-fg">Welcome to AriRent</h1>
+          <p className="text-sm text-muted">
             Sign in to access your rental management portal
           </p>
         </div>
 
         {/* Login Card */}
-        <Card className="p-7 shadow-lg border-slate-100">
+        <Card className="p-7 border-edge">
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="p-3 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl">
+              <div className="p-3 text-xs font-semibold text-danger-fg bg-danger-bg border border-danger-border rounded-xl">
                 {error}
               </div>
             )}
 
             <Input
               id="email"
-              label="Email Address or Username"
+              label="Email Address"
               type="text"
               placeholder="e.g. admin@arirent.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -92,21 +90,21 @@ export default function LoginPage() {
               label="Password"
               type="password"
               placeholder="••••••••"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
 
-            <Button type="submit" disabled={loading} className="w-full mt-2">
-              {loading ? "Signing in..." : "Sign In"}
-              <ArrowRight className="h-4 w-4" />
+            <Button type="submit" className="w-full mt-2" loading={loading}>
+              {!loading && <>Sign In <ArrowRight className="h-4 w-4" /></>}
             </Button>
           </form>
 
-          {/* Quick Demo Access Buttons */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3">
-              Quick Test Access (Dev Mode)
+          {/* Quick Test Credential Prefill */}
+          <div className="mt-6 pt-6 border-t border-edge">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted text-center mb-3">
+              Quick Test Credentials
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Button
@@ -115,8 +113,9 @@ export default function LoginPage() {
                 size="sm"
                 onClick={fillDemoAdmin}
                 className="text-xs"
+                disabled={loading}
               >
-                <ShieldCheck className="h-3.5 w-3.5 text-sky-600" />
+                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
                 Fill Admin
               </Button>
               <Button
@@ -125,8 +124,9 @@ export default function LoginPage() {
                 size="sm"
                 onClick={fillDemoTenant}
                 className="text-xs"
+                disabled={loading}
               >
-                <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <UserCheck className="h-3.5 w-3.5 text-success-fg" />
                 Fill Tenant
               </Button>
             </div>
@@ -134,9 +134,9 @@ export default function LoginPage() {
         </Card>
 
         {/* Footer Link */}
-        <p className="text-center text-xs font-medium text-slate-500">
+        <p className="text-center text-xs text-muted">
           New tenant?{" "}
-          <Link to="/register" className="font-bold text-sky-600 hover:text-sky-700 underline">
+          <Link to="/register" className="font-bold text-accent hover:text-accent-strong underline-offset-2 hover:underline">
             Submit an application
           </Link>
         </p>

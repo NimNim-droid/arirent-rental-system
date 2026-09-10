@@ -1,3 +1,5 @@
+import { useState } from "react";
+import type { CSSProperties } from "react";
 import { NavLink, useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -8,20 +10,39 @@ import {
   FileText,
   LogOut,
   Building2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 interface SidebarProps {
   role: "admin" | "tenant";
+  open?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ role }: SidebarProps) {
-  const navigate = useNavigate();
+const COLLAPSE_KEY = "arirent_sidebar_collapsed";
 
-  const handleLogout = () => {
-    localStorage.removeItem("arirent_token");
-    localStorage.removeItem("arirent_current_user");
+export function Sidebar({ role, open = false, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(COLLAPSE_KEY) === "true"
+  );
+
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
+  };
+
+  const toggleCollapse = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem(COLLAPSE_KEY, String(next));
+      return next;
+    });
   };
 
   const adminLinks = [
@@ -41,66 +62,160 @@ export function Sidebar({ role }: SidebarProps) {
 
   const links = role === "admin" ? adminLinks : tenantLinks;
 
-  const rawUser = localStorage.getItem("arirent_current_user");
-  const user = rawUser ? JSON.parse(rawUser) : null;
+  const initials = String(user?.name || "D")
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const handleNav = () => onClose?.();
 
   return (
-    <aside className="w-64 border-r border-slate-200 bg-white min-h-screen flex flex-col justify-between shrink-0">
-      <div>
-        {/* Brand Header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-600 to-sky-400 text-white shadow-md shadow-sky-500/20">
-            <Building2 className="h-5 w-5" />
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 animate-fade-in bg-slate-950/70 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex min-h-screen shrink-0 flex-col justify-between border-r border-edge bg-card transition-all duration-300 ease-out lg:static lg:z-auto lg:bg-card",
+          open ? "translate-x-0 shadow-2xl shadow-black/60" : "-translate-x-full lg:translate-x-0",
+          collapsed ? "w-64 lg:w-[76px]" : "w-64 sm:w-72 lg:w-64"
+        )}
+      >
+        <div>
+          {/* Brand Header */}
+          <div
+            className={cn(
+              "flex items-center gap-3 border-b border-edge px-5 py-5",
+              collapsed && "lg:justify-center lg:px-0"
+            )}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-950/60 ring-1 ring-inset ring-white/10">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div className={cn("min-w-0", collapsed && "lg:hidden")}>
+              <h1 className="truncate text-base font-extrabold tracking-tight text-fg">
+                AriRent
+              </h1>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-accent">
+                {role === "admin" ? "Landlord Portal" : "Tenant Portal"}
+              </span>
+            </div>
           </div>
-          <div>
-            <h1 className="font-extrabold text-base tracking-tight text-slate-900">AriRent</h1>
-            <span className="text-xs font-semibold uppercase tracking-wider text-sky-600">
-              {role === "admin" ? "Landlord Portal" : "Tenant Portal"}
-            </span>
-          </div>
+
+          {/* Navigation Items */}
+          <nav className="space-y-1 p-3">
+            {links.map((link, i) => {
+              const Icon = link.icon;
+              const isCollapsed = collapsed;
+              return (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  onClick={handleNav}
+                  title={isCollapsed ? link.label : undefined}
+                  style={{ animationDelay: `${i * 60}ms` } as CSSProperties}
+                  className={({ isActive }) =>
+                    cn(
+                      "relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold animate-fade-in-up transition-all duration-200 ease-out",
+                      isCollapsed && "lg:justify-center lg:px-0",
+                      isActive
+                        ? "bg-accent-soft text-accent border border-accent-border"
+                        : "text-muted hover:bg-hover hover:text-fg border border-transparent"
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 hidden h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent lg:block" />
+                      )}
+                      <Icon className={cn("h-[18px] w-[18px] shrink-0", isCollapsed && "lg:mx-auto")} />
+                      <span className={cn("truncate", isCollapsed && "lg:hidden")}>
+                        {link.label}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="p-4 space-y-1.5">
-          {links.map((link) => {
-            const Icon = link.icon;
-            return (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
-                    isActive
-                      ? "bg-sky-50 text-sky-700 shadow-xs border border-sky-100"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  )
-                }
+        {/* User Info, Theme Toggle & Logout */}
+        <div className="space-y-2 border-t border-edge p-4">
+          {!collapsed ? (
+            <div className="flex items-center gap-3 rounded-xl border border-edge bg-inset px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                {initials}
+              </div>
+              <div className="min-w-0 truncate">
+                <p className="truncate text-sm font-bold text-fg">{user?.name || ""}</p>
+                <p className="truncate text-[11px] text-muted">
+                  {user?.email || ""}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 rounded-xl border border-edge bg-inset px-3 py-2.5 lg:hidden">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                  {initials}
+                </div>
+                <div className="min-w-0 truncate">
+                  <p className="truncate text-sm font-bold text-fg">{user?.name || ""}</p>
+                  <p className="truncate text-[11px] text-muted">
+                    {user?.email || ""}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="hidden justify-center py-1 lg:flex"
+                title={user?.name || ""}
               >
-                <Icon className="h-4 w-4" />
-                {link.label}
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                  {initials}
+                </div>
+              </div>
+            </>
+          )}
 
-      {/* User Info & Logout */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="flex items-center justify-between px-2 py-2 mb-2">
-          <div className="truncate">
-            <p className="text-sm font-bold text-slate-800 truncate">{user?.name || "Demo User"}</p>
-            <p className="text-xs text-slate-400 truncate">{user?.email || "user@arirent.com"}</p>
+          <div className={cn("grid grid-cols-2 gap-2", collapsed && "lg:grid-cols-1")}>
+            <ThemeToggle compact className="w-full" />
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              aria-label="Log out"
+              className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-transparent px-2.5 text-xs font-semibold text-danger-fg transition-all duration-200 hover:border-danger-border hover:bg-danger-bg cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
+
+          {/* Collapse toggle (desktop only) */}
+          <button
+            onClick={toggleCollapse}
+            className={cn(
+              "hidden h-9 items-center gap-2 rounded-xl px-2.5 text-xs font-semibold text-muted transition-all duration-200 hover:bg-hover hover:text-fg cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:inline-flex",
+              collapsed ? "w-full justify-center" : "w-full justify-start"
+            )}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4 shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="h-4 w-4 shrink-0" />
+                <span>Collapse</span>
+              </>
+            )}
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
