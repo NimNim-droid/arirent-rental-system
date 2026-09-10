@@ -1,23 +1,317 @@
 @import "tailwindcss";
 
+/* ============ Runtime theme palettes ============ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --app-bg: #f4f6fa;
+  --card: #ffffff;
+  --inset: #f7f9fc;
+  --elevated: #ffffff;
+  --hover: #eef1f7;
+
+  /* Borders */
+  --edge: #e3e8f0;
+  --edge-strong: #cbd5e1;
+
+  /* Text */
+  --fg: #0f172a;
+  --fg-soft: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+
+  /* Accent (indigo) */
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-soft: #eef2ff;
+  --accent-border: #c7d2fe;
+
+  /* Status */
+  --success-fg: #059669;
+  --success-bg: #ecfdf5;
+  --success-border: #a7f3d0;
+  --warning-fg: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --danger-fg: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --info-fg: #4f46e5;
+  --info-bg: #eef2ff;
+  --info-border: #c7d2fe;
+  --neutral-fg: #475569;
+  --neutral-bg: #f1f5f9;
+  --neutral-border: #e2e8f0;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --app-bg: #080b14;
+  --card: #0d1323;
+  --inset: #101a30;
+  --elevated: #141d36;
+  --hover: #16203a;
+
+  /* Borders */
+  --edge: #1e293b;
+  --edge-strong: #334155;
+
+  /* Text */
+  --fg: #f1f5f9;
+  --fg-soft: #cbd5e1;
+  --muted: #94a3b8;
+  --faint: #64748b;
+
+  /* Accent (indigo) */
+  --accent: #818cf8;
+  --accent-strong: #a5b4fc;
+  --accent-soft: #1e1b4b;
+  --accent-border: #45488f;
+
+  /* Status */
+  --success-fg: #34d399;
+  --success-bg: #072b23;
+  --success-border: #065f46;
+  --warning-fg: #fbbf24;
+  --warning-bg: #2e2507;
+  --warning-border: #92400e;
+  --danger-fg: #f87171;
+  --danger-bg: #3a1414;
+  --danger-border: #991b1b;
+  --info-fg: #a5b4fc;
+  --info-bg: #1e1b4b;
+  --info-border: #4338ca;
+  --neutral-fg: #cbd5e1;
+  --neutral-bg: #2b3550;
+  --neutral-border: #3b4564;
+}
+
+/* ============ Map tokens to Tailwind utilities ============ */
+
+@theme inline {
+  --color-app: var(--app-bg);
+  --color-card: var(--card);
+  --color-inset: var(--inset);
+  --color-elevated: var(--elevated);
+  --color-hover: var(--hover);
+
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+
+  --color-success-fg: var(--success-fg);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-info-fg: var(--info-fg);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-neutral-fg: var(--neutral-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-border: var(--neutral-border);
+}
+
 @theme {
-  --color-primary: #0ea5e9;
-  --color-primary-light: #38bdf8;
-  --color-primary-dark: #0284c7;
-  --color-primary-bg: #e0f2fe;
-
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-
-  --color-text-main: #0f172a;
-  --color-text-muted: #64748b;
-
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Elevation scale */
+  --shadow-soft: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 10px 24px -14px rgb(15 23 42 / 0.12);
+  --shadow-pop: 0 2px 4px 0 rgb(15 23 42 / 0.06), 0 16px 40px -16px rgb(15 23 42 / 0.22);
+
+  --shadow-glow: 0 0 0 1px rgba(129, 140, 248, 0.25), 0 8px 32px -8px rgba(99, 102, 241, 0.5);
+  --shadow-glow-sm: 0 0 0 1px rgba(129, 140, 248, 0.2), 0 4px 16px -6px rgba(99, 102, 241, 0.45);
+
+  /* Motion */
+  --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.35s ease-out both;
+  --animate-scale-in: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-in-left: slide-in-left 0.28s ease-out both;
+  --animate-shimmer: shimmer 2s infinite linear;
+  --animate-slide-in-right: slide-in-right 0.28s ease-out both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+}
+
+/* ============ Base ============ */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--app-bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--edge-strong);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
+  -webkit-text-fill-color: var(--fg);
+  caret-color: var(--fg);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+::selection {
+  background: rgba(129, 140, 248, 0.35);
+  color: #ffffff;
+}
+
+/* ============ Native form control theming ============ */
+
+select {
+  color-scheme: light;
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--fg);
+}
+
+:root[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] select option {
+  background-color: var(--elevated);
+  color: var(--fg);
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+/* ============ Accessibility: reduced motion ============ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============ Stagger utility ============ */
+
+.stagger {
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* ============ Primary button polish ============ */
+
+.btn-primary svg {
+  transition: transform 0.2s ease-out;
+}
+
+.btn-primary:hover svg {
+  transform: translateX(2px);
+}
+
+.btn-primary:active svg {
+  transform: translateX(0);
 }

@@ -1,92 +1,93 @@
-import { useState } from "react";
-import { Receipt, CheckCircle, XCircle, Search, Filter, Plus, Eye, Printer } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCircle, XCircle, Plus, Eye, Printer, ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { billingService } from "@/lib/services/billing";
+import { getErrorMessage } from "@/lib/errors";
+import type { Bill } from "@/lib/types";
+
+function fmtMoney(n: number) {
+  return `₱${n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export default function AdminBilling() {
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [generatedMsg, setGeneratedMsg] = useState("");
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<Bill | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  // Mock pending GCash payments to verify
-  const [pendingPayments, setPendingPayments] = useState([
-    {
-      id: "INV-2026-091",
-      tenant: "Carlos Reyes",
-      room: "204",
-      amount: 6850,
-      gcashRef: "GCASH-99281729",
-      date: "2026-09-08",
-    },
-    {
-      id: "INV-2026-092",
-      tenant: "Angela De Silva",
-      room: "201",
-      amount: 5500,
-      gcashRef: "GCASH-11029384",
-      date: "2026-09-07",
-    },
-  ]);
+  const loadBills = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await billingService.getBills({ per_page: 200 });
+      setBills(res.data);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load invoices."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Mock all bills
-  const [invoices, setInvoices] = useState([
-    {
-      id: "INV-2026-001",
-      tenant: "Maria Santos",
-      room: "101",
-      rent: 5000,
-      electricity: 1250,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6750,
-      dueDate: "2026-09-15",
-      status: "paid",
-    },
-    {
-      id: "INV-2026-002",
-      tenant: "Carlos Reyes",
-      room: "204",
-      rent: 5000,
-      electricity: 1350,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6850,
-      dueDate: "2026-09-15",
-      status: "pending_verification",
-    },
-    {
-      id: "INV-2026-003",
-      tenant: "Elena Gomez",
-      room: "302",
-      rent: 6000,
-      electricity: 1100,
-      water: 600,
-      lateFee: 250,
-      totalAmount: 7950,
-      dueDate: "2026-09-15",
-      status: "unpaid",
-    },
-  ]);
+  useEffect(() => {
+    loadBills();
+  }, [loadBills]);
 
-  const handleGenerateBills = () => {
-    setGeneratedMsg("12 monthly invoices generated successfully!");
-    setTimeout(() => setGeneratedMsg(""), 4000);
+  const pendingPayments = bills.filter((b) => b.status === "pending_verification");
+
+  const handleGenerateBills = async () => {
+    setGenerating(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await billingService.generateBills();
+      setMessage(res.message);
+      await loadBills();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to generate bills."));
+    } finally {
+      setGenerating(false);
+    }
   };
 
-  const handleApprovePayment = (id: string) => {
-    setPendingPayments(pendingPayments.filter((p) => p.id !== id));
-    setInvoices(
-      invoices.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv))
-    );
-  };
-
-  const handleRejectPayment = (id: string) => {
-    setPendingPayments(pendingPayments.filter((p) => p.id !== id));
-    setInvoices(
-      invoices.map((inv) => (inv.id === id ? { ...inv, status: "unpaid" } : inv))
-    );
+  const runVerify = async (id: string, approved: boolean) => {
+    setBusyId(id);
+    setError("");
+    setMessage("");
+    try {
+      const resMsg = await billingService.verifyPayment(id, {
+        approved,
+        reject_reason: approved
+          ? undefined
+          : "Payment rejected by the property manager.",
+      });
+      setMessage(resMsg);
+      await loadBills();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to verify payment."));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -95,129 +96,207 @@ export default function AdminBilling() {
         title="Billing & Invoices"
         subtitle="Batch generate monthly invoices and verify tenant GCash payments"
         action={
-          <Button onClick={handleGenerateBills}>
-            <Plus className="h-4 w-4" />
-            Generate Monthly Bills
+          <Button onClick={handleGenerateBills} loading={generating}>
+            {!generating && (
+              <>
+                <Plus className="h-4 w-4" />
+                Generate Monthly Bills
+              </>
+            )}
           </Button>
         }
       />
 
-      {generatedMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-sm rounded-xl flex items-center gap-2">
+      {message && (
+        <div
+          className="flex animate-fade-in-up items-center gap-2 rounded-xl border border-success-border bg-success-bg p-4 text-sm font-semibold text-success-fg"
+          role="status"
+        >
           <CheckCircle className="h-5 w-5" />
-          {generatedMsg}
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={loadBills}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
         </div>
       )}
 
       {/* Pending GCash Verifications */}
-      {pendingPayments.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-sky-500 animate-pulse" />
-            <h2 className="text-base font-bold text-slate-900">
-              Pending GCash Payment Verifications ({pendingPayments.length})
-            </h2>
-          </div>
+      <div className="space-y-4">
+        <SectionHeader
+          dot
+          dotClassName="text-accent"
+          icon={<ShieldCheck className="h-5 w-5" />}
+          title={`Pending GCash Payment Verifications (${pendingPayments.length})`}
+          subtitle="Payment receipts that need to be confirmed"
+        />
 
+        {loading ? (
+          <SkeletonRows rows={3} />
+        ) : pendingPayments.length === 0 ? (
+          <Card className="p-0">
+            <EmptyState
+              title="No payments to verify"
+              description="All submitted GCash payments have been reviewed."
+            />
+          </Card>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pendingPayments.map((p) => (
-              <Card key={p.id} className="p-5 border-sky-200 bg-sky-50/30">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900">{p.tenant} (Room {p.room})</h3>
-                    <p className="text-xl font-black text-sky-600 mt-1">
-                      ₱{p.amount.toLocaleString()}
+              <Card key={p.id} className="p-5 border-accent-border">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-fg">
+                      {p.tenant_name} (Room {p.room})
+                    </h3>
+                    <p className="mt-1 text-xl font-extrabold text-accent tabular-nums">
+                      {fmtMoney(p.total_amount)}
                     </p>
-                    <p className="text-xs text-slate-600 mt-2 font-mono bg-white inline-block px-2 py-1 rounded-md border border-slate-200">
-                      Ref: {p.gcashRef}
-                    </p>
+                    {p.gcash_ref && (
+                      <p className="mt-2 inline-block rounded-lg border border-edge bg-card px-2 py-1 font-mono text-xs text-muted">
+                        Ref: {p.gcash_ref}
+                      </p>
+                    )}
                   </div>
-                  <Badge variant="info">Verification Queued</Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <Badge variant="info" dot>Verification Queued</Badge>
+                    <span className="text-[11px] text-muted">{p.date}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-sky-200/50">
-                  <Button size="sm" onClick={() => handleApprovePayment(p.id)} className="flex-1">
-                    <CheckCircle className="h-4 w-4" />
-                    Approve Payment
+                <div className="mt-4 flex items-center gap-2 border-t border-accent-border/40 pt-3">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    loading={busyId === p.id}
+                    onClick={() => runVerify(p.id, true)}
+                  >
+                    {busyId !== p.id && (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Approve Payment
+                      </>
+                    )}
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleRejectPayment(p.id)}
-                    className="text-red-600 hover:bg-red-50"
+                    loading={busyId === p.id}
+                    onClick={() => runVerify(p.id, false)}
+                    className="text-danger-fg hover:bg-danger-bg hover:border-danger-border hover:text-danger-fg"
                   >
-                    <XCircle className="h-4 w-4" />
-                    Reject
+                    {busyId !== p.id && (
+                      <>
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </>
+                    )}
                   </Button>
                 </div>
               </Card>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* All Invoices Table */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">All Monthly Invoices</h2>
+        <SectionHeader
+          title="All Monthly Invoices"
+          subtitle={`${bills.length} invoices`}
+        />
 
-        <Card className="p-0 overflow-hidden border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="p-4">Invoice ID</th>
-                  <th className="p-4">Tenant & Room</th>
-                  <th className="p-4">Rent</th>
-                  <th className="p-4">Electricity</th>
-                  <th className="p-4">Water</th>
-                  <th className="p-4">Total Amount</th>
-                  <th className="p-4">Due Date</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 font-mono font-bold text-slate-700">{inv.id}</td>
-                    <td className="p-4">
-                      <p className="font-bold text-slate-800">{inv.tenant}</p>
-                      <p className="text-xs text-slate-400">Room {inv.room}</p>
-                    </td>
-                    <td className="p-4 text-xs font-semibold text-slate-600">₱{inv.rent.toLocaleString()}</td>
-                    <td className="p-4 text-xs font-semibold text-slate-600">₱{inv.electricity.toLocaleString()}</td>
-                    <td className="p-4 text-xs font-semibold text-slate-600">₱{inv.water.toLocaleString()}</td>
-                    <td className="p-4 font-bold text-slate-900">₱{inv.totalAmount.toLocaleString()}</td>
-                    <td className="p-4 text-xs text-slate-500">{inv.dueDate}</td>
-                    <td className="p-4">
-                      <Badge
-                        variant={
-                          inv.status === "paid"
-                            ? "success"
-                            : inv.status === "pending_verification"
-                            ? "warning"
-                            : "danger"
-                        }
-                      >
-                        {inv.status === "pending_verification" ? "Pending" : inv.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedInvoice(inv)}
-                        className="text-sky-600 hover:text-sky-700"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <Card className="p-0 overflow-hidden">
+          {loading ? (
+            <div className="p-5">
+              <SkeletonRows rows={5} />
+            </div>
+          ) : bills.length === 0 ? (
+            <EmptyState
+              title="No invoices yet"
+              description="Generate monthly bills to get started."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice ID</TableHead>
+                    <TableHead>Tenant & Room</TableHead>
+                    <TableHead className="text-right">Rent</TableHead>
+                    <TableHead className="text-right">Electricity</TableHead>
+                    <TableHead className="text-right">Water</TableHead>
+                    <TableHead className="text-right">Total Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bills.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
+                        {inv.id}
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-bold text-fg">{inv.tenant_name}</p>
+                        <p className="text-xs text-muted">Room {inv.room}</p>
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        {fmtMoney(inv.rent)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        {fmtMoney(inv.electricity)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        {fmtMoney(inv.water)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
+                        {fmtMoney(inv.total_amount)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted whitespace-nowrap">
+                        {inv.due_date}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          dot
+                          variant={
+                            inv.status === "paid"
+                              ? "success"
+                              : inv.status === "pending_verification"
+                              ? "warning"
+                              : "danger"
+                          }
+                        >
+                          {inv.status === "pending_verification" ? "Pending" : inv.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedInvoice(inv)}
+                          className="text-accent hover:text-accent-strong"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -227,52 +306,55 @@ export default function AdminBilling() {
           open={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
           title={`Statement of Account: ${selectedInvoice.id}`}
-        >
-          <div className="space-y-4 text-sm">
-            <div className="flex justify-between border-b pb-3">
-              <div>
-                <p className="text-xs text-slate-400">Resident</p>
-                <p className="font-bold text-slate-800">{selectedInvoice.tenant}</p>
-                <p className="text-xs text-slate-500">Room {selectedInvoice.room}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-400">Due Date</p>
-                <p className="font-bold text-slate-800">{selectedInvoice.dueDate}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2 py-2">
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>Room Rent</span>
-                <span>₱{selectedInvoice.rent.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>Electricity</span>
-                <span>₱{selectedInvoice.electricity.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>Water</span>
-                <span>₱{selectedInvoice.water.toFixed(2)}</span>
-              </div>
-              {selectedInvoice.lateFee > 0 && (
-                <div className="flex justify-between text-xs text-red-600">
-                  <span>Late Fee</span>
-                  <span>₱{selectedInvoice.lateFee.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-base text-slate-900 border-t pt-2 mt-2">
-                <span>Total Due</span>
-                <span className="text-sky-600">₱{selectedInvoice.totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between pt-4 border-t border-slate-100">
+          footer={
+            <>
               <Button variant="secondary" size="sm" onClick={() => window.print()}>
                 <Printer className="h-4 w-4" /> Print Statement
               </Button>
               <Button size="sm" onClick={() => setSelectedInvoice(null)}>
                 Done
               </Button>
+            </>
+          }
+        >
+          <div className="space-y-4 text-sm">
+            <div className="flex justify-between border-b border-edge pb-3">
+              <div>
+                <p className="text-xs text-muted">Resident</p>
+                <p className="font-bold text-fg">{selectedInvoice.tenant_name}</p>
+                <p className="text-xs text-muted">Room {selectedInvoice.room}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted">Due Date</p>
+                <p className="font-bold text-fg">{selectedInvoice.due_date}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 py-2">
+              <div className="flex justify-between text-xs text-muted">
+                <span>Room Rent</span>
+                <span className="tabular-nums">{fmtMoney(selectedInvoice.rent)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted">
+                <span>Electricity</span>
+                <span className="tabular-nums">{fmtMoney(selectedInvoice.electricity)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted">
+                <span>Water</span>
+                <span className="tabular-nums">{fmtMoney(selectedInvoice.water)}</span>
+              </div>
+              {selectedInvoice.late_fee > 0 && (
+                <div className="flex justify-between text-xs text-danger-fg">
+                  <span>Late Fee</span>
+                  <span className="tabular-nums">{fmtMoney(selectedInvoice.late_fee)}</span>
+                </div>
+              )}
+              <div className="mt-2 flex justify-between border-t border-edge pt-2 text-base font-bold text-fg">
+                <span>Total Due</span>
+                <span className="text-accent tabular-nums">
+                  {fmtMoney(selectedInvoice.total_amount)}
+                </span>
+              </div>
             </div>
           </div>
         </Modal>

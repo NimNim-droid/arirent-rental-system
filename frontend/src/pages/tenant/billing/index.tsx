@@ -1,54 +1,98 @@
-import { useState } from "react";
-import { QrCode, Upload, CheckCircle2, Eye, Receipt, ArrowRight } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
+import { CheckCircle, Eye, Receipt, RefreshCw, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { billingService } from "@/lib/services/billing";
+import { dashboardService } from "@/lib/services/dashboard";
+import { getErrorMessage } from "@/lib/errors";
+import type { Bill, Settings } from "@/lib/types";
+
+function fmtMoney(n: number) {
+  return `₱${n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export default function TenantBilling() {
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Bill | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showStatementModal, setShowStatementModal] = useState(false);
   const [gcashRef, setGcashRef] = useState("");
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentMsg, setPaymentMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [bills, setBills] = useState([
-    {
-      id: "INV-2026-091",
-      rent: 5000,
-      electricity: 1250,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6750,
-      dueDate: "2026-09-15",
-      status: "unpaid",
-    },
-    {
-      id: "INV-2026-081",
-      rent: 5000,
-      electricity: 1180,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6680,
-      dueDate: "2026-08-15",
-      status: "paid",
-    },
-  ]);
+  const loadBills = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [billsRes, dash] = await Promise.all([
+        billingService.getBills({ per_page: 100 }),
+        dashboardService.getTenantDashboard(),
+      ]);
+      setBills(billsRes.data);
+      setSettings(dash.settings ?? null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load your invoices."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadBills();
+  }, [loadBills]);
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBills(
-      bills.map((b) =>
-        b.id === selectedInvoice.id ? { ...b, status: "pending_verification" } : b
-      )
-    );
-    setPaymentSuccess(true);
-    setTimeout(() => {
-      setPaymentSuccess(false);
-      setShowPaymentModal(false);
-      setSelectedInvoice(null);
-    }, 2000);
+    if (!selectedInvoice) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const msg = await billingService.submitPayment(selectedInvoice.id, {
+        gcash_ref: gcashRef,
+        receipt: receipt || undefined,
+      });
+      setPaymentMsg(msg);
+      await loadBills();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to submit your payment."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openPayment = (bill: Bill) => {
+    setSelectedInvoice(bill);
+    setGcashRef("");
+    setReceipt(null);
+    setPaymentMsg("");
+    setShowPaymentModal(true);
+  };
+
+  const openStatement = (bill: Bill) => {
+    setSelectedInvoice(bill);
+    setShowStatementModal(true);
   };
 
   return (
@@ -58,102 +102,157 @@ export default function TenantBilling() {
         subtitle="View breakdown of room rent, electricity consumption, and pay via GCash"
       />
 
-      {/* Invoices List */}
-      <Card className="p-0 overflow-hidden border-slate-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="p-4">Invoice No.</th>
-                <th className="p-4">Rent</th>
-                <th className="p-4">Electricity</th>
-                <th className="p-4">Water</th>
-                <th className="p-4">Total Amount</th>
-                <th className="p-4">Due Date</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {bills.map((bill) => (
-                <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 font-mono font-bold text-slate-800">{bill.id}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.rent.toFixed(2)}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.electricity.toFixed(2)}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.water.toFixed(2)}</td>
-                  <td className="p-4 font-bold text-slate-900">₱{bill.totalAmount.toFixed(2)}</td>
-                  <td className="p-4 text-xs text-slate-500">{bill.dueDate}</td>
-                  <td className="p-4">
-                    <Badge
-                      variant={
-                        bill.status === "paid"
-                          ? "success"
-                          : bill.status === "pending_verification"
-                          ? "warning"
-                          : "danger"
-                      }
-                    >
-                      {bill.status === "pending_verification" ? "Pending Approval" : bill.status}
-                    </Badge>
-                  </td>
-                  <td className="p-4 text-right">
-                    {bill.status === "unpaid" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedInvoice(bill);
-                          setShowPaymentModal(true);
-                        }}
-                      >
-                        Pay GCash
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedInvoice(bill)}
-                      >
-                        <Eye className="h-4 w-4" /> View
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={loadBills}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
         </div>
+      )}
+
+      {/* Invoices List */}
+      <Card className="p-0 overflow-hidden animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+        {loading ? (
+          <div className="p-5">
+            <SkeletonRows rows={4} />
+          </div>
+        ) : bills.length === 0 ? (
+          <EmptyState
+            title="No invoices yet"
+            description="Your monthly invoice will appear here once it is generated."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice No.</TableHead>
+                  <TableHead className="text-right">Rent</TableHead>
+                  <TableHead className="text-right">Electricity</TableHead>
+                  <TableHead className="text-right">Water</TableHead>
+                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bills.map((bill, i) => (
+                  <TableRow key={bill.id} index={i}>
+                    <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
+                      {bill.id}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.rent)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.electricity)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.water)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
+                      {fmtMoney(bill.total_amount)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted whitespace-nowrap">
+                      {bill.due_date}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        dot
+                        variant={
+                          bill.status === "paid"
+                            ? "success"
+                            : bill.status === "pending_verification"
+                            ? "warning"
+                            : "danger"
+                        }
+                      >
+                        {bill.status === "pending_verification"
+                          ? "Pending Approval"
+                          : bill.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {bill.status === "unpaid" ? (
+                        <Button size="sm" onClick={() => openPayment(bill)}>
+                          Pay GCash
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatement(bill)}
+                          className="text-accent hover:text-accent-strong"
+                        >
+                          <Eye className="h-4 w-4" /> View
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </Card>
 
       {/* GCash Payment Modal */}
       {showPaymentModal && selectedInvoice && (
         <Modal
           open={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedInvoice(null);
+          }}
           title={`Pay Invoice ${selectedInvoice.id}`}
+          footer={
+            paymentMsg ? (
+              <Button type="button" onClick={() => setShowPaymentModal(false)}>
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="secondary" onClick={() => setShowPaymentModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" form="payment-form" loading={submitting}>
+                  {!submitting && "Submit for Verification"}
+                </Button>
+              </>
+            )
+          }
         >
-          {paymentSuccess ? (
-            <div className="text-center py-6 space-y-3">
-              <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-900">Payment Submitted!</h3>
-              <p className="text-xs text-slate-500">
-                Your payment reference has been recorded and submitted to management for verification.
-              </p>
+          {paymentMsg ? (
+            <div className="space-y-3 py-6 text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-success-fg" />
+              <h3 className="text-lg font-bold text-fg">Payment Submitted!</h3>
+              <p className="text-xs text-muted">{paymentMsg}</p>
             </div>
           ) : (
-            <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              <div className="p-4 bg-sky-50 rounded-2xl border border-sky-100 text-center">
-                <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Total Due</p>
-                <p className="text-3xl font-black text-sky-900 mt-1">
-                  ₱{selectedInvoice.totalAmount.toFixed(2)}
+            <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-4">
+              <div className="rounded-2xl border border-accent-border bg-accent-soft text-center p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-accent">Total Due</p>
+                <p className="mt-1 text-3xl font-extrabold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.total_amount)}
                 </p>
               </div>
 
-              {/* GCash Details */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                <p className="font-bold text-slate-800">GCash Account Name: ARIRENT PROPERTY MANAGEMENT</p>
-                <p className="font-bold text-slate-800">GCash Number: 0917-888-9999</p>
-                <p className="text-slate-500 pt-1">
-                  Please send the exact amount to the number above, then enter your transaction reference number below.
+              <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-4 text-xs">
+                <p className="font-bold text-fg">
+                  GCash Account Name: {settings?.gcash_name ?? "—"}
+                </p>
+                <p className="font-bold text-fg">
+                  GCash Number: {settings?.gcash_number ?? "—"}
+                </p>
+                <p className="pt-1 text-muted">
+                  Please send the exact amount to the number above, then enter your transaction
+                  reference number below.
                 </p>
               </div>
 
@@ -164,30 +263,128 @@ export default function TenantBilling() {
                 value={gcashRef}
                 onChange={(e) => setGcashRef(e.target.value)}
                 required
+                autoFocus
               />
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                <label className="block text-xs font-semibold text-muted">
                   Upload Receipt Screenshot (Optional)
                 </label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-sky-500 cursor-pointer transition-colors">
-                  <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
-                  <p className="text-xs text-slate-500">Click or drag image of GCash receipt</p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowPaymentModal(false)}
+                <label
+                  htmlFor="receipt-upload"
+                  className="block cursor-pointer rounded-xl border-2 border-dashed border-edge-strong p-4 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40"
                 >
-                  Cancel
-                </Button>
-                <Button type="submit">Submit Verification</Button>
+                  <input
+                    id="receipt-upload"
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="sr-only"
+                    onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
+                  />
+                  <Receipt className="mx-auto mb-1 h-6 w-6 text-muted" />
+                  {receipt ? (
+                    <p className="text-xs font-semibold text-fg">{receipt.name}</p>
+                  ) : (
+                    <p className="text-xs text-muted">Click or drag image of GCash receipt</p>
+                  )}
+                </label>
               </div>
             </form>
           )}
+        </Modal>
+      )}
+
+      {/* Invoice Statement Modal */}
+      {showStatementModal && selectedInvoice && (
+        <Modal
+          open={showStatementModal}
+          onClose={() => setShowStatementModal(false)}
+          title={`Invoice Statement — ${selectedInvoice.id}`}
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setShowStatementModal(false)}>
+                Close
+              </Button>
+              {selectedInvoice.status === "unpaid" && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowStatementModal(false);
+                    openPayment(selectedInvoice);
+                  }}
+                >
+                  Pay via GCash
+                </Button>
+              )}
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl border border-edge bg-inset p-3">
+                <p className="text-muted">Invoice Number</p>
+                <p className="mt-0.5 font-bold text-fg font-mono">{selectedInvoice.id}</p>
+              </div>
+              <div className="rounded-xl border border-edge bg-inset p-3">
+                <p className="text-muted">Due Date</p>
+                <p className="mt-0.5 font-bold text-fg">{selectedInvoice.due_date}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 rounded-2xl border border-edge p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Billing Breakdown
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Monthly Rent</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.rent)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Electricity</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.electricity)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Water</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.water)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Late Fee</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.late_fee)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-edge pt-2 text-sm">
+                <span className="font-bold text-fg">Total Amount Due</span>
+                <span className="font-extrabold text-fg tabular-nums">
+                  {fmtMoney(selectedInvoice.total_amount)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted">Payment Status</span>
+              <Badge
+                dot
+                variant={
+                  selectedInvoice.status === "paid"
+                    ? "success"
+                    : selectedInvoice.status === "pending_verification"
+                    ? "warning"
+                    : "danger"
+                }
+              >
+                {selectedInvoice.status === "pending_verification"
+                  ? "Pending Approval"
+                  : selectedInvoice.status}
+              </Badge>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
