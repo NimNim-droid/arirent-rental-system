@@ -6,7 +6,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\ReadingController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TenantController;
 
 Route::get('/health', function () {
@@ -59,6 +61,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
     Route::post('/bills/{id}/verify', [BillController::class, 'verify']);
     Route::delete('/bills/{id}', [BillController::class, 'destroy']);
+
+    // Utility Meter Readings
+    Route::get('/readings', [ReadingController::class, 'index']);
+    Route::get('/readings/{id}', [ReadingController::class, 'show']);
+    Route::post('/readings', [ReadingController::class, 'store']);
+    Route::delete('/readings/{id}', [ReadingController::class, 'destroy']);
+
+    // System Settings & Rates
+    Route::get('/settings', [SettingsController::class, 'index']);
+    Route::put('/settings', [SettingsController::class, 'update']);
+    Route::post('/settings', [SettingsController::class, 'update']);
 });
 
 

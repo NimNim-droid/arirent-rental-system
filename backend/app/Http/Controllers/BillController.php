@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\UtilityReading;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -203,9 +204,13 @@ class BillController extends Controller
             // Water rate
             $water = (float) $tenant->water_rate > 0 ? (float) $tenant->water_rate : $defaultWaterRate;
 
-            // Electricity (0 if no reading logged yet)
-            $elec = 0.00;
-            $elecUsage = 0.00;
+            // Electricity (lookup utility reading logged for this month)
+            $reading = UtilityReading::where('tenant_id', $tenant->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->latest('date')
+                ->first();
+            $elec = $reading ? (float) $reading->amount : 0.00;
+            $elecUsage = $reading ? (float) $reading->usage_kwh : 0.00;
 
             // Late fee (check if any past unpaid bills older than 30 days)
             $hasLate = Bill::where('tenant_id', $tenant->id)
