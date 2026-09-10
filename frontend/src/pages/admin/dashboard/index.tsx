@@ -1,12 +1,36 @@
 import { useState } from "react";
-import { DollarSign, Home, UserCheck, AlertCircle, Wrench, Plus } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Link, useNavigate } from "react-router";
+import {
+  DollarSign,
+  Home,
+  UserCheck,
+  AlertCircle,
+  Wrench,
+  ArrowUpRight,
+  Users,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SectionHeader } from "@/components/common/section-header";
 import { StatsCard } from "@/components/common/stats-card";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { SkeletonCards, SkeletonRows } from "@/components/ui/skeleton";
+import { useFakeLoading } from "@/lib/hooks";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const loading = useFakeLoading();
   const [selectedProperty, setSelectedProperty] = useState("all");
 
   const mockTickets = [
@@ -42,116 +66,225 @@ export default function AdminDashboard() {
     },
   ];
 
+  const occupancyByProperty = [
+    { name: "AriRent Residences — Makati", occupied: 14, total: 15 },
+    { name: "AriRent Heights — Quezon City", occupied: 9, total: 10 },
+  ];
+
+  const collection = { received: 126500, expected: 145000, pending: 18500 };
+
+  const occupancyOverall = Math.round(
+    (occupancyByProperty.reduce((s, p) => s + p.occupied, 0) /
+      occupancyByProperty.reduce((s, p) => s + p.total, 0)) *
+      100
+  );
+
   return (
     <div className="space-y-8">
       <PageHeader
         title="Admin Dashboard"
         subtitle="Overview of rental operations, occupancy, and pending tasks"
         action={
-          <select
-            value={selectedProperty}
-            onChange={(e) => setSelectedProperty(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-xs"
-          >
-            <option value="all">All Properties</option>
-            <option value="prop-1">AriRent Residences - Makati</option>
-            <option value="prop-2">AriRent Heights - Quezon City</option>
-          </select>
+          <div className="w-full sm:w-56">
+            <Select
+              aria-label="Filter by property"
+              value={selectedProperty}
+              onChange={(e) => setSelectedProperty(e.target.value)}
+            >
+              <option value="all">All Properties</option>
+              <option value="prop-1">AriRent Residences — Makati</option>
+              <option value="prop-2">AriRent Heights — Quezon City</option>
+            </Select>
+          </div>
         }
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatsCard
-          title="Total Monthly Revenue"
-          value="₱145,000"
-          subtitle="September 2026"
-          icon={<DollarSign className="h-6 w-6" />}
-          trend={{ value: "+8.5%", isPositive: true }}
-        />
-        <StatsCard
-          title="Occupancy Rate"
-          value="92%"
-          subtitle="23 of 25 units occupied"
-          icon={<Home className="h-6 w-6" />}
-          trend={{ value: "+4.0%", isPositive: true }}
-        />
-        <StatsCard
-          title="Pending Applications"
-          value="3"
-          subtitle="Awaiting admin approval"
-          icon={<UserCheck className="h-6 w-6" />}
-        />
-        <StatsCard
-          title="Pending GCash Payments"
-          value="₱18,500"
-          subtitle="4 receipts to verify"
-          icon={<AlertCircle className="h-6 w-6 text-amber-600" />}
-        />
-      </div>
+      {loading ? (
+        <SkeletonCards cards={4} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <StatsCard
+            title="Total Monthly Revenue"
+            value="₱145,000"
+            subtitle="September 2026"
+            icon={<DollarSign className="h-5 w-5" />}
+            trend={{ value: "+8.5%", isPositive: true }}
+            delay={0}
+          />
+          <StatsCard
+            title="Occupancy Rate"
+            value={`${occupancyOverall}%`}
+            subtitle={`${occupancyByProperty.reduce((s, p) => s + p.occupied, 0)} of ${occupancyByProperty.reduce((s, p) => s + p.total, 0)} units occupied`}
+            icon={<Home className="h-5 w-5" />}
+            trend={{ value: "+4.0%", isPositive: true }}
+            delay={60}
+          />
+          <StatsCard
+            title="Pending Applications"
+            value="3"
+            subtitle="Awaiting admin approval"
+            icon={<UserCheck className="h-5 w-5" />}
+            delay={120}
+          />
+          <StatsCard
+            title="Pending GCash Payments"
+            value={`₱${collection.pending.toLocaleString()}`}
+            subtitle="4 receipts to verify"
+            icon={<AlertCircle className="h-5 w-5 text-warning-fg" />}
+            delay={180}
+          />
+        </div>
+      )}
+
+      {/* Occupancy & Collections */}
+      {!loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <Card className="p-6 lg:col-span-2 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+            <SectionHeader
+              icon={<Users className="h-5 w-5" />}
+              title="Occupancy by Property"
+              subtitle="Current utilization of rental units"
+            />
+            <div className="mt-5 space-y-5">
+              {occupancyByProperty.map((property) => {
+                const pct = Math.round((property.occupied / property.total) * 100);
+                return (
+                  <div key={property.name}>
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="font-semibold text-fg-soft">{property.name}</span>
+                      <span className="text-xs font-bold text-muted tabular-nums">
+                        {property.occupied}/{property.total} units
+                      </span>
+                    </div>
+                    <div className="mt-2 flex h-2.5 w-full items-center overflow-hidden rounded-full bg-inset ring-1 ring-inset ring-edge">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-right text-[11px] font-bold text-accent">{pct}%</p>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card className="p-6 flex flex-col justify-between animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+            <SectionHeader
+              icon={<DollarSign className="h-5 w-5" />}
+              title="Collections"
+              subtitle="September billing cycle"
+            />
+            <div className="mt-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-fg tabular-nums">
+                  ₱{collection.received.toLocaleString()}
+                </span>
+                <span className="text-xs text-muted">of ₱{collection.expected.toLocaleString()}</span>
+              </div>
+              <div className="mt-3 flex h-2.5 w-full items-center overflow-hidden rounded-full bg-inset ring-1 ring-inset ring-edge">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                  style={{ width: `${Math.round((collection.received / collection.expected) * 100)}%` }}
+                />
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Pending verification</span>
+                  <span className="font-bold text-warning-fg">
+                    ₱{collection.pending.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Collected rate</span>
+                  <span className="font-semibold text-fg-soft">
+                    {Math.round((collection.received / collection.expected) * 100)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Recent Maintenance Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-sky-600" />
-            <h2 className="text-lg font-bold text-slate-900">Recent Maintenance Requests</h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => window.location.href = "/admin/maintenance"}>
-            View All Tickets →
-          </Button>
-        </div>
+        <div className="animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+        <SectionHeader
+          icon={<Wrench className="h-5 w-5" />}
+          title="Recent Maintenance Requests"
+          subtitle="Latest repair tickets across all properties"
+          action={
+            <Link to="/admin/maintenance">
+              <Button variant="ghost" size="sm">
+                View All Tickets
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          }
+        />
 
-        <Card className="p-0 overflow-hidden border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="p-4">Ticket</th>
-                  <th className="p-4">Room & Tenant</th>
-                  <th className="p-4">Category & Issue</th>
-                  <th className="p-4">Priority</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {mockTickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 font-bold text-sky-600">{ticket.id}</td>
-                    <td className="p-4">
-                      <p className="font-semibold text-slate-800">Room {ticket.room}</p>
-                      <p className="text-xs text-slate-400">{ticket.tenant}</p>
-                    </td>
-                    <td className="p-4">
-                      <span className="font-semibold text-slate-700">{ticket.category}</span>
-                      <p className="text-xs text-slate-500 line-clamp-1">{ticket.issue}</p>
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={ticket.priority === "urgent" ? "danger" : "neutral"}>
-                        {ticket.priority}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <Badge
-                        variant={
-                          ticket.status === "resolved"
-                            ? "success"
-                            : ticket.status === "in_progress"
-                            ? "warning"
-                            : "info"
-                        }
-                      >
-                        {ticket.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-xs text-slate-500">{ticket.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <Card className="p-0 overflow-hidden animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+          {loading ? (
+            <div className="p-5">
+              <SkeletonRows rows={5} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ticket</TableHead>
+                    <TableHead>Room & Tenant</TableHead>
+                    <TableHead>Category & Issue</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockTickets.map((ticket, i) => (
+                    <TableRow key={ticket.id} index={i} className="cursor-pointer" onClick={() => navigate("/admin/maintenance")}>
+                      <TableCell className="font-bold text-accent">{ticket.id}</TableCell>
+                      <TableCell>
+                        <p className="font-semibold text-fg-soft">Room {ticket.room}</p>
+                        <p className="text-xs text-muted">{ticket.tenant}</p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-fg-soft">{ticket.category}</span>
+                        <p className="max-w-[14rem] text-xs text-muted line-clamp-1">{ticket.issue}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ticket.priority === "urgent" ? "danger" : "neutral"}>
+                          {ticket.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          dot
+                          variant={
+                            ticket.status === "resolved"
+                              ? "success"
+                              : ticket.status === "in_progress"
+                              ? "warning"
+                              : "info"
+                          }
+                        >
+                          {ticket.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-xs text-muted whitespace-nowrap">
+                        {ticket.date}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
+      </div>
       </div>
     </div>
   );

@@ -1,14 +1,22 @@
 import { useState } from "react";
-import { Wrench, PhoneCall, Plus, CheckCircle2, Clock } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Phone, Send, ClipboardList, Wrench, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function TenantMaintenance() {
+  const [subject, setSubject] = useState("");
+  const [details, setDetails] = useState("");
+  const [issueType, setIssueType] = useState("plumbing");
+  const [submitted, setSubmitted] = useState(false);
+
   const [tickets, setTickets] = useState([
     {
       id: "T-101",
@@ -21,33 +29,28 @@ export default function TenantMaintenance() {
     {
       id: "T-098",
       type: "electrical",
-      description: "Main room light bulb replacement.",
+      description: "Replaced broken ceiling light fixture.",
       priority: "normal",
       status: "resolved",
-      date: "2026-08-20",
+      date: "2026-08-21",
     },
   ]);
 
-  const [form, setForm] = useState({
-    type: "plumbing",
-    description: "",
-    priority: "normal",
-  });
-
-  const [submitted, setSubmitted] = useState(false);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newTicket = {
-      id: `T-${Math.floor(100 + Math.random() * 900)}`,
-      type: form.type,
-      description: form.description,
-      priority: form.priority,
-      status: "pending",
-      date: new Date().toISOString().split("T")[0],
-    };
-    setTickets([newTicket, ...tickets]);
-    setForm({ type: "plumbing", description: "", priority: "normal" });
+    setTickets([
+      {
+        id: `T-${Math.floor(100 + Math.random() * 900)}`,
+        type: issueType,
+        description: details || subject,
+        priority: "normal",
+        status: "pending",
+        date: new Date().toISOString().slice(0, 10),
+      },
+      ...tickets,
+    ]);
+    setSubject("");
+    setDetails("");
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
@@ -55,113 +58,121 @@ export default function TenantMaintenance() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Maintenance & Repairs"
-        subtitle="Submit repair requests for your unit and monitor technician status"
+        title="Maintenance Requests"
+        subtitle="Submit repair requests anytime — our team responds within 24 hours"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Ticket Submission Form */}
-        <Card className="lg:col-span-1 p-6 space-y-5 h-fit">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <Wrench className="h-5 w-5 text-sky-600" />
-            <h2 className="text-base font-bold text-slate-900">Request a Repair</h2>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* New Request Form */}
+        <Card className="p-6 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+          <SectionHeader
+            icon={<Wrench className="h-5 w-5" />}
+            title="Submit a Repair Request"
+            subtitle="Describe the issue and our technician will be dispatched"
+          />
 
-          {submitted && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Ticket submitted to building maintenance!
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <Select
               id="type"
-              label="Issue Category"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              label="Issue Type"
+              value={issueType}
+              onChange={(e) => setIssueType(e.target.value)}
             >
-              <option value="plumbing">Plumbing & Water</option>
-              <option value="electrical">Electrical & Lighting</option>
-              <option value="appliances">Aircon & Appliances</option>
-              <option value="general">Carpentry & General</option>
+              <option value="plumbing">Plumbing (sink, toilet, pipe)</option>
+              <option value="electrical">Electrical (lights, outlets, switch)</option>
+              <option value="appliances">Appliances (AC, fridge, water heater)</option>
+              <option value="structural">Structural (wall, ceiling, door, window)</option>
+              <option value="pest">Pest / Sanitation</option>
+              <option value="other">Other / General</option>
             </Select>
 
-            <Select
-              id="priority"
-              label="Urgency Level"
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value })}
-            >
-              <option value="normal">Normal (within 48 hours)</option>
-              <option value="urgent">Urgent (Immediate attention)</option>
-            </Select>
-
-            <Textarea
-              id="description"
-              label="Describe the Problem"
-              placeholder="What seems to be the issue? e.g. Water dripping under the sink..."
-              rows={4}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            <Input
+              id="subject"
+              label="Short Description"
+              placeholder="e.g. Sink pipe leaking"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
               required
             />
 
+            <Textarea
+              id="details"
+              label="Full Details"
+              placeholder="When did it start? How severe is it? Any other helpful info..."
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              required
+            />
+
+            {/* Emergency Hotline Notice */}
+            <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg p-4 text-sm">
+              <div className="shrink-0 rounded-xl bg-warning-bg p-2 text-warning-fg ring-1 ring-inset ring-warning-border">
+                <Phone className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-fg">
+                  Emergency? Call the hotline
+                </p>
+                <p className="mt-1 text-xs text-fg-soft">
+                  For gas leaks, fire, or flooding — call{" "}
+                  <strong className="text-warning-fg">0917-222-3333</strong> (24/7) instead of submitting this form.
+                </p>
+              </div>
+            </div>
+
             <Button type="submit" className="w-full">
-              <Plus className="h-4 w-4" /> Submit Repair Ticket
+              {submitted ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Submitted! Tracking ID: T-{tickets[0]?.id}
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" /> Submit Request
+                </>
+              )}
             </Button>
           </form>
-
-          {/* Emergency Hotline Box */}
-          <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-amber-800">
-              <PhoneCall className="h-4 w-4" /> Emergency Building Hotline
-            </div>
-            <p className="text-amber-700">For water floods or electrical fires, call immediately:</p>
-            <p className="font-mono font-black text-amber-900 text-sm pt-1">0917-999-HELP (4357)</p>
-          </div>
         </Card>
 
-        {/* My Tickets List */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-slate-900">My Requests ({tickets.length})</h2>
+        {/* My Request History */}
+        <Card className="p-6 animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+          <SectionHeader
+            icon={<ClipboardList className="h-5 w-5" />}
+            title="My Request History"
+            subtitle="Track the status of your past requests"
+          />
 
-          <div className="space-y-3">
-            {tickets.map((t) => (
-              <Card key={t.id} className="p-5 flex flex-col justify-between space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-mono text-xs font-bold text-sky-600">{t.id}</span>
-                    <h3 className="font-bold text-slate-800 text-base capitalize mt-0.5">
-                      {t.type} Issue
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Submitted on {t.date}</p>
+          <div className="mt-5 space-y-3">
+            {tickets.length === 0 ? (
+              <EmptyState
+                title="No requests yet"
+                description="Your submitted repair requests will show up here."
+              />
+            ) : (
+              tickets.map((t, i) => (
+                <div key={t.id} className="rounded-xl border border-edge bg-inset p-4 animate-fade-in-up stagger" style={{ "--i": i + 1 } as CSSProperties}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-accent">{t.id}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted">{t.date}</span>
+                      <Badge
+                        dot
+                        variant={
+                          t.priority === "urgent" ? "danger" : t.status === "resolved" ? "success" : "warning"
+                        }
+                      >
+                        {t.status === "pending" ? "Pending" : t.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={t.priority === "urgent" ? "danger" : "neutral"}>
-                      {t.priority}
-                    </Badge>
-                    <Badge
-                      variant={
-                        t.status === "resolved"
-                          ? "success"
-                          : t.status === "in_progress"
-                          ? "warning"
-                          : "info"
-                      }
-                    >
-                      {t.status.replace("_", " ")}
-                    </Badge>
-                  </div>
+                  <p className="mt-2 text-sm font-bold capitalize text-fg">{t.type}</p>
+                  <p className="mt-0.5 text-sm text-fg-soft">{t.description}</p>
                 </div>
-
-                <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  {t.description}
-                </p>
-              </Card>
-            ))}
+              ))
+            )}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

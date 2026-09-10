@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Zap, Droplets, QrCode, Save, Check } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Zap, QrCode, Save, Check } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -44,20 +46,16 @@ export default function AdminUtilities() {
         subtitle="Record monthly electricity meters and manage rate configurations"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Electricity Meter Reading Form */}
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
-              <Zap className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Record Electric Meter Reading</h2>
-              <p className="text-xs text-slate-500">Calculate kWh consumption per tenant</p>
-            </div>
-          </div>
+        <Card className="p-6 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+          <SectionHeader
+            icon={<Zap className="h-5 w-5 text-warning-fg" />}
+            title="Record Electric Meter Reading"
+            subtitle="Calculate kWh consumption per tenant"
+          />
 
-          <form onSubmit={handleSaveReading} className="space-y-4">
+          <form onSubmit={handleSaveReading} className="mt-5 space-y-4">
             <Select id="tenant" label="Select Resident">
               <option value="1">Maria Santos — Room 101</option>
               <option value="2">Carlos Reyes — Room 204</option>
@@ -84,18 +82,20 @@ export default function AdminUtilities() {
             </div>
 
             {/* Computed Calculation Box */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/60 grid grid-cols-2 gap-2 text-center">
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-edge bg-inset p-4 text-center">
               <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase">Usage</p>
-                <p className="text-lg font-black text-slate-800 mt-0.5">{usageKwh} kWh</p>
+                <p className="text-[11px] text-muted font-bold uppercase tracking-wider">Usage</p>
+                <p className="mt-0.5 text-lg font-extrabold text-fg tabular-nums">{usageKwh} kWh</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase">Total Cost</p>
-                <p className="text-lg font-black text-sky-600 mt-0.5">₱{computedAmount.toFixed(2)}</p>
+              <div className="border-l border-edge">
+                <p className="text-[11px] text-muted font-bold uppercase tracking-wider">Total Cost</p>
+                <p className="mt-0.5 text-lg font-extrabold text-accent tabular-nums">
+                  ₱{computedAmount.toFixed(2)}
+                </p>
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={usageKwh <= 0}>
               {readingSaved ? (
                 <>
                   <Check className="h-4 w-4" /> Reading Recorded!
@@ -110,18 +110,14 @@ export default function AdminUtilities() {
         </Card>
 
         {/* Global Rates & GCash Settings */}
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
-            <div className="p-2 rounded-xl bg-sky-50 text-sky-600">
-              <QrCode className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Payment & Rates Configuration</h2>
-              <p className="text-xs text-slate-500">Global billing rates and GCash account details</p>
-            </div>
-          </div>
+        <Card className="p-6 animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+          <SectionHeader
+            icon={<QrCode className="h-5 w-5" />}
+            title="Payment & Rates Configuration"
+            subtitle="Global billing rates and GCash account details"
+          />
 
-          <form onSubmit={handleSaveSettings} className="space-y-4">
+          <form onSubmit={handleSaveSettings} className="mt-5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="elecRate"
@@ -161,7 +157,7 @@ export default function AdminUtilities() {
             <Button type="submit" variant="secondary" className="w-full">
               {settingsSaved ? (
                 <>
-                  <Check className="h-4 w-4 text-emerald-600" /> Settings Updated!
+                  <Check className="h-4 w-4 text-success-fg" /> Settings Updated!
                 </>
               ) : (
                 <>

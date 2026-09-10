@@ -1,13 +1,26 @@
 import { useState } from "react";
-import { QrCode, Upload, CheckCircle2, Eye, Receipt, ArrowRight } from "lucide-react";
+import type { CSSProperties } from "react";
+import { CheckCircle2, Eye, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { useFakeLoading } from "@/lib/hooks";
 
 export default function TenantBilling() {
+  const loading = useFakeLoading();
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [gcashRef, setGcashRef] = useState("");
@@ -48,7 +61,7 @@ export default function TenantBilling() {
       setPaymentSuccess(false);
       setShowPaymentModal(false);
       setSelectedInvoice(null);
-    }, 2000);
+    }, 1800);
   };
 
   return (
@@ -59,69 +72,100 @@ export default function TenantBilling() {
       />
 
       {/* Invoices List */}
-      <Card className="p-0 overflow-hidden border-slate-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="p-4">Invoice No.</th>
-                <th className="p-4">Rent</th>
-                <th className="p-4">Electricity</th>
-                <th className="p-4">Water</th>
-                <th className="p-4">Total Amount</th>
-                <th className="p-4">Due Date</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {bills.map((bill) => (
-                <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 font-mono font-bold text-slate-800">{bill.id}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.rent.toFixed(2)}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.electricity.toFixed(2)}</td>
-                  <td className="p-4 text-xs font-semibold text-slate-600">₱{bill.water.toFixed(2)}</td>
-                  <td className="p-4 font-bold text-slate-900">₱{bill.totalAmount.toFixed(2)}</td>
-                  <td className="p-4 text-xs text-slate-500">{bill.dueDate}</td>
-                  <td className="p-4">
-                    <Badge
-                      variant={
-                        bill.status === "paid"
-                          ? "success"
-                          : bill.status === "pending_verification"
-                          ? "warning"
-                          : "danger"
-                      }
-                    >
-                      {bill.status === "pending_verification" ? "Pending Approval" : bill.status}
-                    </Badge>
-                  </td>
-                  <td className="p-4 text-right">
-                    {bill.status === "unpaid" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedInvoice(bill);
-                          setShowPaymentModal(true);
-                        }}
-                      >
-                        Pay GCash
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedInvoice(bill)}
-                      >
-                        <Eye className="h-4 w-4" /> View
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Card className="p-0 overflow-hidden animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+        {loading ? (
+          <div className="p-5">
+            <SkeletonRows rows={4} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice No.</TableHead>
+                  <TableHead className="text-right">Rent</TableHead>
+                  <TableHead className="text-right">Electricity</TableHead>
+                  <TableHead className="text-right">Water</TableHead>
+                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bills.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <EmptyState
+                        title="No invoices yet"
+                        description="Your monthly invoice will appear here once it is generated."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  bills.map((bill, i) => (
+                    <TableRow key={bill.id} index={i}>
+                      <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
+                        {bill.id}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        ₱{bill.rent.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        ₱{bill.electricity.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                        ₱{bill.water.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
+                        ₱{bill.totalAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted whitespace-nowrap">
+                        {bill.dueDate}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          dot
+                          variant={
+                            bill.status === "paid"
+                              ? "success"
+                              : bill.status === "pending_verification"
+                              ? "warning"
+                              : "danger"
+                          }
+                        >
+                          {bill.status === "pending_verification" ? "Pending Approval" : bill.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {bill.status === "unpaid" ? (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(bill);
+                              setShowPaymentModal(true);
+                            }}
+                          >
+                            Pay GCash
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedInvoice(bill)}
+                            className="text-accent hover:text-accent-strong"
+                          >
+                            <Eye className="h-4 w-4" /> View
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </Card>
 
       {/* GCash Payment Modal */}
@@ -130,29 +174,44 @@ export default function TenantBilling() {
           open={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           title={`Pay Invoice ${selectedInvoice.id}`}
+          footer={
+            !paymentSuccess ? (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowPaymentModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" form="payment-form">
+                  Submit Verification
+                </Button>
+              </>
+            ) : undefined
+          }
         >
           {paymentSuccess ? (
-            <div className="text-center py-6 space-y-3">
-              <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-900">Payment Submitted!</h3>
-              <p className="text-xs text-slate-500">
+            <div className="space-y-3 py-6 text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-success-fg" />
+              <h3 className="text-lg font-bold text-fg">Payment Submitted!</h3>
+              <p className="text-xs text-muted">
                 Your payment reference has been recorded and submitted to management for verification.
               </p>
             </div>
           ) : (
-            <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              <div className="p-4 bg-sky-50 rounded-2xl border border-sky-100 text-center">
-                <p className="text-xs font-bold uppercase tracking-wider text-sky-700">Total Due</p>
-                <p className="text-3xl font-black text-sky-900 mt-1">
+            <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-4">
+              <div className="rounded-2xl border border-accent-border bg-accent-soft text-center p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-accent">Total Due</p>
+                <p className="mt-1 text-3xl font-extrabold text-fg tabular-nums">
                   ₱{selectedInvoice.totalAmount.toFixed(2)}
                 </p>
               </div>
 
-              {/* GCash Details */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                <p className="font-bold text-slate-800">GCash Account Name: ARIRENT PROPERTY MANAGEMENT</p>
-                <p className="font-bold text-slate-800">GCash Number: 0917-888-9999</p>
-                <p className="text-slate-500 pt-1">
+              <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-4 text-xs">
+                <p className="font-bold text-fg">GCash Account Name: ARIRENT PROPERTY MANAGEMENT</p>
+                <p className="font-bold text-fg">GCash Number: 0917-888-9999</p>
+                <p className="pt-1 text-muted">
                   Please send the exact amount to the number above, then enter your transaction reference number below.
                 </p>
               </div>
@@ -164,27 +223,17 @@ export default function TenantBilling() {
                 value={gcashRef}
                 onChange={(e) => setGcashRef(e.target.value)}
                 required
+                autoFocus
               />
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                <label className="block text-xs font-semibold text-muted">
                   Upload Receipt Screenshot (Optional)
                 </label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-sky-500 cursor-pointer transition-colors">
-                  <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
-                  <p className="text-xs text-slate-500">Click or drag image of GCash receipt</p>
+                <div className="cursor-pointer rounded-xl border-2 border-dashed border-edge-strong p-4 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40">
+                  <Receipt className="mx-auto mb-1 h-6 w-6 text-muted" />
+                  <p className="text-xs text-muted">Click or drag image of GCash receipt</p>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowPaymentModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Submit Verification</Button>
               </div>
             </form>
           )}
