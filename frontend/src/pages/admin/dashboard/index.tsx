@@ -67,17 +67,20 @@ export default function AdminDashboard() {
   ];
 
   const occupancyByProperty = [
-    { name: "AriRent Residences — Makati", occupied: 14, total: 15 },
-    { name: "AriRent Heights — Quezon City", occupied: 9, total: 10 },
+    { id: "prop-1", name: "AriRent Residences — Makati", occupied: 14, total: 15 },
+    { id: "prop-2", name: "AriRent Heights — Quezon City", occupied: 9, total: 10 },
   ];
 
   const collection = { received: 126500, expected: 145000, pending: 18500 };
 
-  const occupancyOverall = Math.round(
-    (occupancyByProperty.reduce((s, p) => s + p.occupied, 0) /
-      occupancyByProperty.reduce((s, p) => s + p.total, 0)) *
-      100
-  );
+  const visibleProperties =
+    selectedProperty === "all"
+      ? occupancyByProperty
+      : occupancyByProperty.filter((p) => p.id === selectedProperty);
+
+  const occupiedTotal = visibleProperties.reduce((s, p) => s + p.occupied, 0);
+  const totalUnits = visibleProperties.reduce((s, p) => s + p.total, 0);
+  const occupancyOverall = totalUnits === 0 ? 0 : Math.round((occupiedTotal / totalUnits) * 100);
 
   return (
     <div className="space-y-8">
@@ -111,14 +114,16 @@ export default function AdminDashboard() {
             icon={<DollarSign className="h-5 w-5" />}
             trend={{ value: "+8.5%", isPositive: true }}
             delay={0}
+            onClick={() => navigate("/admin/billing")}
           />
           <StatsCard
             title="Occupancy Rate"
             value={`${occupancyOverall}%`}
-            subtitle={`${occupancyByProperty.reduce((s, p) => s + p.occupied, 0)} of ${occupancyByProperty.reduce((s, p) => s + p.total, 0)} units occupied`}
+            subtitle={`${occupiedTotal} of ${totalUnits} units occupied`}
             icon={<Home className="h-5 w-5" />}
             trend={{ value: "+4.0%", isPositive: true }}
             delay={60}
+            onClick={() => navigate("/admin/tenants")}
           />
           <StatsCard
             title="Pending Applications"
@@ -126,6 +131,7 @@ export default function AdminDashboard() {
             subtitle="Awaiting admin approval"
             icon={<UserCheck className="h-5 w-5" />}
             delay={120}
+            onClick={() => navigate("/admin/tenants")}
           />
           <StatsCard
             title="Pending GCash Payments"
@@ -133,6 +139,7 @@ export default function AdminDashboard() {
             subtitle="4 receipts to verify"
             icon={<AlertCircle className="h-5 w-5 text-warning-fg" />}
             delay={180}
+            onClick={() => navigate("/admin/billing")}
           />
         </div>
       )}
@@ -147,30 +154,44 @@ export default function AdminDashboard() {
               subtitle="Current utilization of rental units"
             />
             <div className="mt-5 space-y-5">
-              {occupancyByProperty.map((property) => {
-                const pct = Math.round((property.occupied / property.total) * 100);
-                return (
-                  <div key={property.name}>
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                      <span className="font-semibold text-fg-soft">{property.name}</span>
-                      <span className="text-xs font-bold text-muted tabular-nums">
-                        {property.occupied}/{property.total} units
-                      </span>
-                    </div>
-                    <div className="mt-2 flex h-2.5 w-full items-center overflow-hidden rounded-full bg-inset ring-1 ring-inset ring-edge">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-right text-[11px] font-bold text-accent">{pct}%</p>
-                  </div>
-                );
-              })}
+              {visibleProperties.length === 0 ? (
+                <p className="text-xs text-muted">No occupancy data for the selected property.</p>
+              ) : (
+                visibleProperties.map((property) => {
+                  const pct = Math.round((property.occupied / property.total) * 100);
+                  return (
+                    <Link
+                      key={property.id}
+                      to="/admin/tenants"
+                      className="group block rounded-xl px-3 py-2 -mx-3 transition-colors duration-200 hover:bg-hover"
+                      aria-label={`View tenants at ${property.name}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span className="font-semibold text-fg-soft transition-colors group-hover:text-fg">
+                          {property.name}
+                        </span>
+                        <span className="text-xs font-bold text-muted tabular-nums">
+                          {property.occupied}/{property.total} units
+                        </span>
+                      </div>
+                      <div className="mt-2 flex h-2.5 w-full items-center overflow-hidden rounded-full bg-inset ring-1 ring-inset ring-edge">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-right text-[11px] font-bold text-accent">
+                        {pct}% <span className="font-medium text-faint">• manage tenants</span>
+                      </p>
+                    </Link>
+                  );
+                })
+              )}
             </div>
           </Card>
 
-          <Card className="p-6 flex flex-col justify-between animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+          <Link to="/admin/billing" className="block group" aria-label="View billing and pending payments">
+          <Card className="p-6 flex flex-col justify-between h-full animate-fade-in-up stagger duration-300 hover:-translate-y-0.5" style={{ "--i": 1 } as CSSProperties}>
             <SectionHeader
               icon={<DollarSign className="h-5 w-5" />}
               title="Collections"
@@ -191,7 +212,7 @@ export default function AdminDashboard() {
               </div>
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Pending verification</span>
+                  <span className="text-muted transition-colors group-hover:text-fg-soft">Pending verification</span>
                   <span className="font-bold text-warning-fg">
                     ₱{collection.pending.toLocaleString()}
                   </span>
@@ -203,8 +224,12 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
+              <p className="mt-3 flex items-center gap-1 text-[11px] font-bold text-accent">
+                Review payments <ArrowUpRight className="h-3 w-3" />
+              </p>
             </div>
           </Card>
+        </Link>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
 
 interface StatsCardProps {
   title: string;
@@ -12,12 +13,17 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   delay?: number;
+  onClick?: () => void;
 }
 
-export function StatsCard({ title, value, subtitle, icon, trend, delay = 0 }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon, trend, delay = 0, onClick }: StatsCardProps) {
   return (
     <Card
-      className="group relative flex flex-col p-5 animate-fade-in-up"
+      onClick={onClick}
+      className={cn(
+        "group relative flex flex-col p-5 animate-fade-in-up",
+        onClick && "cursor-pointer"
+      )}
       style={{ animationDelay: `${delay}ms` } as CSSProperties}
     >
       <div className="flex items-start justify-between gap-4">

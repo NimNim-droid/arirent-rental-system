@@ -12,6 +12,7 @@ export default function AdminUtilities() {
   const [elecRate, setElecRate] = useState(15.0);
   const [prevReading, setPrevReading] = useState(1200);
   const [currReading, setCurrReading] = useState(1350);
+  const [selectedResident, setSelectedResident] = useState("1");
   const [readingSaved, setReadingSaved] = useState(false);
 
   // Auto calculation
@@ -56,7 +57,12 @@ export default function AdminUtilities() {
           />
 
           <form onSubmit={handleSaveReading} className="mt-5 space-y-4">
-            <Select id="tenant" label="Select Resident">
+            <Select
+              id="tenant"
+              label="Select Resident"
+              value={selectedResident}
+              onChange={(e) => setSelectedResident(e.target.value)}
+            >
               <option value="1">Maria Santos — Room 101</option>
               <option value="2">Carlos Reyes — Room 204</option>
               <option value="3">Elena Gomez — Room 302</option>

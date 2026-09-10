@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export default function TenantMaintenance() {
@@ -16,6 +17,7 @@ export default function TenantMaintenance() {
   const [details, setDetails] = useState("");
   const [issueType, setIssueType] = useState("plumbing");
   const [submitted, setSubmitted] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
 
   const [tickets, setTickets] = useState([
     {
@@ -151,7 +153,13 @@ export default function TenantMaintenance() {
               />
             ) : (
               tickets.map((t, i) => (
-                <div key={t.id} className="rounded-xl border border-edge bg-inset p-4 animate-fade-in-up stagger" style={{ "--i": i + 1 } as CSSProperties}>
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTicket(t)}
+                  className="w-full rounded-xl border border-edge bg-inset p-4 text-left animate-fade-in-up stagger transition-all duration-200 hover:-translate-y-0.5 hover:border-edge-strong hover:shadow-pop"
+                  style={{ "--i": i + 1 } as CSSProperties}
+                >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-xs font-bold text-accent">{t.id}</span>
                     <div className="flex items-center gap-2">
@@ -168,12 +176,63 @@ export default function TenantMaintenance() {
                   </div>
                   <p className="mt-2 text-sm font-bold capitalize text-fg">{t.type}</p>
                   <p className="mt-0.5 text-sm text-fg-soft">{t.description}</p>
-                </div>
+                  <p className="mt-2 text-[11px] font-bold text-accent">View details →</p>
+                </button>
               ))
             )}
           </div>
         </Card>
       </div>
+
+      {/* Ticket Detail Modal */}
+      {selectedTicket && (
+        <Modal
+          open={!!selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          title={`Request ${selectedTicket.id}`}
+          footer={
+            <Button type="button" onClick={() => setSelectedTicket(null)}>
+              Close
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                {selectedTicket.type}
+              </span>
+              <Badge
+                dot
+                variant={
+                  selectedTicket.priority === "urgent"
+                    ? "danger"
+                    : selectedTicket.status === "resolved"
+                    ? "success"
+                    : "warning"
+                }
+              >
+                {selectedTicket.status === "pending" ? "Pending" : selectedTicket.status}
+              </Badge>
+            </div>
+            <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-4 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted">Priority</span>
+                <span className="font-bold capitalize text-fg">{selectedTicket.priority}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted">Date Submitted</span>
+                <span className="font-bold capitalize text-fg">{selectedTicket.date}</span>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-fg-soft">{selectedTicket.description}</p>
+            <p className="text-[11px] text-muted">
+              {selectedTicket.status === "resolved"
+                ? "This request has been completed. If the issue persists, please submit a new request."
+                : "Our maintenance team will respond within 24 hours. Keep your phone accessible in case the technician needs to reach you."}
+            </p>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

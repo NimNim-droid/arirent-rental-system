@@ -23,7 +23,9 @@ export default function TenantBilling() {
   const loading = useFakeLoading();
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showStatementModal, setShowStatementModal] = useState(false);
   const [gcashRef, setGcashRef] = useState("");
+  const [receiptName, setReceiptName] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const [bills, setBills] = useState([
@@ -61,6 +63,7 @@ export default function TenantBilling() {
       setPaymentSuccess(false);
       setShowPaymentModal(false);
       setSelectedInvoice(null);
+      setReceiptName("");
     }, 1800);
   };
 
@@ -143,6 +146,7 @@ export default function TenantBilling() {
                             size="sm"
                             onClick={() => {
                               setSelectedInvoice(bill);
+                              setReceiptName("");
                               setShowPaymentModal(true);
                             }}
                           >
@@ -152,7 +156,10 @@ export default function TenantBilling() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedInvoice(bill)}
+                            onClick={() => {
+                              setSelectedInvoice(bill);
+                              setShowStatementModal(true);
+                            }}
                             className="text-accent hover:text-accent-strong"
                           >
                             <Eye className="h-4 w-4" /> View
@@ -172,7 +179,10 @@ export default function TenantBilling() {
       {showPaymentModal && selectedInvoice && (
         <Modal
           open={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setReceiptName("");
+          }}
           title={`Pay Invoice ${selectedInvoice.id}`}
           footer={
             !paymentSuccess ? (
@@ -230,13 +240,124 @@ export default function TenantBilling() {
                 <label className="block text-xs font-semibold text-muted">
                   Upload Receipt Screenshot (Optional)
                 </label>
-                <div className="cursor-pointer rounded-xl border-2 border-dashed border-edge-strong p-4 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40">
+                <label
+                  htmlFor="receipt-upload"
+                  className="block cursor-pointer rounded-xl border-2 border-dashed border-edge-strong p-4 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40"
+                >
+                  <input
+                    id="receipt-upload"
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      setReceiptName(file ? file.name : "");
+                    }}
+                  />
                   <Receipt className="mx-auto mb-1 h-6 w-6 text-muted" />
-                  <p className="text-xs text-muted">Click or drag image of GCash receipt</p>
-                </div>
+                  {receiptName ? (
+                    <p className="text-xs font-semibold text-fg">{receiptName}</p>
+                  ) : (
+                    <p className="text-xs text-muted">Click or drag image of GCash receipt</p>
+                  )}
+                </label>
               </div>
             </form>
           )}
+        </Modal>
+      )}
+    {/* Invoice Statement Modal */}
+      {showStatementModal && selectedInvoice && (
+        <Modal
+          open={showStatementModal}
+          onClose={() => setShowStatementModal(false)}
+          title={`Invoice Statement — ${selectedInvoice.id}`}
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={() => setShowStatementModal(false)}>
+                Close
+              </Button>
+              {selectedInvoice.status === "unpaid" && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowStatementModal(false);
+                    setReceiptName("");
+                    setShowPaymentModal(true);
+                  }}
+                >
+                  Pay via GCash
+                </Button>
+              )}
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl border border-edge bg-inset p-3">
+                <p className="text-muted">Invoice Number</p>
+                <p className="mt-0.5 font-bold text-fg font-mono">{selectedInvoice.id}</p>
+              </div>
+              <div className="rounded-xl border border-edge bg-inset p-3">
+                <p className="text-muted">Due Date</p>
+                <p className="mt-0.5 font-bold text-fg">{selectedInvoice.dueDate}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 rounded-2xl border border-edge p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Billing Breakdown
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Monthly Rent</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  ₱{selectedInvoice.rent.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Electricity</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  ₱{selectedInvoice.electricity.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Water</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  ₱{selectedInvoice.water.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Late Fee</span>
+                <span className="font-semibold text-fg tabular-nums">
+                  ₱{selectedInvoice.lateFee.toFixed(2)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-edge pt-2 text-sm">
+                <span className="font-bold text-fg">Total Amount Due</span>
+                <span className="font-extrabold text-fg tabular-nums">
+                  ₱{selectedInvoice.totalAmount.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted">Payment Status</span>
+              <Badge
+                dot
+                variant={
+                  selectedInvoice.status === "paid"
+                    ? "success"
+                    : selectedInvoice.status === "pending_verification"
+                    ? "warning"
+                    : "danger"
+                }
+              >
+                {selectedInvoice.status === "pending_verification"
+                  ? "Pending Approval"
+                  : selectedInvoice.status}
+              </Badge>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

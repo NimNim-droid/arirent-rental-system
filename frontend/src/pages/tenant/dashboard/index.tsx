@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   CheckCircle2,
   Home,
@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function TenantDashboard() {
+  const navigate = useNavigate();
   const rawUser = localStorage.getItem("arirent_current_user");
   const user = rawUser ? JSON.parse(rawUser) : { name: "Maria Santos", email: "maria@example.com" };
 
@@ -49,7 +50,11 @@ export default function TenantDashboard() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Balance Card */}
-        <Card className="flex flex-col justify-between border-success-border bg-gradient-to-br from-success-bg to-success-bg/30 p-6 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+        <Card
+          onClick={() => navigate("/tenant/billing")}
+          className="flex flex-col justify-between border-success-border bg-gradient-to-br from-success-bg to-success-bg/30 p-6 animate-fade-in-up stagger"
+          style={{ "--i": 0 } as CSSProperties}
+        >
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-success-fg">
@@ -68,7 +73,11 @@ export default function TenantDashboard() {
         </Card>
 
         {/* Assigned Room Card */}
-        <Card className="flex flex-col justify-between p-6 animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+        <Card
+          onClick={() => navigate("/tenant/billing")}
+          className="flex flex-col justify-between p-6 animate-fade-in-up stagger"
+          style={{ "--i": 1 } as CSSProperties}
+        >
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
@@ -87,7 +96,11 @@ export default function TenantDashboard() {
         </Card>
 
         {/* Utility Consumption */}
-        <Card className="flex flex-col justify-between p-6 animate-fade-in-up stagger" style={{ "--i": 2 } as CSSProperties}>
+        <Card
+          onClick={() => navigate("/tenant/billing")}
+          className="flex flex-col justify-between p-6 animate-fade-in-up stagger"
+          style={{ "--i": 2 } as CSSProperties}
+        >
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
@@ -108,7 +121,11 @@ export default function TenantDashboard() {
 
       {/* Quick Access Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Card className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
+        <Card
+          onClick={() => navigate("/tenant/maintenance")}
+          className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center animate-fade-in-up stagger"
+          style={{ "--i": 0 } as CSSProperties}
+        >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-2xl bg-warning-bg text-warning-fg ring-1 ring-inset ring-warning-border">
               <Wrench className="h-6 w-6" />
@@ -118,14 +135,23 @@ export default function TenantDashboard() {
               <p className="text-xs text-muted">Submit a repair request to building maintenance</p>
             </div>
           </div>
-          <Link to="/tenant/maintenance" className="shrink-0">
+          <Link
+            to="/tenant/maintenance"
+            className="shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Go to maintenance"
+          >
             <Button size="sm">
               Request Repair <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         </Card>
 
-        <Card className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
+        <Card
+          onClick={() => navigate("/tenant/billing")}
+          className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center animate-fade-in-up stagger"
+          style={{ "--i": 1 } as CSSProperties}
+        >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-2xl bg-accent-soft text-accent ring-1 ring-inset ring-accent-border">
               <Receipt className="h-6 w-6" />
@@ -135,7 +161,12 @@ export default function TenantDashboard() {
               <p className="text-xs text-muted">View official QR code and submit payment receipt</p>
             </div>
           </div>
-          <Link to="/tenant/billing" className="shrink-0">
+          <Link
+            to="/tenant/billing"
+            className="shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Go to billing"
+          >
             <Button variant="secondary" size="sm">
               Pay Online <ArrowRight className="h-4 w-4" />
             </Button>
