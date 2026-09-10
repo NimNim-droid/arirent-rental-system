@@ -34,7 +34,12 @@ function readStoredUser(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<User | null>(readStoredUser);
-  const [initializing, setInitializing] = useState(true);
+  const [initializing, setInitializing] = useState(() => {
+    const cachedUser = readStoredUser();
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    // Only block if a token exists but user profile isn't yet cached in localStorage
+    return !!storedToken && !cachedUser;
+  });
 
   // Validate the stored session on first load by asking the backend for the current user.
   useEffect(() => {

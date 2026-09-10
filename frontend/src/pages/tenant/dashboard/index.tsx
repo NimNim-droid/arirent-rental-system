@@ -24,7 +24,7 @@ import type { TenantDashboardData } from "@/lib/types";
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
   const [stats, setStats] = useState<TenantDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,8 +43,14 @@ export default function TenantDashboard() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!initializing) {
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      loadData();
+    }
+  }, [user, initializing, loadData, navigate]);
 
   const unit = stats?.unit;
   const elec = stats?.electricity;

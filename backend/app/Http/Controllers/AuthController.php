@@ -85,11 +85,13 @@ class AuthController extends Controller
             ], 409);
         }
 
+        $hashedPassword = Hash::make($request->password);
+
         // 1. Create User account
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => $hashedPassword,
             'role' => 'tenant',
         ]);
 
@@ -106,7 +108,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make($request->password),
+            'password' => $hashedPassword,
             'status' => 'pending_approval',
             'balance' => 0.00,
             'water_rate' => 500.00,

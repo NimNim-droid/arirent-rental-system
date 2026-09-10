@@ -11,6 +11,16 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('property_id')) {
+            $cleaned = (int) preg_replace('/[^0-9]/', '', (string) $this->property_id);
+            $this->merge([
+                'property_id' => $cleaned > 0 ? $cleaned : $this->property_id,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [

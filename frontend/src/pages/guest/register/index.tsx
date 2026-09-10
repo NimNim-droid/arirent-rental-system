@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { Building2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
+import { propertiesService } from "@/lib/services/properties";
 import { getErrorMessage } from "@/lib/errors";
 
 export default function RegisterPage() {
@@ -15,15 +16,41 @@ export default function RegisterPage() {
   const [submitted, setSubmitted] = useState<{ name: string; room: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [properties, setProperties] = useState<{ id: string; name: string }[]>([
+    { id: "1", name: "AriRent Residences - Makati" },
+    { id: "2", name: "AriRent Heights - Quezon City" },
+  ]);
+  const [rooms, setRooms] = useState<{ id: string; room_number: string; rent: number }[]>([
+    { id: "2", room_number: "102", rent: 12000 },
+    { id: "3", room_number: "105", rent: 8500 },
+    { id: "5", room_number: "201", rent: 6500 },
+  ]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    property_id: "prop-1",
-    room_number: "101",
+    property_id: "1",
+    room_number: "102",
     password: "",
     password_confirmation: "",
   });
+
+  useEffect(() => {
+    propertiesService.getProperties().then((res) => {
+      if (res && res.length > 0) {
+        setProperties(res);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    propertiesService.getRooms({ property_id: formData.property_id, status: "vacant" }).then((res) => {
+      if (res && res.length > 0) {
+        setRooms(res);
+        setFormData((prev) => ({ ...prev, room_number: res[0].room_number }));
+      }
+    }).catch(() => {});
+  }, [formData.property_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,19 +159,24 @@ export default function RegisterPage() {
                 value={formData.property_id}
                 onChange={(e) => setFormData({ ...formData, property_id: e.target.value })}
               >
-                <option value="prop-1">AriRent Residences - Makati</option>
-                <option value="prop-2">AriRent Heights - Quezon City</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
               </Select>
 
               <Select
                 id="room"
-                label="Select Room"
+                label="Select Available Room"
                 value={formData.room_number}
                 onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
               >
-                <option value="101">Room 101 (₱5,000/mo)</option>
-                <option value="102">Room 102 (₱5,500/mo)</option>
-                <option value="203">Room 203 (₱6,000/mo)</option>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.room_number}>
+                    Room {r.room_number} (₱{Number(r.rent).toLocaleString()}/mo)
+                  </option>
+                ))}
               </Select>
             </div>
 

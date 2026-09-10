@@ -30,11 +30,13 @@ import {
 import { SkeletonCards, SkeletonRows } from "@/components/ui/skeleton";
 import { dashboardService } from "@/lib/services/dashboard";
 import { propertiesService } from "@/lib/services/properties";
+import { useAuth } from "@/lib/auth-context";
 import { getErrorMessage } from "@/lib/errors";
 import type { DashboardStats, Property, MaintenanceTicket } from "@/lib/types";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { user, initializing } = useAuth();
   const [selectedProperty, setSelectedProperty] = useState("all");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -61,9 +63,15 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadData();
+    if (!initializing) {
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProperty]);
+  }, [user, initializing, selectedProperty]);
 
   const visibleProperties =
     selectedProperty === "all"
