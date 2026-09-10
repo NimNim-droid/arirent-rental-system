@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 interface SidebarProps {
   role: "admin" | "tenant";
@@ -26,13 +27,13 @@ const COLLAPSE_KEY = "arirent_sidebar_collapsed";
 
 export function Sidebar({ role, open = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "true"
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("arirent_token");
-    localStorage.removeItem("arirent_current_user");
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -61,8 +62,6 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
 
   const links = role === "admin" ? adminLinks : tenantLinks;
 
-  const rawUser = localStorage.getItem("arirent_current_user");
-  const user = rawUser ? JSON.parse(rawUser) : null;
   const initials = String(user?.name || "D")
     .split(" ")
     .map((n) => n[0])
@@ -156,9 +155,9 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
                 {initials}
               </div>
               <div className="min-w-0 truncate">
-                <p className="truncate text-sm font-bold text-fg">{user?.name || "Demo User"}</p>
+                <p className="truncate text-sm font-bold text-fg">{user?.name || ""}</p>
                 <p className="truncate text-[11px] text-muted">
-                  {user?.email || "user@arirent.com"}
+                  {user?.email || ""}
                 </p>
               </div>
             </div>
@@ -169,15 +168,15 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
                   {initials}
                 </div>
                 <div className="min-w-0 truncate">
-                  <p className="truncate text-sm font-bold text-fg">{user?.name || "Demo User"}</p>
+                  <p className="truncate text-sm font-bold text-fg">{user?.name || ""}</p>
                   <p className="truncate text-[11px] text-muted">
-                    {user?.email || "user@arirent.com"}
+                    {user?.email || ""}
                   </p>
                 </div>
               </div>
               <div
                 className="hidden justify-center py-1 lg:flex"
-                title={user?.name || "Demo User"}
+                title={user?.name || ""}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
                   {initials}

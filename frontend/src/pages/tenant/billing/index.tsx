@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { CheckCircle2, Eye, Receipt } from "lucide-react";
+import { CheckCircle, Eye, Receipt, RefreshCw, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,54 +17,82 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { useFakeLoading } from "@/lib/hooks";
+import { billingService } from "@/lib/services/billing";
+import { dashboardService } from "@/lib/services/dashboard";
+import { getErrorMessage } from "@/lib/errors";
+import type { Bill, Settings } from "@/lib/types";
+
+function fmtMoney(n: number) {
+  return `₱${n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export default function TenantBilling() {
-  const loading = useFakeLoading();
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Bill | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [gcashRef, setGcashRef] = useState("");
-  const [receiptName, setReceiptName] = useState("");
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentMsg, setPaymentMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [bills, setBills] = useState([
-    {
-      id: "INV-2026-091",
-      rent: 5000,
-      electricity: 1250,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6750,
-      dueDate: "2026-09-15",
-      status: "unpaid",
-    },
-    {
-      id: "INV-2026-081",
-      rent: 5000,
-      electricity: 1180,
-      water: 500,
-      lateFee: 0,
-      totalAmount: 6680,
-      dueDate: "2026-08-15",
-      status: "paid",
-    },
-  ]);
+  const loadBills = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [billsRes, dash] = await Promise.all([
+        billingService.getBills({ per_page: 100 }),
+        dashboardService.getTenantDashboard(),
+      ]);
+      setBills(billsRes.data);
+      setSettings(dash.settings ?? null);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load your invoices."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadBills();
+  }, [loadBills]);
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBills(
-      bills.map((b) =>
-        b.id === selectedInvoice.id ? { ...b, status: "pending_verification" } : b
-      )
-    );
-    setPaymentSuccess(true);
-    setTimeout(() => {
-      setPaymentSuccess(false);
-      setShowPaymentModal(false);
-      setSelectedInvoice(null);
-      setReceiptName("");
-    }, 1800);
+    if (!selectedInvoice) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const msg = await billingService.submitPayment(selectedInvoice.id, {
+        gcash_ref: gcashRef,
+        receipt: receipt || undefined,
+      });
+      setPaymentMsg(msg);
+      await loadBills();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to submit your payment."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openPayment = (bill: Bill) => {
+    setSelectedInvoice(bill);
+    setGcashRef("");
+    setReceipt(null);
+    setPaymentMsg("");
+    setShowPaymentModal(true);
+  };
+
+  const openStatement = (bill: Bill) => {
+    setSelectedInvoice(bill);
+    setShowStatementModal(true);
   };
 
   return (
@@ -74,12 +102,30 @@ export default function TenantBilling() {
         subtitle="View breakdown of room rent, electricity consumption, and pay via GCash"
       />
 
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={loadBills}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Invoices List */}
       <Card className="p-0 overflow-hidden animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
         {loading ? (
           <div className="p-5">
             <SkeletonRows rows={4} />
           </div>
+        ) : bills.length === 0 ? (
+          <EmptyState
+            title="No invoices yet"
+            description="Your monthly invoice will appear here once it is generated."
+          />
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -96,79 +142,60 @@ export default function TenantBilling() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bills.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8}>
-                      <EmptyState
-                        title="No invoices yet"
-                        description="Your monthly invoice will appear here once it is generated."
-                      />
+                {bills.map((bill, i) => (
+                  <TableRow key={bill.id} index={i}>
+                    <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
+                      {bill.id}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.rent)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.electricity)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                      {fmtMoney(bill.water)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
+                      {fmtMoney(bill.total_amount)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted whitespace-nowrap">
+                      {bill.due_date}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        dot
+                        variant={
+                          bill.status === "paid"
+                            ? "success"
+                            : bill.status === "pending_verification"
+                            ? "warning"
+                            : "danger"
+                        }
+                      >
+                        {bill.status === "pending_verification"
+                          ? "Pending Approval"
+                          : bill.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {bill.status === "unpaid" ? (
+                        <Button size="sm" onClick={() => openPayment(bill)}>
+                          Pay GCash
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatement(bill)}
+                          className="text-accent hover:text-accent-strong"
+                        >
+                          <Eye className="h-4 w-4" /> View
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
-                ) : (
-                  bills.map((bill, i) => (
-                    <TableRow key={bill.id} index={i}>
-                      <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
-                        {bill.id}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
-                        ₱{bill.rent.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
-                        ₱{bill.electricity.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
-                        ₱{bill.water.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
-                        ₱{bill.totalAmount.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted whitespace-nowrap">
-                        {bill.dueDate}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          dot
-                          variant={
-                            bill.status === "paid"
-                              ? "success"
-                              : bill.status === "pending_verification"
-                              ? "warning"
-                              : "danger"
-                          }
-                        >
-                          {bill.status === "pending_verification" ? "Pending Approval" : bill.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {bill.status === "unpaid" ? (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedInvoice(bill);
-                              setReceiptName("");
-                              setShowPaymentModal(true);
-                            }}
-                          >
-                            Pay GCash
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedInvoice(bill);
-                              setShowStatementModal(true);
-                            }}
-                            className="text-accent hover:text-accent-strong"
-                          >
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
@@ -181,48 +208,51 @@ export default function TenantBilling() {
           open={showPaymentModal}
           onClose={() => {
             setShowPaymentModal(false);
-            setReceiptName("");
+            setSelectedInvoice(null);
           }}
           title={`Pay Invoice ${selectedInvoice.id}`}
           footer={
-            !paymentSuccess ? (
+            paymentMsg ? (
+              <Button type="button" onClick={() => setShowPaymentModal(false)}>
+                Done
+              </Button>
+            ) : (
               <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setShowPaymentModal(false)}
-                >
+                <Button type="button" variant="secondary" onClick={() => setShowPaymentModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" form="payment-form">
-                  Submit Verification
+                <Button type="submit" form="payment-form" loading={submitting}>
+                  {!submitting && "Submit for Verification"}
                 </Button>
               </>
-            ) : undefined
+            )
           }
         >
-          {paymentSuccess ? (
+          {paymentMsg ? (
             <div className="space-y-3 py-6 text-center">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-success-fg" />
+              <CheckCircle className="mx-auto h-12 w-12 text-success-fg" />
               <h3 className="text-lg font-bold text-fg">Payment Submitted!</h3>
-              <p className="text-xs text-muted">
-                Your payment reference has been recorded and submitted to management for verification.
-              </p>
+              <p className="text-xs text-muted">{paymentMsg}</p>
             </div>
           ) : (
             <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-4">
               <div className="rounded-2xl border border-accent-border bg-accent-soft text-center p-4">
                 <p className="text-xs font-bold uppercase tracking-wider text-accent">Total Due</p>
                 <p className="mt-1 text-3xl font-extrabold text-fg tabular-nums">
-                  ₱{selectedInvoice.totalAmount.toFixed(2)}
+                  {fmtMoney(selectedInvoice.total_amount)}
                 </p>
               </div>
 
               <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-4 text-xs">
-                <p className="font-bold text-fg">GCash Account Name: ARIRENT PROPERTY MANAGEMENT</p>
-                <p className="font-bold text-fg">GCash Number: 0917-888-9999</p>
+                <p className="font-bold text-fg">
+                  GCash Account Name: {settings?.gcash_name ?? "—"}
+                </p>
+                <p className="font-bold text-fg">
+                  GCash Number: {settings?.gcash_number ?? "—"}
+                </p>
                 <p className="pt-1 text-muted">
-                  Please send the exact amount to the number above, then enter your transaction reference number below.
+                  Please send the exact amount to the number above, then enter your transaction
+                  reference number below.
                 </p>
               </div>
 
@@ -249,14 +279,11 @@ export default function TenantBilling() {
                     type="file"
                     accept="image/*,.pdf"
                     className="sr-only"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      setReceiptName(file ? file.name : "");
-                    }}
+                    onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
                   />
                   <Receipt className="mx-auto mb-1 h-6 w-6 text-muted" />
-                  {receiptName ? (
-                    <p className="text-xs font-semibold text-fg">{receiptName}</p>
+                  {receipt ? (
+                    <p className="text-xs font-semibold text-fg">{receipt.name}</p>
                   ) : (
                     <p className="text-xs text-muted">Click or drag image of GCash receipt</p>
                   )}
@@ -266,7 +293,8 @@ export default function TenantBilling() {
           )}
         </Modal>
       )}
-    {/* Invoice Statement Modal */}
+
+      {/* Invoice Statement Modal */}
       {showStatementModal && selectedInvoice && (
         <Modal
           open={showStatementModal}
@@ -282,8 +310,7 @@ export default function TenantBilling() {
                   type="button"
                   onClick={() => {
                     setShowStatementModal(false);
-                    setReceiptName("");
-                    setShowPaymentModal(true);
+                    openPayment(selectedInvoice);
                   }}
                 >
                   Pay via GCash
@@ -300,7 +327,7 @@ export default function TenantBilling() {
               </div>
               <div className="rounded-xl border border-edge bg-inset p-3">
                 <p className="text-muted">Due Date</p>
-                <p className="mt-0.5 font-bold text-fg">{selectedInvoice.dueDate}</p>
+                <p className="mt-0.5 font-bold text-fg">{selectedInvoice.due_date}</p>
               </div>
             </div>
 
@@ -311,31 +338,31 @@ export default function TenantBilling() {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Monthly Rent</span>
                 <span className="font-semibold text-fg tabular-nums">
-                  ₱{selectedInvoice.rent.toFixed(2)}
+                  {fmtMoney(selectedInvoice.rent)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Electricity</span>
                 <span className="font-semibold text-fg tabular-nums">
-                  ₱{selectedInvoice.electricity.toFixed(2)}
+                  {fmtMoney(selectedInvoice.electricity)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Water</span>
                 <span className="font-semibold text-fg tabular-nums">
-                  ₱{selectedInvoice.water.toFixed(2)}
+                  {fmtMoney(selectedInvoice.water)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Late Fee</span>
                 <span className="font-semibold text-fg tabular-nums">
-                  ₱{selectedInvoice.lateFee.toFixed(2)}
+                  {fmtMoney(selectedInvoice.late_fee)}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between border-t border-edge pt-2 text-sm">
                 <span className="font-bold text-fg">Total Amount Due</span>
                 <span className="font-extrabold text-fg tabular-nums">
-                  ₱{selectedInvoice.totalAmount.toFixed(2)}
+                  {fmtMoney(selectedInvoice.total_amount)}
                 </span>
               </div>
             </div>

@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { Phone, Send, ClipboardList, Wrench, CheckCircle2 } from "lucide-react";
+import {
+  Phone,
+  Send,
+  ClipboardList,
+  Wrench,
+  CheckCircle2,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
@@ -11,50 +19,70 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonRows } from "@/components/ui/skeleton";
+import { maintenanceService } from "@/lib/services/maintenance";
+import { getErrorMessage } from "@/lib/errors";
+import type { MaintenanceTicket } from "@/lib/types";
+
+const ISSUE_TYPES: { value: MaintenanceTicket["type"]; label: string }[] = [
+  { value: "plumbing", label: "Plumbing (sink, toilet, pipe)" },
+  { value: "electrical", label: "Electrical (lights, outlets, switch)" },
+  { value: "appliances", label: "Appliances (AC, fridge, water heater)" },
+  { value: "general", label: "Other / General" },
+];
+
+function ticketId(t: MaintenanceTicket) {
+  return /^\d+$/.test(t.id) ? `#${t.id}` : t.id;
+}
 
 export default function TenantMaintenance() {
-  const [subject, setSubject] = useState("");
-  const [details, setDetails] = useState("");
-  const [issueType, setIssueType] = useState("plumbing");
-  const [submitted, setSubmitted] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [description, setDescription] = useState("");
+  const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>("plumbing");
+  const [priority, setPriority] = useState<MaintenanceTicket["priority"]>("normal");
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<MaintenanceTicket | null>(null);
+  const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [tickets, setTickets] = useState([
-    {
-      id: "T-101",
-      type: "plumbing",
-      description: "Bathroom sink pipe leaking water on floor.",
-      priority: "urgent",
-      status: "pending",
-      date: "2026-09-08",
-    },
-    {
-      id: "T-098",
-      type: "electrical",
-      description: "Replaced broken ceiling light fixture.",
-      priority: "normal",
-      status: "resolved",
-      date: "2026-08-21",
-    },
-  ]);
+  const loadTickets = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await maintenanceService.getTickets({ per_page: 100 });
+      setTickets(res.data);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load your requests."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTickets([
-      {
-        id: `T-${Math.floor(100 + Math.random() * 900)}`,
+    setSubmitting(true);
+    setError("");
+    setNotice("");
+    try {
+      await maintenanceService.createTicket({
         type: issueType,
-        description: details || subject,
-        priority: "normal",
-        status: "pending",
-        date: new Date().toISOString().slice(0, 10),
-      },
-      ...tickets,
-    ]);
-    setSubject("");
-    setDetails("");
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+        description,
+        priority,
+      });
+      setDescription("");
+      setPriority("normal");
+      setNotice("Request submitted! Our maintenance team will respond within 24 hours.");
+      await loadTickets();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to submit your request."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -63,6 +91,26 @@ export default function TenantMaintenance() {
         title="Maintenance Requests"
         subtitle="Submit repair requests anytime — our team responds within 24 hours"
       />
+
+      {notice && (
+        <div className="flex items-center gap-2 rounded-xl border border-success-border bg-success-bg px-4 py-3 text-xs font-semibold text-success-fg">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {notice}
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={loadTickets}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* New Request Form */}
@@ -78,31 +126,35 @@ export default function TenantMaintenance() {
               id="type"
               label="Issue Type"
               value={issueType}
-              onChange={(e) => setIssueType(e.target.value)}
+              onChange={(e) => setIssueType(e.target.value as MaintenanceTicket["type"])}
             >
-              <option value="plumbing">Plumbing (sink, toilet, pipe)</option>
-              <option value="electrical">Electrical (lights, outlets, switch)</option>
-              <option value="appliances">Appliances (AC, fridge, water heater)</option>
-              <option value="structural">Structural (wall, ceiling, door, window)</option>
-              <option value="pest">Pest / Sanitation</option>
-              <option value="other">Other / General</option>
+              {ISSUE_TYPES.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </Select>
 
-            <Input
-              id="subject"
-              label="Short Description"
-              placeholder="e.g. Sink pipe leaking"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                id="priority"
+                label="Priority"
+                value={priority}
+                onChange={(e) =>
+                  setPriority(e.target.value as MaintenanceTicket["priority"])
+                }
+              >
+                <option value="normal">Normal</option>
+                <option value="urgent">Urgent</option>
+              </Select>
+            </div>
 
             <Textarea
-              id="details"
+              id="description"
               label="Full Details"
               placeholder="When did it start? How severe is it? Any other helpful info..."
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               required
             />
 
@@ -122,13 +174,8 @@ export default function TenantMaintenance() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              {submitted ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Submitted! Tracking ID: T-{tickets[0]?.id}
-                </>
-              ) : (
+            <Button type="submit" className="w-full" loading={submitting} disabled={!description.trim()}>
+              {!submitting && (
                 <>
                   <Send className="h-4 w-4" /> Submit Request
                 </>
@@ -146,7 +193,9 @@ export default function TenantMaintenance() {
           />
 
           <div className="mt-5 space-y-3">
-            {tickets.length === 0 ? (
+            {loading ? (
+              <SkeletonRows rows={4} />
+            ) : tickets.length === 0 ? (
               <EmptyState
                 title="No requests yet"
                 description="Your submitted repair requests will show up here."
@@ -161,7 +210,7 @@ export default function TenantMaintenance() {
                   style={{ "--i": i + 1 } as CSSProperties}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-bold text-accent">{t.id}</span>
+                    <span className="font-mono text-xs font-bold text-accent">{ticketId(t)}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] text-muted">{t.date}</span>
                       <Badge
@@ -170,7 +219,7 @@ export default function TenantMaintenance() {
                           t.priority === "urgent" ? "danger" : t.status === "resolved" ? "success" : "warning"
                         }
                       >
-                        {t.status === "pending" ? "Pending" : t.status}
+                        {t.status === "pending" ? "Pending" : t.status.replace("_", " ")}
                       </Badge>
                     </div>
                   </div>
@@ -189,7 +238,7 @@ export default function TenantMaintenance() {
         <Modal
           open={!!selectedTicket}
           onClose={() => setSelectedTicket(null)}
-          title={`Request ${selectedTicket.id}`}
+          title={`Request ${ticketId(selectedTicket)}`}
           footer={
             <Button type="button" onClick={() => setSelectedTicket(null)}>
               Close
@@ -211,7 +260,7 @@ export default function TenantMaintenance() {
                     : "warning"
                 }
               >
-                {selectedTicket.status === "pending" ? "Pending" : selectedTicket.status}
+                {selectedTicket.status === "pending" ? "Pending" : selectedTicket.status.replace("_", " ")}
               </Badge>
             </div>
             <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-4 text-xs">
@@ -223,6 +272,22 @@ export default function TenantMaintenance() {
                 <span className="text-muted">Date Submitted</span>
                 <span className="font-bold capitalize text-fg">{selectedTicket.date}</span>
               </div>
+              {selectedTicket.technician_name && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Technician</span>
+                  <span className="font-bold capitalize text-fg">
+                    {selectedTicket.technician_name}
+                  </span>
+                </div>
+              )}
+              {selectedTicket.admin_notes && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted">Admin Notes</span>
+                  <span className="font-bold text-right text-fg">
+                    {selectedTicket.admin_notes}
+                  </span>
+                </div>
+              )}
             </div>
             <p className="text-sm leading-relaxed text-fg-soft">{selectedTicket.description}</p>
             <p className="text-[11px] text-muted">

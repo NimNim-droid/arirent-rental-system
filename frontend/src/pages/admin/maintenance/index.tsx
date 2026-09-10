@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { CheckCircle2, UserCheck, SearchX } from "lucide-react";
+import { CheckCircle2, UserCheck, SearchX, RefreshCw, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
-import { useFakeLoading } from "@/lib/hooks";
+import { maintenanceService } from "@/lib/services/maintenance";
+import { getErrorMessage } from "@/lib/errors";
+import type { MaintenanceTicket } from "@/lib/types";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -20,66 +22,78 @@ const FILTERS = [
   { value: "resolved", label: "Resolved" },
 ];
 
+function ticketId(t: MaintenanceTicket) {
+  return /^\d+$/.test(t.id) ? `#${t.id}` : t.id;
+}
+
 export default function AdminMaintenance() {
-  const loading = useFakeLoading();
+  const [tickets, setTickets] = useState<MaintenanceTicket[]>([]);
   const [filter, setFilter] = useState("all");
-  const [activeTicket, setActiveTicket] = useState<any>(null);
+  const [activeTicket, setActiveTicket] = useState<MaintenanceTicket | null>(null);
   const [techName, setTechName] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [tickets, setTickets] = useState([
-    {
-      id: "T-101",
-      room: "101",
-      tenant: "Maria Santos",
-      type: "plumbing",
-      description: "Bathroom sink pipe leaking water on floor.",
-      priority: "urgent",
-      status: "pending",
-      date: "2026-09-08",
-      technician: "",
-    },
-    {
-      id: "T-102",
-      room: "204",
-      tenant: "Carlos Reyes",
-      type: "electrical",
-      description: "Light switch in bedroom not working.",
-      priority: "normal",
-      status: "in_progress",
-      date: "2026-09-07",
-      technician: "Kuya Roger",
-    },
-    {
-      id: "T-103",
-      room: "302",
-      tenant: "Elena Gomez",
-      type: "appliances",
-      description: "Air conditioner making loud buzzing sound.",
-      priority: "urgent",
-      status: "resolved",
-      date: "2026-09-05",
-      technician: "Tech Master Alex",
-    },
-  ]);
+  const loadTickets = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await maintenanceService.getTickets({ per_page: 200 });
+      setTickets(res.data);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load maintenance tickets."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleDispatch = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
+
+  const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTickets(
-      tickets.map((t) =>
-        t.id === activeTicket.id
-          ? { ...t, status: "in_progress", technician: techName }
-          : t
-      )
-    );
-    setActiveTicket(null);
+    if (!activeTicket) return;
+    setBusyId(activeTicket.id);
+    setError("");
+    try {
+      await maintenanceService.dispatchTicket(activeTicket.id, {
+        technician_name: techName,
+        admin_notes: adminNotes || undefined,
+      });
+      setActiveTicket(null);
+      setTechName("");
+      setAdminNotes("");
+      await loadTickets();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to dispatch a technician."));
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleMarkResolved = (id: string) => {
-    setTickets(
-      tickets.map((t) => (t.id === id ? { ...t, status: "resolved" } : t))
-    );
+  const handleMarkResolved = async (id: string) => {
+    setBusyId(id);
+    setError("");
+    try {
+      await maintenanceService.resolveTicket(id);
+      await loadTickets();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to mark the ticket as resolved."));
+    } finally {
+      setBusyId(null);
+    }
   };
+
+  const counts = FILTERS.reduce<Record<string, number>>((acc, tab) => {
+    acc[tab.value] =
+      tab.value === "all"
+        ? tickets.length
+        : tickets.filter((t) => t.status === tab.value).length;
+    return acc;
+  }, {});
 
   const filteredTickets =
     filter === "all" ? tickets : tickets.filter((t) => t.status === filter);
@@ -90,6 +104,19 @@ export default function AdminMaintenance() {
         title="Maintenance Dispatch"
         subtitle="Review tenant repair requests, dispatch technicians, and track resolution status"
       />
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={loadTickets}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-edge bg-inset p-1 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
@@ -111,15 +138,12 @@ export default function AdminMaintenance() {
                 filter === tab.value ? "bg-accent text-white" : "bg-hover text-muted"
               )}
             >
-              {tab.value === "all"
-                ? tickets.length
-                : tickets.filter((t) => t.status === tab.value).length}
+              {counts[tab.value] ?? 0}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Ticket List */}
       {loading ? (
         <SkeletonCards cards={3} />
       ) : filteredTickets.length === 0 ? (
@@ -136,7 +160,7 @@ export default function AdminMaintenance() {
             <Card key={t.id} className="flex flex-col justify-between space-y-4 p-5 animate-fade-in-up stagger" style={{ "--i": i + 1 } as CSSProperties}>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-bold text-accent">{t.id}</span>
+                  <span className="font-mono text-xs font-bold text-accent">{ticketId(t)}</span>
                   <Badge variant={t.priority === "urgent" ? "danger" : "neutral"} dot>
                     {t.priority}
                   </Badge>
@@ -144,7 +168,9 @@ export default function AdminMaintenance() {
 
                 <div className="mt-3">
                   <h3 className="text-base font-bold text-fg">Room {t.room}</h3>
-                  <p className="text-xs text-muted">Tenant: {t.tenant} • {t.date}</p>
+                  <p className="text-xs text-muted">
+                    Tenant: {t.tenant_name} • {t.date}
+                  </p>
                 </div>
 
                 <div className="mt-2 rounded-xl border border-edge bg-inset p-3">
@@ -154,12 +180,18 @@ export default function AdminMaintenance() {
                   <p className="mt-1 text-sm text-fg-soft">{t.description}</p>
                 </div>
 
-                {t.technician && (
-                  <div className="mt-3 flex items-center gap-1.5 text-xs text-muted">
-                    <UserCheck className="h-4 w-4 text-success-fg" />
-                    Assigned Tech: <strong className="text-fg-soft">{t.technician}</strong>
-                  </div>
-                )}
+                <div className="mt-3 space-y-1.5">
+                  {t.technician_name && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <UserCheck className="h-4 w-4 text-success-fg" />
+                      Assigned Tech:{" "}
+                      <strong className="text-fg-soft">{t.technician_name}</strong>
+                    </div>
+                  )}
+                  {t.admin_notes && (
+                    <p className="text-xs text-muted italic">"{t.admin_notes}"</p>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 border-t border-edge pt-3">
@@ -171,7 +203,8 @@ export default function AdminMaintenance() {
                       className="flex-1 text-xs"
                       onClick={() => {
                         setActiveTicket(t);
-                        setTechName(t.technician || "");
+                        setTechName(t.technician_name || "");
+                        setAdminNotes(t.admin_notes || "");
                       }}
                     >
                       Dispatch Tech
@@ -179,10 +212,15 @@ export default function AdminMaintenance() {
                     <Button
                       size="sm"
                       className="text-xs"
+                      loading={busyId === t.id}
                       onClick={() => handleMarkResolved(t.id)}
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Resolved
+                      {busyId !== t.id && (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Resolved
+                        </>
+                      )}
                     </Button>
                   </>
                 ) : (
@@ -201,21 +239,22 @@ export default function AdminMaintenance() {
         <Modal
           open={!!activeTicket}
           onClose={() => setActiveTicket(null)}
-          title={`Dispatch Technician — ${activeTicket.id}`}
+          title={`Dispatch Technician — ${ticketId(activeTicket)}`}
           footer={
             <>
               <Button type="button" variant="secondary" onClick={() => setActiveTicket(null)}>
                 Cancel
               </Button>
-              <Button type="submit" form="dispatch-form">
-                Confirm Dispatch
+              <Button type="submit" form="dispatch-form" loading={busyId === activeTicket.id}>
+                {busyId !== activeTicket.id && "Confirm Dispatch"}
               </Button>
             </>
           }
         >
           <form id="dispatch-form" onSubmit={handleDispatch} className="space-y-4">
             <p className="text-xs text-muted">
-              Assign a maintenance personnel to Room <strong className="text-fg">{activeTicket.room}</strong> for{" "}
+              Assign a maintenance personnel to Room{" "}
+              <strong className="text-fg">{activeTicket.room}</strong> for{" "}
               {activeTicket.type}.
             </p>
 

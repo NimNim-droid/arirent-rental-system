@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { UserCheck, UserX, Search } from "lucide-react";
+import {
+  UserCheck,
+  UserX,
+  Search,
+  RefreshCw,
+  AlertTriangle,
+  LogOut,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
@@ -18,7 +25,9 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { useFakeLoading } from "@/lib/hooks";
+import { tenantsService } from "@/lib/services/tenants";
+import { getErrorMessage } from "@/lib/errors";
+import type { Tenant } from "@/lib/types";
 
 function Avatar({ name, className }: { name: string; className?: string }) {
   const initials = String(name)
@@ -36,100 +45,78 @@ function Avatar({ name, className }: { name: string; className?: string }) {
   );
 }
 
+function formatDate(value?: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function AdminTenants() {
-  const loading = useFakeLoading();
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTenant, setSelectedTenant] = useState<any>(null);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [pendingApplicants, setPendingApplicants] = useState([
-    {
-      id: "app-1",
-      name: "Juan Miguel",
-      email: "juan.m@example.com",
-      phone: "0918-333-4444",
-      room: "105",
-      property: "AriRent Residences - Makati",
-      appliedDate: "2026-09-07",
-    },
-    {
-      id: "app-2",
-      name: "Angela De Silva",
-      email: "angela@example.com",
-      phone: "0920-555-8888",
-      room: "201",
-      property: "AriRent Heights - Quezon City",
-      appliedDate: "2026-09-08",
-    },
-  ]);
+  const loadTenants = useCallback(async (search?: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await tenantsService.getTenants({ search, per_page: 200 });
+      setTenants(res.data);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load tenants."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const [tenants, setTenants] = useState([
-    {
-      id: "t-1",
-      name: "Maria Santos",
-      email: "maria@example.com",
-      phone: "0917-123-4567",
-      room: "101",
-      property: "AriRent Residences - Makati",
-      status: "active",
-      balance: 0,
-      waterRate: 500,
-      leaseEnd: "2027-01-15",
-    },
-    {
-      id: "t-2",
-      name: "Carlos Reyes",
-      email: "carlos@example.com",
-      phone: "0918-987-6543",
-      room: "204",
-      property: "AriRent Residences - Makati",
-      status: "active",
-      balance: 5500,
-      waterRate: 500,
-      leaseEnd: "2026-12-31",
-    },
-    {
-      id: "t-3",
-      name: "Elena Gomez",
-      email: "elena@example.com",
-      phone: "0922-456-7890",
-      room: "302",
-      property: "AriRent Heights - Quezon City",
-      status: "active",
-      balance: 0,
-      waterRate: 600,
-      leaseEnd: "2027-03-31",
-    },
-  ]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (searchTerm === "") {
+        loadTenants(undefined);
+      } else {
+        loadTenants(searchTerm);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
-  const handleApprove = (applicant: any) => {
-    setTenants([
-      ...tenants,
-      {
-        id: applicant.id,
-        name: applicant.name,
-        email: applicant.email,
-        phone: applicant.phone,
-        room: applicant.room,
-        property: applicant.property,
-        status: "active",
-        balance: 0,
-        waterRate: 500,
-        leaseEnd: "2027-09-01",
-      },
-    ]);
-    setPendingApplicants(pendingApplicants.filter((a) => a.id !== applicant.id));
+  const pendingApplicants = tenants.filter((t) => t.status === "pending_approval");
+  const residents = tenants.filter((t) => t.status !== "pending_approval");
+
+  const runAction = async (id: string, fn: () => Promise<void>) => {
+    setBusyId(id);
+    setError("");
+    try {
+      await fn();
+      await loadTenants(searchTerm || undefined);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to update the tenant."));
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleReject = (id: string) => {
-    setPendingApplicants(pendingApplicants.filter((a) => a.id !== id));
-  };
+  const handleApprove = (app: Tenant) =>
+    runAction(app.id, () => tenantsService.approveTenant(app.id));
 
-  const filteredTenants = tenants.filter(
-    (t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleReject = (app: Tenant) =>
+    runAction(app.id, () => tenantsService.rejectTenant(app.id));
+
+  const handleVacate = (tenant: Tenant) => {
+    setBusyId(tenant.id);
+    void runAction(tenant.id, () => tenantsService.vacateTenant(tenant.id)).then(() => {
+      setSelectedTenant(null);
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -138,8 +125,21 @@ export default function AdminTenants() {
         subtitle="Approve new registrations, manage active leases, and monitor resident accounts"
       />
 
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => loadTenants(searchTerm || undefined)}>
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Pending Applications Queue */}
-      {pendingApplicants.length > 0 && (
+      {!loading && !error && pendingApplicants.length > 0 && (
         <div className="space-y-4 animate-fade-in-up stagger" style={{ "--i": 0 } as CSSProperties}>
           <SectionHeader
             dot
@@ -150,14 +150,21 @@ export default function AdminTenants() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pendingApplicants.map((app, i) => (
-              <Card key={app.id} className="p-5 border-warning-border animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
+              <Card
+                key={app.id}
+                className="p-5 border-warning-border animate-fade-in-up"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="font-bold text-fg">{app.name}</h3>
-                    <p className="text-xs text-muted mt-0.5">Applied: {app.appliedDate}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      Applied: {formatDate(app.created_at)}
+                    </p>
                     <div className="mt-3 space-y-1 text-xs text-muted">
                       <p>
-                        <strong className="text-fg-soft">Room Requested:</strong> {app.room} ({app.property})
+                        <strong className="text-fg-soft">Room Requested:</strong>{" "}
+                        {app.room} ({app.property_name})
                       </p>
                       <p className="truncate">
                         <strong className="text-fg-soft">Contact:</strong> {app.phone} • {app.email}
@@ -170,18 +177,32 @@ export default function AdminTenants() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2 border-t border-warning-border/50 pt-3">
-                  <Button size="sm" onClick={() => handleApprove(app)} className="flex-1">
-                    <UserCheck className="h-4 w-4" />
-                    Approve
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    loading={busyId === app.id}
+                    onClick={() => handleApprove(app)}
+                  >
+                    {busyId !== app.id && (
+                      <>
+                        <UserCheck className="h-4 w-4" />
+                        Approve
+                      </>
+                    )}
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleReject(app.id)}
+                    loading={busyId === app.id && selectedTenant === null}
+                    onClick={() => handleReject(app)}
                     className="text-danger-fg hover:bg-danger-bg hover:border-danger-border hover:text-danger-fg"
                   >
-                    <UserX className="h-4 w-4" />
-                    Decline
+                    {busyId !== app.id && (
+                      <>
+                        <UserX className="h-4 w-4" />
+                        Decline
+                      </>
+                    )}
                   </Button>
                 </div>
               </Card>
@@ -194,7 +215,7 @@ export default function AdminTenants() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up stagger" style={{ "--i": 1 } as CSSProperties}>
           <h2 className="text-lg font-bold tracking-tight text-fg">
-            Active Residents ({tenants.length})
+            Residents ({residents.length})
           </h2>
           <Input
             icon={<Search className="h-4 w-4" />}
@@ -211,6 +232,11 @@ export default function AdminTenants() {
             <div className="p-5">
               <SkeletonRows rows={5} />
             </div>
+          ) : residents.length === 0 ? (
+            <EmptyState
+              title="No residents found"
+              description="Try adjusting your search or approving a pending application."
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -226,60 +252,53 @@ export default function AdminTenants() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTenants.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <EmptyState
-                          title="No residents found"
-                          description="Try adjusting your search or approving a pending application."
-                        />
+                  {residents.map((t, i) => (
+                    <TableRow key={t.id} index={i}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={t.name} />
+                          <p className="font-bold text-fg">{t.name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-semibold text-fg-soft">Room {t.room}</p>
+                        <p className="text-xs text-muted">{t.property_name}</p>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted">
+                        <p>{t.phone}</p>
+                        <p className="text-faint">{t.email}</p>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-fg-soft whitespace-nowrap">
+                        {formatDate(t.lease_end)}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {t.balance > 0 ? (
+                          <span className="font-bold text-warning-fg">
+                            ₱{t.balance.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-success-fg">₱0.00</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {t.status === "active" ? (
+                          <Badge variant="success" dot>Active</Badge>
+                        ) : (
+                          <Badge variant="neutral" dot>Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTenant(t)}
+                          className="text-accent hover:text-accent-strong"
+                        >
+                          Details
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredTenants.map((t, i) => (
-                      <TableRow key={t.id} index={i}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar name={t.name} />
-                            <p className="font-bold text-fg">{t.name}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="font-semibold text-fg-soft">Room {t.room}</p>
-                          <p className="text-xs text-muted">{t.property}</p>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted">
-                          <p>{t.phone}</p>
-                          <p className="text-faint">{t.email}</p>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium text-fg-soft whitespace-nowrap">
-                          {t.leaseEnd}
-                        </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">
-                          {t.balance > 0 ? (
-                            <span className="font-bold text-warning-fg">
-                              ₱{t.balance.toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="font-semibold text-success-fg">₱0.00</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="success" dot>Active</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedTenant(t)}
-                            className="text-accent hover:text-accent-strong"
-                          >
-                            Details
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </div>
@@ -305,16 +324,24 @@ export default function AdminTenants() {
               <Button
                 variant="danger"
                 size="sm"
-                onClick={() => {
-                  setTenants(tenants.filter((t) => t.id !== selectedTenant.id));
-                  setSelectedTenant(null);
-                }}
+                loading={busyId === selectedTenant.id}
+                onClick={() => handleVacate(selectedTenant)}
               >
-                End Lease / Vacate Unit
+                {busyId !== selectedTenant.id && (
+                  <>
+                    <LogOut className="h-4 w-4" />
+                    End Lease / Vacate Unit
+                  </>
+                )}
               </Button>
             </>
           }
         >
+          {error && (
+            <div className="mb-4 rounded-xl border border-danger-border bg-danger-bg px-3 py-2 text-xs font-semibold text-danger-fg">
+              {error}
+            </div>
+          )}
           <div className="flex items-center gap-3 pb-4">
             <Avatar name={selectedTenant.name} className="h-12 w-12 text-sm" />
             <div>
@@ -329,15 +356,15 @@ export default function AdminTenants() {
             </div>
             <div>
               <p className="text-xs text-muted">Property</p>
-              <p className="font-bold text-fg">{selectedTenant.property}</p>
+              <p className="font-bold text-fg">{selectedTenant.property_name}</p>
             </div>
             <div>
               <p className="text-xs text-muted">Monthly Water Rate</p>
-              <p className="font-bold text-fg">₱{selectedTenant.waterRate}</p>
+              <p className="font-bold text-fg">₱{selectedTenant.water_rate}</p>
             </div>
             <div>
               <p className="text-xs text-muted">Lease Expiration</p>
-              <p className="font-bold text-fg">{selectedTenant.leaseEnd}</p>
+              <p className="font-bold text-fg">{formatDate(selectedTenant.lease_end)}</p>
             </div>
           </div>
         </Modal>

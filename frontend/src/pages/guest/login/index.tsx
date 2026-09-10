@@ -5,44 +5,30 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Temporary mock authentication until backend is running
-    setTimeout(() => {
-      if (email.includes("admin") || email === "admin@arirent.com") {
-        const adminUser = {
-          id: "1",
-          name: "Property Manager",
-          email: email || "admin@arirent.com",
-          role: "admin",
-        };
-        localStorage.setItem("arirent_token", "demo-admin-token");
-        localStorage.setItem("arirent_current_user", JSON.stringify(adminUser));
-        navigate("/admin/dashboard");
-      } else {
-        const tenantUser = {
-          id: "2",
-          name: "Maria Santos",
-          email: email || "tenant@arirent.com",
-          role: "tenant",
-        };
-        localStorage.setItem("arirent_token", "demo-tenant-token");
-        localStorage.setItem("arirent_current_user", JSON.stringify(tenantUser));
-        navigate("/tenant/dashboard");
-      }
+    try {
+      await login({ email, password });
+      navigate("/admin/dashboard");
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to log in. Please try again."));
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const fillDemoAdmin = () => {
@@ -90,9 +76,10 @@ export default function LoginPage() {
 
             <Input
               id="email"
-              label="Email Address or Username"
+              label="Email Address"
               type="text"
               placeholder="e.g. admin@arirent.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -103,21 +90,21 @@ export default function LoginPage() {
               label="Password"
               type="password"
               placeholder="••••••••"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
 
             <Button type="submit" className="w-full mt-2" loading={loading}>
-              Sign In
-              {!loading && <ArrowRight className="h-4 w-4" />}
+              {!loading && <>Sign In <ArrowRight className="h-4 w-4" /></>}
             </Button>
           </form>
 
-          {/* Quick Demo Access Buttons */}
+          {/* Quick Test Credential Prefill */}
           <div className="mt-6 pt-6 border-t border-edge">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted text-center mb-3">
-              Quick Test Access (Dev Mode)
+              Quick Test Credentials
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Button
@@ -126,6 +113,7 @@ export default function LoginPage() {
                 size="sm"
                 onClick={fillDemoAdmin}
                 className="text-xs"
+                disabled={loading}
               >
                 <ShieldCheck className="h-3.5 w-3.5 text-accent" />
                 Fill Admin
@@ -136,6 +124,7 @@ export default function LoginPage() {
                 size="sm"
                 onClick={fillDemoTenant}
                 className="text-xs"
+                disabled={loading}
               >
                 <UserCheck className="h-3.5 w-3.5 text-success-fg" />
                 Fill Tenant

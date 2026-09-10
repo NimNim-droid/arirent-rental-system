@@ -1,5 +1,6 @@
 import { Menu, Building2 } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 interface MobileHeaderProps {
   title: string;
@@ -7,8 +8,8 @@ interface MobileHeaderProps {
 }
 
 export function MobileHeader({ title, onMenuClick }: MobileHeaderProps) {
-  const rawUser = localStorage.getItem("arirent_current_user");
-  const user = rawUser ? JSON.parse(rawUser) : null;
+  const { user } = useAuth();
+  const name = user?.name || "";
 
   return (
     <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card/90 backdrop-blur-xl px-4 py-3 animate-fade-in">
@@ -31,7 +32,7 @@ export function MobileHeader({ title, onMenuClick }: MobileHeaderProps) {
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle compact />
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-edge">
-          {String(user?.name || "D")
+          {String(name || "D")
             .split(" ")
             .map((n) => n[0])
             .slice(0, 2)

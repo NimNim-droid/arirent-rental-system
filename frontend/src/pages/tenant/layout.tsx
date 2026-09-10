@@ -2,14 +2,28 @@ import { useState } from "react";
 import { Outlet, Navigate, useLocation } from "react-router";
 import { Sidebar } from "@/components/common/sidebar";
 import { MobileHeader } from "@/components/common/mobile-header";
+import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/lib/auth-context";
 
 export default function TenantLayout() {
-  const token = localStorage.getItem("arirent_token");
+  const { user, token, initializing } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
-  if (!token) {
+  if (initializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-app">
+        <Spinner className="h-8 w-8 text-accent" />
+      </div>
+    );
+  }
+
+  if (!token || !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "tenant") {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (

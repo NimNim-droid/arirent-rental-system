@@ -6,23 +6,38 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [submitted, setSubmitted] = useState(false);
+  const { register } = useAuth();
+  const [submitted, setSubmitted] = useState<{ name: string; room: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    property: "prop-1",
-    room: "101",
+    property_id: "prop-1",
+    room_number: "101",
     password: "",
     password_confirmation: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await register(formData);
+      setSubmitted({ name: res.tenant.name, room: res.tenant.room });
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to submit your application. Please try again."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -39,8 +54,8 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-2xl font-extrabold text-fg">Application Submitted!</h2>
           <p className="text-sm text-muted">
-            Thank you, <strong className="text-fg">{formData.name}</strong>. Your rental
-            application for Room <strong className="text-fg">{formData.room}</strong> has been
+            Thank you, <strong className="text-fg">{submitted.name}</strong>. Your rental
+            application for Room <strong className="text-fg">{submitted.room}</strong> has been
             received. The property manager will review and approve your account shortly.
           </p>
           <div className="pt-4">
@@ -74,6 +89,12 @@ export default function RegisterPage() {
 
         <Card className="p-7 border-edge">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 text-xs font-semibold text-danger-fg bg-danger-bg border border-danger-border rounded-xl">
+                {error}
+              </div>
+            )}
+
             <Input
               id="name"
               label="Full Name"
@@ -108,8 +129,8 @@ export default function RegisterPage() {
               <Select
                 id="property"
                 label="Property Building"
-                value={formData.property}
-                onChange={(e) => setFormData({ ...formData, property: e.target.value })}
+                value={formData.property_id}
+                onChange={(e) => setFormData({ ...formData, property_id: e.target.value })}
               >
                 <option value="prop-1">AriRent Residences - Makati</option>
                 <option value="prop-2">AriRent Heights - Quezon City</option>
@@ -118,8 +139,8 @@ export default function RegisterPage() {
               <Select
                 id="room"
                 label="Select Room"
-                value={formData.room}
-                onChange={(e) => setFormData({ ...formData, room: e.target.value })}
+                value={formData.room_number}
+                onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
               >
                 <option value="101">Room 101 (₱5,000/mo)</option>
                 <option value="102">Room 102 (₱5,500/mo)</option>
@@ -151,8 +172,8 @@ export default function RegisterPage() {
               />
             </div>
 
-            <Button type="submit" className="w-full mt-2">
-              Submit Application
+            <Button type="submit" className="w-full mt-2" loading={loading}>
+              {loading ? "Submitting…" : "Submit Application"}
             </Button>
           </form>
         </Card>
