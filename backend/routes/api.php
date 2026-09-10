@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReadingController;
 use App\Http\Controllers\RoomController;
@@ -59,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bills', [BillController::class, 'store']);
     Route::post('/bills/generate', [BillController::class, 'generate']);
     Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
+    Route::post('/bills/{id}/payment', [BillController::class, 'pay']);
     Route::post('/bills/{id}/verify', [BillController::class, 'verify']);
     Route::delete('/bills/{id}', [BillController::class, 'destroy']);
 
@@ -72,6 +75,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index']);
     Route::put('/settings', [SettingsController::class, 'update']);
     Route::post('/settings', [SettingsController::class, 'update']);
+
+    // Dashboard Analytics
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/tenant/dashboard', [DashboardController::class, 'tenantDashboard']);
+
+    // Maintenance Tickets
+    Route::get('/maintenance', [MaintenanceController::class, 'index']);
+    Route::post('/maintenance', [MaintenanceController::class, 'store']);
+    Route::put('/maintenance/{id}', [MaintenanceController::class, 'update']);
+    Route::patch('/maintenance/{id}', [MaintenanceController::class, 'update']);
 });
 
 
