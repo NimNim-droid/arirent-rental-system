@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -87,37 +88,42 @@ class AuthController extends Controller
 
         $hashedPassword = Hash::make($request->password);
 
-        // 1. Create User account
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $hashedPassword,
-            'role' => 'tenant',
-        ]);
+        // Wrap all inserts in a transaction to prevent orphaned records
+        $tenant = DB::transaction(function () use ($request, $room, $hashedPassword) {
+            // 1. Create User account
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $hashedPassword,
+                'role' => 'tenant',
+            ]);
 
-        // Generate username
-        $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $request->name));
-        $username = $cleanName . rand(100, 999);
+            // Generate username
+            $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $request->name));
+            $username = $cleanName . rand(100, 999);
 
-        // 2. Create Tenant profile
-        $tenant = Tenant::create([
-            'user_id' => $user->id,
-            'property_id' => $request->property_id,
-            'room' => $request->room_number,
-            'username' => $username,
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => $hashedPassword,
-            'status' => 'pending_approval',
-            'balance' => 0.00,
-            'water_rate' => 500.00,
-        ]);
+            // 2. Create Tenant profile
+            $tenant = Tenant::create([
+                'user_id' => $user->id,
+                'property_id' => $request->property_id,
+                'room' => $request->room_number,
+                'username' => $username,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'password' => $hashedPassword,
+                'status' => 'pending_approval',
+                'balance' => 0.00,
+                'water_rate' => 500.00,
+            ]);
 
-        // 3. Reserve room if room exists
-        if ($room) {
-            $room->update(['status' => 'reserved']);
-        }
+            // 3. Reserve room if room exists
+            if ($room) {
+                $room->update(['status' => 'reserved']);
+            }
+
+            return $tenant;
+        });
 
         return response()->json([
             'message' => 'Registration submitted. Awaiting approval.',

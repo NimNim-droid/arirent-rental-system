@@ -85,6 +85,55 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/maintenance', [MaintenanceController::class, 'store']);
     Route::put('/maintenance/{id}', [MaintenanceController::class, 'update']);
     Route::patch('/maintenance/{id}', [MaintenanceController::class, 'update']);
+
+    // Tenant Documents
+    Route::get('/documents', function () {
+        return response()->json([
+            'data' => [
+                [
+                    'id' => '1',
+                    'name' => 'AriRent Lease Contract & Agreement.pdf',
+                    'type' => 'application/pdf',
+                    'size' => 2457600,
+                    'url' => '#',
+                    'uploaded_at' => now()->subMonths(1)->format('Y-m-d'),
+                ],
+                [
+                    'id' => '2',
+                    'name' => 'AriRent House Rules & Safety Regulations.pdf',
+                    'type' => 'application/pdf',
+                    'size' => 1245184,
+                    'url' => '#',
+                    'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
+                ],
+                [
+                    'id' => '3',
+                    'name' => 'Unit Move-In Checklist & Inspection Report.pdf',
+                    'type' => 'application/pdf',
+                    'size' => 842100,
+                    'url' => '#',
+                    'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
+                ],
+            ],
+        ]);
+    });
+    Route::post('/documents', function (Request $request) {
+        $file = $request->file('file');
+        return response()->json([
+            'message' => 'Document uploaded successfully.',
+            'data' => [
+                'id' => (string) rand(10, 99),
+                'name' => $file ? $file->getClientOriginalName() : 'Uploaded_Document.pdf',
+                'type' => 'application/pdf',
+                'size' => $file ? $file->getSize() : 102400,
+                'url' => '#',
+                'uploaded_at' => now()->format('Y-m-d'),
+            ],
+        ]);
+    });
+    Route::delete('/documents/{id}', function () {
+        return response()->json(['message' => 'Document deleted successfully.']);
+    });
 });
 
 

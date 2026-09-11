@@ -113,10 +113,13 @@ class BillController extends Controller
     }
 
     /**
-     * Create a single bill manually.
+     * Create a single bill manually. Admin only.
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
         $validated = $request->validate([
             'tenant_id' => 'required|exists:tenants,id',
             'rent' => 'required|numeric|min:0',
@@ -163,10 +166,14 @@ class BillController extends Controller
     }
 
     /**
-     * Batch generate monthly invoices for all active tenants.
+     * Batch generate monthly invoices for all active tenants. Admin only.
      */
     public function generate(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $request->validate([
             'date' => 'nullable|date',
         ]);
@@ -251,10 +258,22 @@ class BillController extends Controller
      */
     public function pay(Request $request, int $id): JsonResponse
     {
+        $user = $request->user();
         $bill = Bill::find($id);
 
         if (! $bill) {
             return response()->json(['message' => 'Bill not found.'], 404);
+        }
+
+        // Tenants may only pay their own bills (IDOR protection)
+        if ($user->role === 'tenant') {
+            $tenant = Tenant::where('user_id', $user->id)
+                ->orWhere('email', $user->email)
+                ->first();
+
+            if (! $tenant || $bill->tenant_id !== $tenant->id) {
+                return response()->json(['message' => 'Unauthorized to pay this bill.'], 403);
+            }
         }
 
         $validated = $request->validate([
@@ -287,10 +306,14 @@ class BillController extends Controller
     }
 
     /**
-     * Landlord verifies or rejects a submitted payment.
+     * Landlord verifies or rejects a submitted payment. Admin only.
      */
     public function verify(Request $request, int $id): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $bill = Bill::find($id);
 
         if (! $bill) {
@@ -346,8 +369,8 @@ class BillController extends Controller
             return response()->json(['message' => 'Bill not found.'], 404);
         }
 
-        // If unpaid, reduce tenant balance
-        if ($bill->status === 'unpaid') {
+        // Reduce tenant balance for any unsettled bill (unpaid or pending_verification)
+        if (in_array($bill->status, ['unpaid', 'pending_verification'])) {
             $tenant = Tenant::find($bill->tenant_id);
             if ($tenant) {
                 $tenant->balance = max(0, (float) $tenant->balance - (float) $bill->total_amount);

@@ -75,10 +75,14 @@ class ReadingController extends Controller
     }
 
     /**
-     * Store a new meter reading and auto-calculate usage and cost.
+     * Store a new meter reading and auto-calculate usage and cost. Admin only.
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'tenant_id' => 'required|exists:tenants,id',
             'prev_reading' => 'required|numeric|min:0',

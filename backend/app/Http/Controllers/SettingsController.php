@@ -34,10 +34,14 @@ class SettingsController extends Controller
     }
 
     /**
-     * Update global utility rates or GCash details.
+     * Update global utility rates or GCash details. Admin only.
      */
     public function update(Request $request): JsonResponse
     {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'elec_rate' => 'nullable|numeric|min:0',
             'water_rate' => 'nullable|numeric|min:0',

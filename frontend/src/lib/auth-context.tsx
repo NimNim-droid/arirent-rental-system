@@ -15,7 +15,7 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   initializing: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<User>;
   register: (payload: RegisterPayload) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
 }
@@ -75,12 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (payload: LoginPayload) => {
+  const login = async (payload: LoginPayload): Promise<User> => {
     const res = await authService.login(payload);
     localStorage.setItem(TOKEN_KEY, res.token);
     localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     setToken(res.token);
     setUser(res.user);
+    return res.user;
   };
 
   const register = (payload: RegisterPayload) => authService.register(payload);

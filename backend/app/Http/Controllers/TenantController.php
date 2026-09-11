@@ -129,10 +129,14 @@ class TenantController extends Controller
     }
 
     /**
-     * Approve a pending tenant application and assign room as occupied.
+     * Approve a pending tenant application and assign room as occupied. Admin only.
      */
     public function approve(int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $tenant = Tenant::find($id);
 
         if (! $tenant) {
@@ -184,10 +188,14 @@ class TenantController extends Controller
     }
 
     /**
-     * Reject a pending tenant application.
+     * Reject a pending tenant application. Admin only.
      */
     public function reject(int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $tenant = Tenant::find($id);
 
         if (! $tenant) {
@@ -211,10 +219,14 @@ class TenantController extends Controller
     }
 
     /**
-     * Mark a tenant as vacated and release the room.
+     * Mark a tenant as vacated and release the room. Admin only.
      */
     public function vacate(int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $tenant = Tenant::find($id);
 
         if (! $tenant) {
@@ -241,10 +253,14 @@ class TenantController extends Controller
     }
 
     /**
-     * Delete a tenant record.
+     * Delete a tenant record. Admin only.
      */
     public function destroy(int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $tenant = Tenant::find($id);
 
         if (! $tenant) {

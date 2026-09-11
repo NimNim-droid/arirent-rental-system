@@ -22,8 +22,12 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await login({ email, password });
-      navigate("/admin/dashboard");
+      const loggedUser = await login({ email, password });
+      if (loggedUser.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/tenant/dashboard");
+      }
     } catch (err) {
       setError(getErrorMessage(err, "Unable to log in. Please try again."));
     } finally {
