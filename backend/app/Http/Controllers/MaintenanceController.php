@@ -15,7 +15,7 @@ class MaintenanceController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = MaintenanceTicket::with(['tenant.property'])->latest();
+        $query = MaintenanceTicket::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])->latest();
 
         // Role-based filtering
         if ($user && $user->role === 'tenant') {
@@ -43,31 +43,41 @@ class MaintenanceController extends Controller
             }
         }
 
-        $tickets = $query->get();
+        $formatTicket = fn ($t) => [
+            'id' => (string) $t->id,
+            'tenant_id' => (string) $t->tenant_id,
+            'tenant_name' => $t->tenant?->name,
+            'property_id' => (string) $t->property_id,
+            'property_name' => $t->tenant?->property?->name,
+            'room' => $t->room,
+            'type' => $t->type,
+            'description' => $t->description,
+            'photo_url' => $t->photo_url,
+            'priority' => $t->priority,
+            'status' => $t->status,
+            'technician_name' => $t->technician_name,
+            'admin_notes' => $t->admin_notes,
+            'resolved_date' => $t->resolved_date ? $t->resolved_date->format('Y-m-d H:i:s') : null,
+            'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
+            'created_at' => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
+        ];
 
-        $data = $tickets->map(function ($t) {
-            return [
-                'id' => (string) $t->id,
-                'tenant_id' => (string) $t->tenant_id,
-                'tenant_name' => $t->tenant?->name,
-                'property_id' => (string) $t->property_id,
-                'property_name' => $t->tenant?->property?->name,
-                'room' => $t->room,
-                'type' => $t->type,
-                'description' => $t->description,
-                'photo_url' => $t->photo_url,
-                'priority' => $t->priority,
-                'status' => $t->status,
-                'technician_name' => $t->technician_name,
-                'admin_notes' => $t->admin_notes,
-                'resolved_date' => $t->resolved_date ? $t->resolved_date->format('Y-m-d H:i:s') : null,
-                'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
-                'created_at' => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
-            ];
-        });
+        $perPage = min((int) $request->input('per_page', 50), 250);
+        $paginated = $query->paginate($perPage);
 
         return response()->json([
-            'data' => $data,
+            'data' => $paginated->getCollection()->map($formatTicket),
+            'links' => [
+                'first' => $paginated->url(1),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
+            ],
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -90,13 +100,17 @@ class MaintenanceController extends Controller
             'photo' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $tenantId = $validated['tenant_id'] ?? $tenant?->id;
+        $tenantId = ($user->role === 'tenant') ? $tenant?->id : ($validated['tenant_id'] ?? $tenant?->id);
 
         if (! $tenantId) {
             return response()->json(['message' => 'Tenant profile required to submit ticket.'], 422);
         }
 
         $activeTenant = Tenant::find($tenantId);
+
+        if (! $activeTenant) {
+            return response()->json(['message' => 'Tenant not found.'], 404);
+        }
 
         $photoUrl = $validated['photo_url'] ?? null;
         if ($request->hasFile('photo')) {
@@ -126,6 +140,10 @@ class MaintenanceController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $ticket = MaintenanceTicket::find($id);
 
         if (! $ticket) {
@@ -133,7 +151,7 @@ class MaintenanceController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'nullable|in:pending,in_progress,resolved',
+            'status' => 'nullable|in:pending,in_progress,resolved,archived',
             'technician_name' => 'nullable|string|max:100',
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -147,6 +165,28 @@ class MaintenanceController extends Controller
         return response()->json([
             'message' => 'Ticket updated successfully.',
             'data' => $ticket,
+        ]);
+    }
+
+    /**
+     * Delete a maintenance ticket. Admin only.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $ticket = MaintenanceTicket::find($id);
+
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket->delete();
+
+        return response()->json([
+            'message' => 'Ticket deleted successfully.',
         ]);
     }
 }

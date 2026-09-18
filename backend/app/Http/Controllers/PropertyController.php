@@ -13,22 +13,24 @@ class PropertyController extends Controller
      */
     public function index(): JsonResponse
     {
-        $properties = Property::withCount([
-            'rooms',
-            'rooms as occupied_count' => function ($query) {
-                $query->where('status', 'occupied');
-            },
-        ])->get();
+        $data = \Illuminate\Support\Facades\Cache::remember('all_properties_with_counts', 60, function () {
+            $properties = Property::withCount([
+                'rooms',
+                'rooms as occupied_count' => function ($query) {
+                    $query->where('status', 'occupied');
+                },
+            ])->get();
 
-        $data = $properties->map(function ($prop) {
-            return [
-                'id' => (string) $prop->id,
-                'name' => $prop->name,
-                'city' => $prop->city,
-                'address' => $prop->address,
-                'rooms_count' => $prop->rooms_count,
-                'occupied_count' => $prop->occupied_count,
-            ];
+            return $properties->map(function ($prop) {
+                return [
+                    'id' => (string) $prop->id,
+                    'name' => $prop->name,
+                    'city' => $prop->city,
+                    'address' => $prop->address,
+                    'rooms_count' => $prop->rooms_count,
+                    'occupied_count' => $prop->occupied_count,
+                ];
+            })->all();
         });
 
         return response()->json([
@@ -41,6 +43,10 @@ class PropertyController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'city' => 'required|string|max:100',
@@ -48,6 +54,8 @@ class PropertyController extends Controller
         ]);
 
         $property = Property::create($validated);
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
 
         return response()->json([
             'message' => 'Property created successfully.',
@@ -87,5 +95,75 @@ class PropertyController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    /**
+     * Update an existing property.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $property = Property::find($id);
+        if (! $property) {
+            return response()->json(['message' => 'Property not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'city' => 'sometimes|required|string|max:100',
+            'address' => 'sometimes|required|string|max:255',
+        ]);
+
+        $property->update($validated);
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+
+        return response()->json([
+            'message' => 'Property updated successfully.',
+            'data' => [
+                'id' => (string) $property->id,
+                'name' => $property->name,
+                'city' => $property->city,
+                'address' => $property->address,
+            ],
+        ]);
+    }
+
+    /**
+     * Delete a property if it has no occupied units.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $property = Property::withCount([
+            'rooms as occupied_rooms' => function ($q) {
+                $q->where('status', 'occupied');
+            },
+        ])->find($id);
+
+        if (! $property) {
+            return response()->json(['message' => 'Property not found.'], 404);
+        }
+
+        if ($property->occupied_rooms > 0) {
+            return response()->json([
+                'message' => 'Cannot delete property with occupied rooms. Please vacate or reassign tenants first.',
+            ], 422);
+        }
+
+        // Remove vacant/reserved rooms and the property
+        $property->rooms()->delete();
+        $property->delete();
+
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+
+        return response()->json(['message' => 'Property deleted successfully.']);
     }
 }

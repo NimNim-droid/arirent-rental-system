@@ -5,7 +5,7 @@ export function Skeleton({ className }: { className?: string }) {
     <div
       aria-hidden="true"
       className={cn(
-        "animate-shimmer rounded-lg border border-edge bg-[linear-gradient(100deg,var(--inset)_0%,var(--hover)_40%,var(--inset)_80%)] bg-[length:200%_100%]",
+        "animate-shimmer rounded-xl border border-edge/60 bg-[linear-gradient(90deg,var(--inset)_0%,var(--hover)_50%,var(--inset)_100%)] bg-[length:200%_100%]",
         className
       )}
     />
@@ -14,9 +14,9 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function SkeletonRows({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
-    <div className={cn("space-y-2.5", className)}>
+    <div className={cn("space-y-3", className)}>
       {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-4" />
+        <Skeleton key={i} className="h-5 w-full" />
       ))}
     </div>
   );
@@ -24,17 +24,45 @@ export function SkeletonRows({ rows = 5, className }: { rows?: number; className
 
 export function SkeletonCards({ cards = 3, className }: { cards?: number; className?: string }) {
   return (
-    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-5", className)}>
+    <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5", className)}>
       {Array.from({ length: cards }).map((_, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-edge bg-card p-6 space-y-3"
+          className="rounded-2xl border border-edge bg-card p-6 space-y-3.5 shadow-soft"
         >
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-full" />
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-8 w-8 rounded-xl" />
+          </div>
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-3.5 w-3/4" />
         </div>
       ))}
     </div>
   );
 }
+
+/** Full-page shell fallback used during Suspense route chunk downloads */
+export function PageShellSkeleton() {
+  return (
+    <div className="space-y-8 animate-fade-in" aria-busy="true" aria-label="Loading page">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-9 w-32 rounded-xl" />
+      </div>
+
+      <SkeletonCards cards={3} />
+
+      <div className="rounded-2xl border border-edge bg-card p-6 space-y-4 shadow-soft">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-8 w-24 rounded-lg" />
+        </div>
+        <SkeletonRows rows={5} />
+      </div>
+    </div>
+  );
+}

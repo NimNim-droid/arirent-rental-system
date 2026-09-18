@@ -20,13 +20,13 @@ export function Badge({ children, variant = "neutral", dot = false, className }:
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ring-1 ring-inset animate-fade-in transition-transform duration-200 hover:scale-105",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ring-1 ring-inset animate-fade-in",
         variants[variant],
         className
       )}
     >
-      {dot && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />}
+      {dot && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current shrink-0" />}
       {children}
     </span>
   );
-}
+}

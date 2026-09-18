@@ -27,19 +27,16 @@ export function SectionHeader({
         className
       )}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         {icon && (
-          <span className="flex p-2 shrink-0 rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent-border">
+          <span className="shrink-0 text-fg-soft/80">
             {icon}
           </span>
         )}
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-fg">
+          <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-fg">
             {dot && (
-              <span className={cn("relative flex h-2.5 w-2.5", dotClassName)}>
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-current" />
-              </span>
+              <span className={cn("inline-flex h-2 w-2 rounded-full bg-accent", dotClassName)} />
             )}
             {title}
           </h2>

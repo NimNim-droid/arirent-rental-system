@@ -98,9 +98,14 @@ class AuthController extends Controller
                 'role' => 'tenant',
             ]);
 
-            // Generate username
+            // Generate unique username
             $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $request->name));
             $username = $cleanName . rand(100, 999);
+
+            // Ensure username is unique
+            while (Tenant::where('username', $username)->exists()) {
+                $username = $cleanName . rand(100, 999);
+            }
 
             // 2. Create Tenant profile
             $tenant = Tenant::create([

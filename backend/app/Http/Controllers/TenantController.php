@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\User;
+use App\Models\UtilityReading;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +16,7 @@ class TenantController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Tenant::with('property')->latest();
+        $query = Tenant::with('property:id,name,address')->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -34,29 +36,57 @@ class TenantController extends Controller
             });
         }
 
-        $tenants = $query->get();
+        $perPage = min((int) $request->input('per_page', 50), 250);
+        $paginated = $query->paginate($perPage);
 
-        $data = $tenants->map(function ($t) {
-            return [
-                'id' => (string) $t->id,
-                'username' => $t->username,
-                'name' => $t->name,
-                'email' => $t->email,
-                'phone' => $t->phone,
-                'property_id' => (string) $t->property_id,
-                'property_name' => $t->property?->name,
-                'property_address' => $t->property?->address,
-                'room' => $t->room,
-                'status' => $t->status,
-                'balance' => (float) $t->balance,
-                'water_rate' => (float) $t->water_rate,
-                'lease_end' => $t->lease_end ? $t->lease_end->format('Y-m-d') : null,
-                'vacated_date' => $t->vacated_date ? $t->vacated_date->format('Y-m-d H:i:s') : null,
-            ];
-        });
+        $propertyIds = $paginated->getCollection()->pluck('property_id')->unique()->all();
+        $tenantIds = $paginated->getCollection()->pluck('id')->all();
+
+        $rooms = Room::whereIn('property_id', $propertyIds)
+            ->get(['property_id', 'room_number', 'rent'])
+            ->keyBy(fn ($r) => "{$r->property_id}-{$r->room_number}");
+
+        $latestReadings = UtilityReading::whereIn('tenant_id', $tenantIds)
+            ->orderBy('date', 'desc')
+            ->get(['tenant_id', 'curr_reading'])
+            ->groupBy('tenant_id')
+            ->map(fn ($g) => (float) $g->first()->curr_reading);
+
+        $formatTenant = fn ($t) => [
+            'id' => (string) $t->id,
+            'username' => $t->username,
+            'name' => $t->name,
+            'email' => $t->email,
+            'phone' => $t->phone,
+            'property_id' => (string) $t->property_id,
+            'property_name' => $t->property?->name,
+            'property_address' => $t->property?->address,
+            'room' => $t->room,
+            'room_rent' => (float) ($rooms->get("{$t->property_id}-{$t->room}")?->rent ?? 0.00),
+            'latest_reading' => (float) ($latestReadings->get($t->id) ?? 0.00),
+            'status' => $t->status,
+            'balance' => (float) $t->balance,
+            'water_rate' => (float) $t->water_rate,
+            'move_in_date' => $t->move_in_date ? $t->move_in_date->format('Y-m-d') : ($t->created_at ? $t->created_at->format('Y-m-d') : null),
+            'billing_day' => $t->getBillingDay(),
+            'advance_paid' => (float) $t->advance_paid,
+            'lease_end' => $t->lease_end ? $t->lease_end->format('Y-m-d') : null,
+            'vacated_date' => $t->vacated_date ? $t->vacated_date->format('Y-m-d H:i:s') : null,
+        ];
 
         return response()->json([
-            'data' => $data,
+            'data' => $paginated->getCollection()->map($formatTenant),
+            'links' => [
+                'first' => $paginated->url(1),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
+            ],
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -72,6 +102,9 @@ class TenantController extends Controller
             return response()->json(['message' => 'Tenant not found.'], 404);
         }
 
+        $room = Room::where('property_id', $tenant->property_id)->where('room_number', $tenant->room)->first();
+        $latestReading = UtilityReading::where('tenant_id', $tenant->id)->latest('date')->first();
+
         return response()->json([
             'data' => [
                 'id' => (string) $tenant->id,
@@ -83,9 +116,14 @@ class TenantController extends Controller
                 'property_name' => $tenant->property?->name,
                 'property_address' => $tenant->property?->address,
                 'room' => $tenant->room,
+                'room_rent' => $room ? (float) $room->rent : 0.00,
+                'latest_reading' => $latestReading ? (float) $latestReading->curr_reading : 0.00,
                 'status' => $tenant->status,
                 'balance' => (float) $tenant->balance,
                 'water_rate' => (float) $tenant->water_rate,
+                'move_in_date' => $tenant->move_in_date ? $tenant->move_in_date->format('Y-m-d') : ($tenant->created_at ? $tenant->created_at->format('Y-m-d') : null),
+                'billing_day' => $tenant->getBillingDay(),
+                'advance_paid' => (float) $tenant->advance_paid,
                 'lease_end' => $tenant->lease_end ? $tenant->lease_end->format('Y-m-d') : null,
                 'bills' => $tenant->bills,
                 'maintenance_tickets' => $tenant->maintenanceTickets,
@@ -94,7 +132,7 @@ class TenantController extends Controller
     }
 
     /**
-     * Update tenant information (water_rate, lease_end, phone, balance).
+     * Update tenant information (water_rate, lease_end, phone, balance, move_in_date, advance_paid).
      */
     public function update(Request $request, int $id): JsonResponse
     {
@@ -109,6 +147,8 @@ class TenantController extends Controller
             'water_rate' => 'nullable|numeric|min:0',
             'balance' => 'nullable|numeric',
             'lease_end' => 'nullable|date',
+            'move_in_date' => 'nullable|date',
+            'advance_paid' => 'nullable|numeric|min:0',
             'room' => 'nullable|string|max:50',
         ]);
 
@@ -123,6 +163,9 @@ class TenantController extends Controller
                 'room' => $tenant->room,
                 'balance' => (float) $tenant->balance,
                 'water_rate' => (float) $tenant->water_rate,
+                'move_in_date' => $tenant->move_in_date ? $tenant->move_in_date->format('Y-m-d') : null,
+                'billing_day' => $tenant->getBillingDay(),
+                'advance_paid' => (float) $tenant->advance_paid,
                 'lease_end' => $tenant->lease_end ? $tenant->lease_end->format('Y-m-d') : null,
             ],
         ]);
@@ -131,9 +174,9 @@ class TenantController extends Controller
     /**
      * Approve a pending tenant application and assign room as occupied. Admin only.
      */
-    public function approve(int $id): JsonResponse
+    public function approve(Request $request, int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
+        if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
@@ -148,8 +191,14 @@ class TenantController extends Controller
             ->where('room_number', $tenant->room)
             ->first();
 
+        if (! $room) {
+            return response()->json([
+                'message' => "Room {$tenant->room} not found in the assigned property.",
+            ], 404);
+        }
+
         // Check if room is already occupied by someone else
-        if ($room && $room->status === 'occupied') {
+        if ($room->status === 'occupied') {
             $otherTenant = Tenant::where('property_id', $tenant->property_id)
                 ->where('room', $tenant->room)
                 ->where('status', 'active')
@@ -163,16 +212,24 @@ class TenantController extends Controller
             }
         }
 
-        // Update tenant status to active
+        $validated = $request->validate([
+            'move_in_date' => 'nullable|date',
+            'advance_paid' => 'nullable|numeric|min:0',
+        ]);
+
+        // Update tenant status to active with move-in date and advance
+        $moveIn = $validated['move_in_date'] ?? $tenant->move_in_date ?? now()->format('Y-m-d');
+        $advance = $validated['advance_paid'] ?? $tenant->advance_paid ?? 0.00;
+
         $tenant->update([
             'status' => 'active',
+            'move_in_date' => $moveIn,
+            'advance_paid' => $advance,
             'lease_end' => $tenant->lease_end ?? now()->addYear()->format('Y-m-d'),
         ]);
 
         // Update room status to occupied
-        if ($room) {
-            $room->update(['status' => 'occupied']);
-        }
+        $room->update(['status' => 'occupied']);
 
         return response()->json([
             'message' => 'Tenant approved successfully.',
@@ -182,6 +239,9 @@ class TenantController extends Controller
                 'email' => $tenant->email,
                 'room' => $tenant->room,
                 'status' => $tenant->status,
+                'move_in_date' => $tenant->move_in_date ? $tenant->move_in_date->format('Y-m-d') : null,
+                'billing_day' => $tenant->getBillingDay(),
+                'advance_paid' => (float) $tenant->advance_paid,
                 'lease_end' => $tenant->lease_end ? $tenant->lease_end->format('Y-m-d') : null,
             ],
         ]);
@@ -233,6 +293,10 @@ class TenantController extends Controller
             return response()->json(['message' => 'Tenant not found.'], 404);
         }
 
+        if ($tenant->status !== 'active') {
+            return response()->json(['message' => 'Only active tenants can be vacated.'], 422);
+        }
+
         $tenant->update([
             'status' => 'inactive',
             'vacated_date' => now(),
@@ -274,6 +338,11 @@ class TenantController extends Controller
 
         if ($room && in_array($room->status, ['reserved', 'occupied'])) {
             $room->update(['status' => 'vacant']);
+        }
+
+        // Also delete associated user account to prevent orphaned records
+        if ($tenant->user_id) {
+            User::where('id', $tenant->user_id)->delete();
         }
 
         $tenant->delete();

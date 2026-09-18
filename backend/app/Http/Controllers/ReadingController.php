@@ -18,7 +18,7 @@ class ReadingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = UtilityReading::with(['tenant.property'])->latest('date');
+        $query = UtilityReading::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])->latest('date');
 
         // Role-based filtering
         if ($user && $user->role === 'tenant') {
@@ -51,26 +51,36 @@ class ReadingController extends Controller
             }
         }
 
-        $readings = $query->get();
+        $formatReading = fn ($r) => [
+            'id' => (string) $r->id,
+            'tenant_id' => (string) $r->tenant_id,
+            'tenant_name' => $r->tenant?->name,
+            'room' => $r->tenant?->room,
+            'property_name' => $r->tenant?->property?->name,
+            'prev_reading' => (float) $r->prev_reading,
+            'curr_reading' => (float) $r->curr_reading,
+            'usage_kwh' => (float) $r->usage_kwh,
+            'amount' => (float) $r->amount,
+            'date' => $r->date ? Carbon::parse($r->date)->format('Y-m-d') : null,
+            'created_at' => $r->created_at ? $r->created_at->format('Y-m-d H:i:s') : null,
+        ];
 
-        $data = $readings->map(function ($r) {
-            return [
-                'id' => (string) $r->id,
-                'tenant_id' => (string) $r->tenant_id,
-                'tenant_name' => $r->tenant?->name,
-                'room' => $r->tenant?->room,
-                'property_name' => $r->tenant?->property?->name,
-                'prev_reading' => (float) $r->prev_reading,
-                'curr_reading' => (float) $r->curr_reading,
-                'usage_kwh' => (float) $r->usage_kwh,
-                'amount' => (float) $r->amount,
-                'date' => $r->date ? Carbon::parse($r->date)->format('Y-m-d') : null,
-                'created_at' => $r->created_at ? $r->created_at->format('Y-m-d H:i:s') : null,
-            ];
-        });
+        $perPage = min((int) $request->input('per_page', 50), 250);
+        $paginated = $query->paginate($perPage);
 
         return response()->json([
-            'data' => $data,
+            'data' => $paginated->getCollection()->map($formatReading),
+            'links' => [
+                'first' => $paginated->url(1),
+                'last' => $paginated->url($paginated->lastPage()),
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
+            ],
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -94,9 +104,9 @@ class ReadingController extends Controller
         $curr = (float) $validated['curr_reading'];
         $usage = max(0, round($curr - $prev, 2));
 
-        // Get electricity rate from settings
-        $settings = Setting::first();
-        $elecRate = $settings ? (float) $settings->elec_rate : 12.50;
+        // Get electricity rate from cached settings
+        $settings = Setting::getGlobal();
+        $elecRate = (float) $settings->elec_rate;
         $amount = round($usage * $elecRate, 2);
 
         $reading = UtilityReading::create([
@@ -183,10 +193,42 @@ class ReadingController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $reading = UtilityReading::find($id);
 
         if (! $reading) {
             return response()->json(['message' => 'Reading not found.'], 404);
+        }
+
+        // Reverse bill adjustment if a bill was updated by this reading
+        $readingDate = Carbon::parse($reading->date);
+        $monthStart = $readingDate->copy()->startOfMonth()->format('Y-m-d');
+        $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
+
+        $bill = Bill::where('tenant_id', $reading->tenant_id)
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->first();
+
+        if ($bill) {
+            $oldElec = (float) $bill->electricity;
+            $readingAmount = (float) $reading->amount;
+
+            // Only reverse if the bill's electricity matches this reading
+            if (abs($oldElec - $readingAmount) < 0.01) {
+                $bill->electricity = 0;
+                $bill->elec_usage = 0;
+                $bill->total_amount = (float) $bill->rent + (float) $bill->water + (float) $bill->late_fee;
+                $bill->save();
+
+                // Reverse tenant balance adjustment
+                $tenant = Tenant::find($reading->tenant_id);
+                if ($tenant) {
+                    $tenant->decrement('balance', $readingAmount);
+                }
+            }
         }
 
         $reading->delete();

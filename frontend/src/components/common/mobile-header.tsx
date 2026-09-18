@@ -1,43 +1,129 @@
-import { Menu, Building2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Menu, LogOut } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
+import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
 
 interface MobileHeaderProps {
   title: string;
-  onMenuClick: () => void;
+  role?: "admin" | "tenant";
+  onMenuClick?: () => void;
 }
 
-export function MobileHeader({ title, onMenuClick }: MobileHeaderProps) {
-  const { user } = useAuth();
+const PAGE_TITLES: Record<string, string> = {
+  "/admin/dashboard": "Dashboard",
+  "/admin/properties": "Properties & Units",
+  "/admin/tenants": "Tenants",
+  "/admin/utilities": "Utilities",
+  "/admin/billing": "Billing",
+  "/admin/maintenance": "Maintenance",
+  "/admin/documents": "Documents",
+  "/tenant/dashboard": "Overview",
+  "/tenant/billing": "My Bills",
+  "/tenant/maintenance": "Maintenance",
+  "/tenant/documents": "Documents",
+};
+
+export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeaderProps) {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   const name = user?.name || "";
+  const pageTitle = PAGE_TITLES[location.pathname] ?? title;
+  const isTenant = role === "tenant";
+
+  const initials = String(name || "D")
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    if (profileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileOpen]);
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    await logout();
+    navigate("/login");
+  };
 
   return (
-    <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card/90 backdrop-blur-xl px-4 py-3 animate-fade-in">
+    <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card/95 backdrop-blur-md px-4 py-3 animate-fade-in">
       <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={onMenuClick}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-edge bg-inset text-fg-soft hover:bg-hover hover:text-fg transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          aria-label="Open menu"
-          title="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-            <Building2 className="h-4 w-4" />
+        {!isTenant && onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-edge bg-inset text-fg-soft hover:bg-hover hover:text-fg transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label="Open menu"
+            title="Open menu"
+          >
+            <Menu className="h-4.5 w-4.5" />
+          </button>
+        )}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Logo variant="mark" size="sm" />
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-sm text-fg truncate leading-tight">{pageTitle}</span>
+            {isTenant && (
+              <span className="text-[10px] text-muted font-medium tracking-tight">AriRent Tenant</span>
+            )}
           </div>
-          <span className="font-extrabold tracking-tight text-fg truncate">{title}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle compact />
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-edge">
-          {String(name || "D")
-            .split(" ")
-            .map((n) => n[0])
-            .slice(0, 2)
-            .join("")
-            .toUpperCase()}
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => setProfileOpen((o) => !o)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white ring-2 ring-edge cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            title={name}
+            aria-label={`Account menu for ${name}`}
+            aria-expanded={profileOpen}
+          >
+            {initials}
+          </button>
+
+          {profileOpen && (
+            <div className="absolute right-0 top-full mt-2 w-60 rounded-xl border border-edge bg-card p-3 shadow-pop animate-scale-in z-50">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-edge">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white shadow-sm">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-fg">{name || "User"}</p>
+                  <p className="truncate text-[11px] text-muted">{user?.email || ""}</p>
+                  <span className="inline-block mt-1 text-[9px] uppercase font-bold tracking-wider text-accent bg-accent-soft px-1.5 py-0.5 rounded">
+                    {user?.role || "Tenant"}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-semibold text-danger-fg hover:bg-danger-bg rounded-lg transition-colors cursor-pointer active:scale-95"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

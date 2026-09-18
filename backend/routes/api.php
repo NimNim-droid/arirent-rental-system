@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReadingController;
@@ -23,7 +24,7 @@ Route::get('/health', function () {
 });
 
 // Public Auth routes
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -44,7 +45,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Properties & Rooms Management
     Route::post('/properties', [PropertyController::class, 'store']);
+    Route::put('/properties/{id}', [PropertyController::class, 'update']);
+    Route::delete('/properties/{id}', [PropertyController::class, 'destroy']);
     Route::post('/rooms', [RoomController::class, 'store']);
+    Route::put('/rooms/{id}', [RoomController::class, 'update']);
+    Route::delete('/rooms/{id}', [RoomController::class, 'destroy']);
 
     // Tenants Management
     Route::get('/tenants', [TenantController::class, 'index']);
@@ -59,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bills', [BillController::class, 'index']);
     Route::get('/bills/{id}', [BillController::class, 'show']);
     Route::post('/bills', [BillController::class, 'store']);
+    Route::put('/bills/{id}', [BillController::class, 'update']);
     Route::post('/bills/generate', [BillController::class, 'generate']);
     Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
     Route::post('/bills/{id}/payment', [BillController::class, 'pay']);
@@ -85,55 +91,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/maintenance', [MaintenanceController::class, 'store']);
     Route::put('/maintenance/{id}', [MaintenanceController::class, 'update']);
     Route::patch('/maintenance/{id}', [MaintenanceController::class, 'update']);
+    Route::delete('/maintenance/{id}', [MaintenanceController::class, 'destroy']);
 
-    // Tenant Documents
-    Route::get('/documents', function () {
-        return response()->json([
-            'data' => [
-                [
-                    'id' => '1',
-                    'name' => 'AriRent Lease Contract & Agreement.pdf',
-                    'type' => 'application/pdf',
-                    'size' => 2457600,
-                    'url' => '#',
-                    'uploaded_at' => now()->subMonths(1)->format('Y-m-d'),
-                ],
-                [
-                    'id' => '2',
-                    'name' => 'AriRent House Rules & Safety Regulations.pdf',
-                    'type' => 'application/pdf',
-                    'size' => 1245184,
-                    'url' => '#',
-                    'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
-                ],
-                [
-                    'id' => '3',
-                    'name' => 'Unit Move-In Checklist & Inspection Report.pdf',
-                    'type' => 'application/pdf',
-                    'size' => 842100,
-                    'url' => '#',
-                    'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
-                ],
-            ],
-        ]);
-    });
-    Route::post('/documents', function (Request $request) {
-        $file = $request->file('file');
-        return response()->json([
-            'message' => 'Document uploaded successfully.',
-            'data' => [
-                'id' => (string) rand(10, 99),
-                'name' => $file ? $file->getClientOriginalName() : 'Uploaded_Document.pdf',
-                'type' => 'application/pdf',
-                'size' => $file ? $file->getSize() : 102400,
-                'url' => '#',
-                'uploaded_at' => now()->format('Y-m-d'),
-            ],
-        ]);
-    });
-    Route::delete('/documents/{id}', function () {
-        return response()->json(['message' => 'Document deleted successfully.']);
-    });
+    // Property Documents (Admin uploads & manages; Tenants view & download)
+    Route::get('/documents', [DocumentController::class, 'index']);
+    Route::post('/documents', [DocumentController::class, 'store']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
 });
 
 

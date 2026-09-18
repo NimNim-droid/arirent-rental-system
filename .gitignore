@@ -22,6 +22,9 @@ dist/
 dist-ssr/
 *.local
 .vite/
+*.tsbuildinfo
+.backup-theme-original/
+restore-theme.bat
 
 # PHP / Laravel
 /vendor/

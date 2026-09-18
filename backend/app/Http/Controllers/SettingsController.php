@@ -13,13 +13,7 @@ class SettingsController extends Controller
      */
     public function index(): JsonResponse
     {
-        $setting = Setting::firstOrCreate([], [
-            'elec_rate' => 12.50,
-            'water_rate' => 500.00,
-            'gcash_name' => 'AriRent Property Management',
-            'gcash_number' => '0917-123-4567',
-            'gcash_qr_path' => null,
-        ]);
+        $setting = Setting::getGlobal();
 
         return response()->json([
             'data' => [
@@ -57,6 +51,11 @@ class SettingsController extends Controller
         }
 
         if ($request->hasFile('gcash_qr')) {
+            // Delete old QR from storage if it exists
+            if ($setting->gcash_qr_path && str_starts_with($setting->gcash_qr_path, '/storage/')) {
+                $oldPath = str_replace('/storage/', '', $setting->gcash_qr_path);
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+            }
             $path = $request->file('gcash_qr')->store('settings', 'public');
             $setting->gcash_qr_path = '/storage/' . $path;
         }

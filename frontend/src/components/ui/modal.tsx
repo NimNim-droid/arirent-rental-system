@@ -24,6 +24,9 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
 
@@ -32,12 +35,12 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab" && panel) {
         const focusables = panel.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
         );
         if (focusables.length === 0) return;
         const first = focusables[0];
@@ -56,11 +59,15 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
 
+    // Initial focus on open only: do not steal focus if an element inside the panel is already active
     const frame = requestAnimationFrame(() => {
-      const first = panel?.querySelector<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      if (panel && panel.contains(document.activeElement)) {
+        return;
+      }
+      const initial = panel?.querySelector<HTMLElement>(
+        '[autofocus], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
       );
-      (first ?? closeButtonRef.current)?.focus();
+      (initial ?? closeButtonRef.current)?.focus();
     });
 
     return () => {
@@ -69,7 +76,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
       cancelAnimationFrame(frame);
       previousFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -86,7 +93,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-2xl border border-edge bg-card shadow-pop animate-scale-in",
+          "relative z-10 flex max-h-[90vh] w-full flex-col rounded-xl border border-edge bg-card shadow-2xl animate-scale-in",
           MAX_WIDTHS[maxWidth]
         )}
       >

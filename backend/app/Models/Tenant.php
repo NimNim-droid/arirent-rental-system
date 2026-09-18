@@ -23,6 +23,8 @@ class Tenant extends Model
         'status',
         'balance',
         'water_rate',
+        'move_in_date',
+        'advance_paid',
         'lease_end',
         'vacated_date',
     ];
@@ -36,9 +38,20 @@ class Tenant extends Model
         return [
             'balance' => 'decimal:2',
             'water_rate' => 'decimal:2',
+            'advance_paid' => 'decimal:2',
+            'move_in_date' => 'date',
             'lease_end' => 'date',
             'vacated_date' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the day of the month when this tenant's rent is due.
+     */
+    public function getBillingDay(): int
+    {
+        $date = $this->move_in_date ?? $this->created_at ?? now();
+        return (int) \Carbon\Carbon::parse($date)->day;
     }
 
     public function user(): BelongsTo

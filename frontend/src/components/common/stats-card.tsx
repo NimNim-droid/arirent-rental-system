@@ -5,9 +5,10 @@ import { cn } from "@/lib/cn";
 
 interface StatsCardProps {
   title: string;
-  value: string | number;
+  value: ReactNode;
   subtitle?: string;
   icon: ReactNode;
+  variant?: "accent" | "success" | "warning" | "danger" | "neutral";
   trend?: {
     value: string;
     isPositive: boolean;
@@ -16,27 +17,37 @@ interface StatsCardProps {
   onClick?: () => void;
 }
 
-export function StatsCard({ title, value, subtitle, icon, trend, delay = 0, onClick }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon, variant = "accent", trend, delay = 0, onClick }: StatsCardProps) {
+  const iconColors = {
+    accent: "bg-accent-soft text-accent ring-accent-border",
+    success: "bg-success-bg text-success-fg ring-success-border",
+    warning: "bg-warning-bg text-warning-fg ring-warning-border",
+    danger: "bg-danger-bg text-danger-fg ring-danger-border",
+    neutral: "bg-neutral-bg text-neutral-fg ring-neutral-border",
+  };
+
   return (
     <Card
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col p-5 animate-fade-in-up",
-        onClick && "cursor-pointer"
+        "group relative flex flex-col p-5",
+        onClick && "cursor-pointer hover:border-edge-strong"
       )}
-      style={{ animationDelay: `${delay}ms` } as CSSProperties}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">
             {title}
           </p>
-          <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-fg tabular-nums">
+          <div className="mt-1 text-2xl font-extrabold tracking-tight text-fg tabular-nums">
             {value}
-          </p>
-          {subtitle && <p className="mt-1 text-xs text-muted">{subtitle}</p>}
+          </div>
+          {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-accent-border transition-transform duration-300 ease-out group-hover:scale-105">
+        <div className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border",
+          iconColors[variant]
+        )}>
           {icon}
         </div>
       </div>
@@ -62,4 +73,4 @@ export function StatsCard({ title, value, subtitle, icon, trend, delay = 0, onCl
       )}
     </Card>
   );
-}
+}

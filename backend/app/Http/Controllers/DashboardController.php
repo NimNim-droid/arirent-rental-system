@@ -12,6 +12,7 @@ use App\Models\UtilityReading;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
@@ -21,59 +22,70 @@ class DashboardController extends Controller
     public function stats(Request $request): JsonResponse
     {
         $propertyId = $request->query('property_id');
+        $cacheKey = 'admin_stats_' . ($propertyId ?: 'all');
 
-        // Total revenue from all approved/paid bills
-        $billsQuery = Bill::where('status', 'paid');
-        if ($propertyId) {
-            $billsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-        }
-        $totalRevenue = (float) $billsQuery->sum('total_amount');
+        $data = Cache::remember($cacheKey, 15, function () use ($propertyId) {
+            // Total revenue from all approved/paid bills
+            $billsQuery = Bill::where('status', 'paid');
+            if ($propertyId) {
+                $billsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
+            }
+            $totalRevenue = (float) $billsQuery->sum('total_amount');
 
-        // Rooms & occupancy
-        $roomsQuery = Room::query();
-        if ($propertyId) {
-            $roomsQuery->where('property_id', $propertyId);
-        }
-        $totalRooms = $roomsQuery->count();
-        $occupiedRooms = (clone $roomsQuery)->where('status', 'occupied')->count();
-        $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100, 1) : 0;
+            // Rooms & occupancy: single conditional aggregation query
+            $roomsQuery = Room::query();
+            if ($propertyId) {
+                $roomsQuery->where('property_id', $propertyId);
+            }
+            $roomStats = $roomsQuery->selectRaw('count(*) as total, count(case when status = "occupied" then 1 end) as occupied')->first();
+            $totalRooms = (int) ($roomStats->total ?? 0);
+            $occupiedRooms = (int) ($roomStats->occupied ?? 0);
+            $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100, 1) : 0;
 
-        // Pending applications
-        $pendingQuery = Tenant::where('status', 'pending_approval');
-        if ($propertyId) {
-            $pendingQuery->where('property_id', $propertyId);
-        }
-        $pendingApplications = $pendingQuery->count();
+            // Pending applications
+            $pendingQuery = Tenant::where('status', 'pending_approval');
+            if ($propertyId) {
+                $pendingQuery->where('property_id', $propertyId);
+            }
+            $pendingApplications = $pendingQuery->count();
 
-        // Pending payments awaiting verification
-        $pendingPaymentsQuery = Bill::where('status', 'pending_verification');
-        if ($propertyId) {
-            $pendingPaymentsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-        }
-        $pendingPayments = $pendingPaymentsQuery->count();
+            // Pending payments awaiting verification
+            $pendingPaymentsQuery = Bill::where('status', 'pending_verification');
+            if ($propertyId) {
+                $pendingPaymentsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
+            }
+            $pendingPayments = $pendingPaymentsQuery->count();
 
-        // Recent maintenance tickets
-        $ticketsQuery = MaintenanceTicket::with('tenant')->latest()->take(5);
-        if ($propertyId) {
-            $ticketsQuery->where('property_id', $propertyId);
-        }
-        $recentTickets = $ticketsQuery->get()->map(fn ($t) => [
-            'id' => (string) $t->id,
-            'tenant_id' => (string) $t->tenant_id,
-            'tenant_name' => $t->tenant?->name,
-            'property_id' => (string) $t->property_id,
-            'room' => $t->room,
-            'type' => $t->type,
-            'description' => $t->description,
-            'priority' => $t->priority,
-            'status' => $t->status,
-            'technician_name' => $t->technician_name,
-            'admin_notes' => $t->admin_notes,
-            'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
-        ]);
+            // Recent maintenance tickets with selective columns
+            $ticketsQuery = MaintenanceTicket::with('tenant:id,name')
+                ->select([
+                    'id', 'tenant_id', 'property_id', 'room', 'type',
+                    'description', 'priority', 'status', 'technician_name',
+                    'admin_notes', 'created_at'
+                ])
+                ->latest()
+                ->take(5);
 
-        return response()->json([
-            'data' => [
+            if ($propertyId) {
+                $ticketsQuery->where('property_id', $propertyId);
+            }
+
+            $recentTickets = $ticketsQuery->get()->map(fn ($t) => [
+                'id' => (string) $t->id,
+                'tenant_id' => (string) $t->tenant_id,
+                'tenant_name' => $t->tenant?->name,
+                'property_id' => (string) $t->property_id,
+                'room' => $t->room,
+                'type' => $t->type,
+                'description' => $t->description,
+                'priority' => $t->priority,
+                'status' => $t->status,
+                'technician_name' => $t->technician_name,
+                'admin_notes' => $t->admin_notes,
+                'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
+            ]);
+
+            return [
                 'total_revenue' => $totalRevenue,
                 'occupancy_rate' => $occupancyRate,
                 'occupied_rooms' => $occupiedRooms,
@@ -81,7 +93,11 @@ class DashboardController extends Controller
                 'pending_applications' => $pendingApplications,
                 'pending_payments' => $pendingPayments,
                 'recent_maintenance' => $recentTickets,
-            ],
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
         ]);
     }
 
@@ -93,49 +109,54 @@ class DashboardController extends Controller
         $user = $request->user();
         $tenant = Tenant::where('user_id', $user->id)
             ->orWhere('email', $user->email)
-            ->with('property')
+            ->with('property:id,name,city,address')
             ->first();
 
         if (! $tenant) {
             return response()->json(['message' => 'Tenant profile not found.'], 404);
         }
 
-        // Room and rent
-        $room = Room::where('property_id', $tenant->property_id)
-            ->where('room_number', $tenant->room)
-            ->first();
+        $cacheKey = "tenant_dashboard_{$tenant->id}";
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, 30, function () use ($tenant) {
+            // Room and rent
+            $room = Room::where('property_id', $tenant->property_id)
+                ->where('room_number', $tenant->room)
+                ->select('rent')
+                ->first();
 
-        // Latest unpaid bill for due date
-        $latestBill = Bill::where('tenant_id', $tenant->id)
-            ->where('status', 'unpaid')
-            ->orderBy('due_date', 'asc')
-            ->first();
+            // Latest unpaid bill for due date
+            $latestBill = Bill::where('tenant_id', $tenant->id)
+                ->where('status', 'unpaid')
+                ->orderBy('due_date', 'asc')
+                ->select(['id', 'due_date'])
+                ->first();
 
-        // Latest utility reading
-        $latestReading = UtilityReading::where('tenant_id', $tenant->id)
-            ->latest('date')
-            ->first();
+            // Latest utility reading
+            $latestReading = UtilityReading::where('tenant_id', $tenant->id)
+                ->latest('date')
+                ->select(['usage_kwh', 'curr_reading', 'amount'])
+                ->first();
 
-        // System settings
-        $settings = Setting::first();
-        $elecRate = $settings ? (float) $settings->elec_rate : 12.50;
+            // System settings from fast cache
+            $settings = Setting::getGlobal();
+            $elecRate = (float) $settings->elec_rate;
 
-        // Recent maintenance
-        $recentTickets = MaintenanceTicket::where('tenant_id', $tenant->id)
-            ->latest()
-            ->take(3)
-            ->get()
-            ->map(fn ($t) => [
-                'id' => (string) $t->id,
-                'type' => $t->type,
-                'description' => $t->description,
-                'priority' => $t->priority,
-                'status' => $t->status,
-                'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
-            ]);
+            // Recent maintenance
+            $recentTickets = MaintenanceTicket::where('tenant_id', $tenant->id)
+                ->latest()
+                ->take(3)
+                ->select(['id', 'type', 'description', 'priority', 'status', 'created_at'])
+                ->get()
+                ->map(fn ($t) => [
+                    'id' => (string) $t->id,
+                    'type' => $t->type,
+                    'description' => $t->description,
+                    'priority' => $t->priority,
+                    'status' => $t->status,
+                    'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
+                ]);
 
-        return response()->json([
-            'data' => [
+            return [
                 'outstanding_balance' => (float) $tenant->balance,
                 'due_date' => $latestBill?->due_date ? Carbon::parse($latestBill->due_date)->format('Y-m-d') : null,
                 'unit' => [
@@ -154,14 +175,16 @@ class DashboardController extends Controller
                     'elec_rate' => $elecRate,
                 ],
                 'recent_maintenance' => $recentTickets,
-                'settings' => $settings ? [
+                'settings' => [
                     'elec_rate' => (float) $settings->elec_rate,
                     'water_rate' => (float) $settings->water_rate,
                     'gcash_name' => $settings->gcash_name,
                     'gcash_number' => $settings->gcash_number,
                     'gcash_qr_path' => $settings->gcash_qr_path,
-                ] : null,
-            ],
-        ]);
+                ],
+            ];
+        });
+
+        return response()->json(['data' => $data]);
     }
 }

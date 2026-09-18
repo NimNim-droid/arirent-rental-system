@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import { clientCache } from "@/lib/cache";
 import type {
   MaintenanceInput,
   MaintenanceTicket,
@@ -21,17 +22,24 @@ export interface TicketUpdatePayload {
 
 export const maintenanceService = {
   async getTickets(params?: TicketQuery): Promise<PaginatedResponse<MaintenanceTicket>> {
-    const res = await api.get<PaginatedResponse<MaintenanceTicket>>("/maintenance", { params });
-    return res.data;
+    const cacheKey = `maintenance:${JSON.stringify(params || {})}`;
+    return clientCache.remember(cacheKey, async () => {
+      const res = await api.get<PaginatedResponse<MaintenanceTicket>>("/maintenance", { params });
+      return res.data;
+    });
   },
 
   async createTicket(payload: MaintenanceInput): Promise<MaintenanceTicket> {
     const res = await api.post<{ data: MaintenanceTicket }>("/maintenance", payload);
+    clientCache.invalidate("maintenance");
+    clientCache.invalidate("dashboard");
     return res.data.data;
   },
 
   async updateTicket(id: string, payload: TicketUpdatePayload): Promise<MaintenanceTicket> {
     const res = await api.put<{ data: MaintenanceTicket }>(`/maintenance/${id}`, payload);
+    clientCache.invalidate("maintenance");
+    clientCache.invalidate("dashboard");
     return res.data.data;
   },
 

@@ -1,54 +1,65 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { PageShellSkeleton } from "@/components/ui/skeleton";
 
-// Guest pages
-import LoginPage from "@/pages/guest/login";
-import RegisterPage from "@/pages/guest/register";
-
-// Admin pages
+// Layouts (loaded statically so shell renders without chunk delay)
 import AdminLayout from "@/pages/admin/layout";
-import AdminDashboard from "@/pages/admin/dashboard";
-import AdminTenants from "@/pages/admin/tenants";
-import AdminUtilities from "@/pages/admin/utilities";
-import AdminBilling from "@/pages/admin/billing";
-import AdminMaintenance from "@/pages/admin/maintenance";
-
-// Tenant pages
 import TenantLayout from "@/pages/tenant/layout";
-import TenantDashboard from "@/pages/tenant/dashboard";
-import TenantBilling from "@/pages/tenant/billing";
-import TenantMaintenance from "@/pages/tenant/maintenance";
-import TenantDocuments from "@/pages/tenant/documents";
+
+// Lazy-loaded guest pages
+const LoginPage = lazy(() => import("@/pages/guest/login"));
+const RegisterPage = lazy(() => import("@/pages/guest/register"));
+
+// Lazy-loaded admin portal pages
+const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
+const AdminProperties = lazy(() => import("@/pages/admin/properties"));
+const AdminTenants = lazy(() => import("@/pages/admin/tenants"));
+const AdminUtilities = lazy(() => import("@/pages/admin/utilities"));
+const AdminBilling = lazy(() => import("@/pages/admin/billing"));
+const AdminMaintenance = lazy(() => import("@/pages/admin/maintenance"));
+const AdminDocuments = lazy(() => import("@/pages/admin/documents"));
+
+// Lazy-loaded tenant portal pages
+const TenantDashboard = lazy(() => import("@/pages/tenant/dashboard"));
+const TenantBilling = lazy(() => import("@/pages/tenant/billing"));
+const TenantMaintenance = lazy(() => import("@/pages/tenant/maintenance"));
+const TenantDocuments = lazy(() => import("@/pages/tenant/documents"));
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+      <Suspense fallback={<PageShellSkeleton />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        {/* Landlord / Admin Portal */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="tenants" element={<AdminTenants />} />
-          <Route path="utilities" element={<AdminUtilities />} />
-          <Route path="billing" element={<AdminBilling />} />
-          <Route path="maintenance" element={<AdminMaintenance />} />
-        </Route>
+          {/* Landlord / Admin Portal */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="properties" element={<AdminProperties />} />
+            <Route path="tenants" element={<AdminTenants />} />
+            <Route path="utilities" element={<AdminUtilities />} />
+            <Route path="billing" element={<AdminBilling />} />
+            <Route path="maintenance" element={<AdminMaintenance />} />
+            <Route path="documents" element={<AdminDocuments />} />
+          </Route>
 
-        {/* Tenant Portal */}
-        <Route path="/tenant" element={<TenantLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<TenantDashboard />} />
-          <Route path="billing" element={<TenantBilling />} />
-          <Route path="maintenance" element={<TenantMaintenance />} />
-          <Route path="documents" element={<TenantDocuments />} />
-        </Route>
+          {/* Tenant Portal */}
+          <Route path="/tenant" element={<TenantLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<TenantDashboard />} />
+            <Route path="billing" element={<TenantBilling />} />
+            <Route path="maintenance" element={<TenantMaintenance />} />
+            <Route path="documents" element={<TenantDocuments />} />
+          </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
+

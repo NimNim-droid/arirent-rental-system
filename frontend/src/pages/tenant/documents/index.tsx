@@ -1,151 +1,67 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  Download,
+  AlertTriangle,
   FileText,
   FolderOpen,
-  UploadCloud,
   RefreshCw,
-  AlertTriangle,
-  Trash2,
+  Search,
+  ShieldCheck,
+  Info,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
 import { SkeletonCards } from "@/components/ui/skeleton";
-import { documentsService } from "@/lib/services/documents";
-import { getErrorMessage } from "@/lib/errors";
-import type { DocumentItem } from "@/lib/types";
+import {
+  useDocuments,
+  DocumentCard,
+  UnavailableDocModal,
+} from "@/components/features/documents";
 
-function formatFileSize(value?: number | string): string {
-  if (typeof value === "string") return value;
-  if (typeof value !== "number") return "—";
-  return value >= 1024 * 1024
-    ? `${(value / (1024 * 1024)).toFixed(2)} MB`
-    : `${Math.max(1, Math.round(value / 1024))} KB`;
-}
-
-function formatDate(value?: string): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-const DEFAULT_DOCUMENTS: DocumentItem[] = [
-  {
-    id: "1",
-    name: "AriRent Lease Contract & Agreement.pdf",
-    type: "application/pdf",
-    size: 2457600,
-    url: "#",
-    uploaded_at: "2026-08-15",
-  },
-  {
-    id: "2",
-    name: "AriRent House Rules & Safety Regulations.pdf",
-    type: "application/pdf",
-    size: 1245184,
-    url: "#",
-    uploaded_at: "2026-08-15",
-  },
-  {
-    id: "3",
-    name: "Unit Move-In Checklist & Inspection Report.pdf",
-    type: "application/pdf",
-    size: 842100,
-    url: "#",
-    uploaded_at: "2026-08-15",
-  },
+const CATEGORIES = [
+  "All",
+  "Contracts & Agreements",
+  "House Rules & Regulations",
+  "Checklists & Guides",
+  "Notices & Policies",
 ];
 
 export default function TenantDocuments() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [docs, setDocs] = useState<DocumentItem[]>(DEFAULT_DOCUMENTS);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [unavailableDoc, setUnavailableDoc] = useState<DocumentItem | null>(null);
-  const [deletingDoc, setDeletingDoc] = useState<DocumentItem | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
+  const {
+    docs,
+    error,
+    loading,
+    unavailableDoc,
+    setUnavailableDoc,
+    loadDocs,
+    handleDownload,
+  } = useDocuments();
 
-  const loadDocs = useCallback(async () => {
-    try {
-      const res = await documentsService.getDocuments();
-      if (res && res.length > 0) {
-        setDocs(res);
-      }
-    } catch {
-      // Fallback seamlessly to default documents for demo
-      setDocs(DEFAULT_DOCUMENTS);
-    }
-  }, []);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
-  useEffect(() => {
-    loadDocs();
-  }, [loadDocs]);
+  const filteredDocs = useMemo(() => {
+    return docs.filter((doc) => {
+      const matchesSearch =
+        search === "" ||
+        doc.name.toLowerCase().includes(search.toLowerCase()) ||
+        (doc.category && doc.category.toLowerCase().includes(search.toLowerCase())) ||
+        (doc.description && doc.description.toLowerCase().includes(search.toLowerCase()));
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    setError("");
-    setSuccessMsg("");
-    try {
-      const uploaded: DocumentItem[] = [];
-      for (const file of Array.from(files)) {
-        uploaded.push(await documentsService.uploadDocument(file));
-      }
-      setDocs((prev) => [...uploaded.reverse(), ...prev]);
-      setSuccessMsg(
-        uploaded.length > 1
-          ? `${uploaded.length} files uploaded successfully!`
-          : "File uploaded successfully!"
-      );
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to upload the file(s)."));
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
+      const matchesCategory =
+        selectedCategory === "All" ||
+        (doc.category && doc.category.toLowerCase() === selectedCategory.toLowerCase());
 
-  const handleDownload = (doc: DocumentItem) => {
-    if (!doc.url) {
-      setUnavailableDoc(doc);
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = doc.url;
-    link.target = "_blank";
-    link.click();
-  };
-
-  const handleDelete = async (doc: DocumentItem) => {
-    setDeleteBusy(true);
-    setError("");
-    try {
-      await documentsService.deleteDocument(doc.id);
-      setDocs((prev) => prev.filter((d) => d.id !== doc.id));
-      setDeletingDoc(null);
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to delete the document."));
-    } finally {
-      setDeleteBusy(false);
-    }
-  };
+      return matchesSearch && matchesCategory;
+    });
+  }, [docs, search, selectedCategory]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       <PageHeader
-        title="Documents & Files"
-        subtitle="View your lease agreement and official receipts, or attach supporting documents"
+        title="Property Documentation"
+        subtitle="Official lease contract, house regulations, and property guidelines provided by your landlord"
       />
 
       {error && (
@@ -161,150 +77,136 @@ export default function TenantDocuments() {
         </div>
       )}
 
-      {successMsg && (
-        <div className="flex animate-fade-in-up items-center gap-2 rounded-xl border border-success-border bg-success-bg px-4 py-3 text-xs font-semibold text-success-fg">
-          <FileText className="h-4 w-4 shrink-0" />
-          {successMsg}
+      {/* Official Landlord Notice Banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-accent-border bg-accent-soft/40 p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-sm mt-0.5">
+          <ShieldCheck className="h-5 w-5" />
         </div>
-      )}
-
-      {/* Upload Area */}
-      <Card
-        className="cursor-pointer border-2 border-dashed border-edge-strong p-8 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40"
-        onClick={() => !uploading && fileInputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleFiles(e.dataTransfer.files);
-        }}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-          className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-inset text-muted ring-1 ring-inset ring-edge">
-          <UploadCloud className="h-7 w-7" />
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-fg">Verified Landlord Documentation</h4>
+          <p className="text-xs text-muted mt-0.5 leading-relaxed">
+            The documentation below contains all legal agreements, property rules, and guidelines
+            governing your tenancy. All documents are issued by your landlord and available for you
+            to view or download anytime.
+          </p>
         </div>
-        <h3 className="mt-3 font-bold text-fg">
-          {uploading ? "Uploading…" : "Upload a Document"}
-        </h3>
-        <p className="mt-1 text-xs text-muted">
-          Click or drag a scanned receipt, permit, or written request below
-        </p>
-      </Card>
+      </div>
 
-      {/* Document Files */}
+      {/* Search and Category Filters */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+            <input
+              type="text"
+              placeholder="Search documents by name or keyword..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-edge bg-inset pl-10 pr-4 py-2 text-sm text-fg placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadDocs}
+            disabled={loading}
+            className="flex items-center gap-2 self-end sm:self-auto text-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            const count =
+              cat === "All"
+                ? docs.length
+                : docs.filter((d) => d.category?.toLowerCase() === cat.toLowerCase()).length;
+
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${
+                  isSelected
+                    ? "bg-accent text-white shadow-sm"
+                    : "bg-card border border-edge text-muted hover:text-fg hover:border-accent/40"
+                }`}
+              >
+                <span>{cat}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    isSelected ? "bg-white/20 text-white" : "bg-hover text-muted"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Document Files List */}
       <div className="space-y-4">
         <SectionHeader
           icon={<FolderOpen className="h-5 w-5" />}
-          title={`My Documents (${docs.length})`}
-          subtitle="Important contracts and receipts for your unit"
+          title={`Available Documents (${filteredDocs.length})`}
+          subtitle="Click download to save a copy of any document to your device"
         />
 
         {loading ? (
-          <SkeletonCards cards={2} />
-        ) : docs.length === 0 ? (
-          <Card className="p-8 text-center text-xs text-muted">
-            No documents yet. Upload your first file above.
+          <SkeletonCards cards={3} />
+        ) : filteredDocs.length === 0 ? (
+          <Card className="p-10 text-center space-y-3">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-inset text-muted border border-edge">
+              <FileText className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-fg">No documents found</p>
+              <p className="text-xs text-muted mt-1">
+                {search || selectedCategory !== "All"
+                  ? "No documents match your current filter."
+                  : "No documents have been published by your landlord yet."}
+              </p>
+            </div>
+            {(search || selectedCategory !== "All") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setSelectedCategory("All");
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {docs.map((doc) => (
-              <Card key={doc.id} className="flex items-start justify-between gap-4 p-5">
-                <div className="flex min-w-0 items-start gap-4">
-                  <div className="shrink-0 rounded-2xl bg-accent-soft p-3 text-accent ring-1 ring-inset ring-accent-border">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-bold text-fg">{doc.name}</h3>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <Badge variant={doc.url ? "success" : "info"}>{doc.type ?? "File"}</Badge>
-                      <span className="text-[11px] text-muted">
-                        {formatFileSize(doc.size)} • {formatDate(doc.uploaded_at)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-accent hover:text-accent-strong"
-                    onClick={() => handleDownload(doc)}
-                  >
-                    <Download className="h-4 w-4" />
-                    <span className="hidden sm:inline">Download</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Delete ${doc.name}`}
-                    className="text-danger-fg hover:bg-danger-bg hover:text-danger-fg"
-                    onClick={() => setDeletingDoc(doc)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
+          <Card className="p-0 overflow-hidden divide-y divide-edge">
+            {filteredDocs.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                doc={doc}
+                canDelete={false}
+                onDownload={handleDownload}
+              />
             ))}
-          </div>
+          </Card>
         )}
       </div>
 
-      {/* Unavailable Document Notice */}
-      <Modal
-        open={!!unavailableDoc}
+      {/* Unavailable Doc Modal */}
+      <UnavailableDocModal
+        doc={unavailableDoc}
         onClose={() => setUnavailableDoc(null)}
-        title={unavailableDoc?.name ?? "Document unavailable"}
-        footer={
-          <Button type="button" onClick={() => setUnavailableDoc(null)}>
-            OK
-          </Button>
-        }
-      >
-        <div className="space-y-2 text-sm">
-          <p className="font-semibold text-fg">This file isn't available for download yet.</p>
-          <p className="text-xs text-muted">
-            The original copy of {unavailableDoc?.name} is kept in the office's records. If you
-            need a copy, please contact the property manager.
-          </p>
-        </div>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={!!deletingDoc}
-        onClose={() => setDeletingDoc(null)}
-        title="Delete document?"
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={() => setDeletingDoc(null)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              loading={deleteBusy}
-              onClick={() => deletingDoc && handleDelete(deletingDoc)}
-            >
-              {!deleteBusy && "Delete"}
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-muted">
-          This will permanently remove <strong className="text-fg">{deletingDoc?.name}</strong>.
-          This action cannot be undone.
-        </p>
-      </Modal>
+      />
     </div>
   );
 }

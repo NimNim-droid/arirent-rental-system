@@ -13,7 +13,7 @@ class RoomController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Room::with('property');
+        $query = Room::with('property:id,name,city,address');
 
         if ($request->filled('property_id')) {
             $query->where('property_id', $request->property_id);
@@ -51,6 +51,10 @@ class RoomController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'property_id' => 'required|exists:properties,id',
             'room_number' => 'required|string|max:50',
@@ -59,6 +63,8 @@ class RoomController extends Controller
         ]);
 
         $room = Room::create($validated);
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
 
         return response()->json([
             'message' => 'Room created successfully.',
@@ -70,5 +76,68 @@ class RoomController extends Controller
                 'status' => $room->status,
             ],
         ], 201);
+    }
+
+    /**
+     * Update an existing room.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $room = Room::find($id);
+        if (! $room) {
+            return response()->json(['message' => 'Room not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'room_number' => 'sometimes|required|string|max:50',
+            'rent' => 'sometimes|required|numeric|min:0',
+            'status' => 'sometimes|required|in:vacant,reserved,occupied',
+        ]);
+
+        $room->update($validated);
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+
+        return response()->json([
+            'message' => 'Room updated successfully.',
+            'data' => [
+                'id' => (string) $room->id,
+                'property_id' => (string) $room->property_id,
+                'room_number' => $room->room_number,
+                'rent' => (float) $room->rent,
+                'status' => $room->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Delete a room if it is not occupied.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $room = Room::find($id);
+        if (! $room) {
+            return response()->json(['message' => 'Room not found.'], 404);
+        }
+
+        if ($room->status === 'occupied') {
+            return response()->json([
+                'message' => 'Cannot delete an occupied room. Please vacate the tenant first.',
+            ], 422);
+        }
+
+        $room->delete();
+        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
+        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+
+        return response()->json(['message' => 'Room deleted successfully.']);
     }
 }

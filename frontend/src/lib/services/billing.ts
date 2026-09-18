@@ -1,5 +1,6 @@
 import api from "@/lib/axios";
-import type { Bill, BillGenerateResult, PaginatedResponse } from "@/lib/types";
+import { clientCache } from "@/lib/cache";
+import type { Bill, BillGenerateResult, CreateBillPayload, PaginatedResponse } from "@/lib/types";
 
 export interface BillQuery {
   tenant_id?: string;
@@ -10,17 +11,33 @@ export interface BillQuery {
 
 export const billingService = {
   async getBills(params?: BillQuery): Promise<PaginatedResponse<Bill>> {
-    const res = await api.get<PaginatedResponse<Bill>>("/bills", { params });
-    return res.data;
+    const cacheKey = `bills:${JSON.stringify(params || {})}`;
+    return clientCache.remember(cacheKey, async () => {
+      const res = await api.get<PaginatedResponse<Bill>>("/bills", { params });
+      return res.data;
+    });
   },
 
   async getBill(id: string): Promise<Bill> {
-    const res = await api.get<{ data: Bill }>(`/bills/${id}`);
-    return res.data.data;
+    return clientCache.remember(`bill:${id}`, async () => {
+      const res = await api.get<{ data: Bill }>(`/bills/${id}`);
+      return res.data.data;
+    });
+  },
+
+  async createBill(payload: CreateBillPayload): Promise<{ message: string; bill: Bill }> {
+    const res = await api.post<{ message: string; bill: Bill }>("/bills", payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
+    return res.data;
   },
 
   async generateBills(payload: { date?: string } = {}): Promise<BillGenerateResult> {
     const res = await api.post<BillGenerateResult>("/bills/generate", payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
     return res.data;
   },
 
@@ -29,6 +46,10 @@ export const billingService = {
     payload: { approved: boolean; reject_reason?: string }
   ): Promise<string> {
     const res = await api.post<{ message: string }>(`/bills/${id}/verify`, payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
     return res.data.message;
   },
 
@@ -37,13 +58,15 @@ export const billingService = {
     payload: Partial<Pick<Bill, "rent" | "electricity" | "water" | "status">>
   ): Promise<Bill> {
     const res = await api.put<{ data: Bill }>(`/bills/${id}`, payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
     return res.data.data;
   },
 
   /**
    * Submits a tenant payment reference for verification.
-   * NOTE: This endpoint is part of the frontend API contract; it is not yet
-   * defined in BACKEND.md and must be implemented by the Laravel backend.
    */
   async submitPayment(
     id: string,
@@ -54,9 +77,10 @@ export const billingService = {
     if (payload.notes) body.append("notes", payload.notes);
     if (payload.receipt) body.append("receipt", payload.receipt);
 
-    const res = await api.post<{ message: string }>(`/bills/${id}/payment`, body, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await api.post<{ message: string }>(`/bills/${id}/payment`, body);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("dashboard");
     return res.data.message;
   },
 };

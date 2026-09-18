@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
         $adminUser = User::create([
             'name' => 'Property Manager',
             'email' => 'admin@arirent.com',
-            'password' => Hash::make('admin123'),
+            'password' => Hash::make('admin'),
             'role' => 'admin',
         ]);
 
@@ -156,8 +156,15 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Tenant 3: Juan Miguel (Pending Approval)
+        $juanUser = User::create([
+            'name' => 'Juan Miguel',
+            'email' => 'juan.m@example.com',
+            'password' => Hash::make('secret123'),
+            'role' => 'tenant',
+        ]);
+
         Tenant::create([
-            'user_id' => null,
+            'user_id' => $juanUser->id,
             'property_id' => $makati->id,
             'room' => '105',
             'username' => 'juanmiguel',
@@ -172,8 +179,15 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Tenant 4: Angela De Silva (Pending Approval)
+        $angelaUser = User::create([
+            'name' => 'Angela De Silva',
+            'email' => 'angela@example.com',
+            'password' => Hash::make('secret123'),
+            'role' => 'tenant',
+        ]);
+
         Tenant::create([
-            'user_id' => null,
+            'user_id' => $angelaUser->id,
             'property_id' => $qc->id,
             'room' => '201',
             'username' => 'angeladesilva',
@@ -248,12 +262,12 @@ class DatabaseSeeder extends Seeder
         // Carlos: Older Unpaid Bill
         Bill::create([
             'tenant_id' => $carlosTenant->id,
-            'rent' => 5000.00,
+            'rent' => 14000.00,
             'electricity' => 0.00,
             'elec_usage' => 0.00,
             'water' => 500.00,
             'late_fee' => 0.00,
-            'total_amount' => 5500.00,
+            'total_amount' => 14500.00,
             'date' => '2026-08-01',
             'due_date' => '2026-08-15',
             'status' => 'unpaid',

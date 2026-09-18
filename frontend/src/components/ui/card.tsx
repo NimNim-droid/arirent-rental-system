@@ -18,13 +18,13 @@ export function Card({ children, className, onClick, style, onDragOver, onDrop }
       onDrop={onDrop}
       style={style}
       className={cn(
-        "rounded-2xl border border-edge bg-card shadow-card transition-all duration-300 ease-out hover:shadow-pop",
+        "rounded-xl border border-edge bg-card shadow-soft transition-all duration-150",
         onClick &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-edge-strong",
+          "cursor-pointer hover:border-edge-strong hover:bg-hover/20",
         className
       )}
     >
       {children}
     </div>
   );
-}
+}

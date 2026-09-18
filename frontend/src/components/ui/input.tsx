@@ -23,7 +23,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={id} className="block text-xs font-semibold text-muted">
+          <label htmlFor={id} className="block text-sm font-semibold text-fg-soft">
             {label}
           </label>
         )}
@@ -38,10 +38,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             type={resolvedType}
             className={cn(
-              "w-full rounded-xl border border-edge bg-inset px-3.5 py-2.5 text-sm text-fg placeholder:text-faint focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:cursor-not-allowed disabled:bg-hover disabled:text-faint transition-all duration-200",
+              "w-full rounded-xl border border-edge bg-inset px-3.5 py-2.5 text-sm text-fg placeholder:text-faint focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-hover disabled:text-faint transition-all duration-200",
               icon && "pl-10",
               isPassword && "pr-11",
-              error && "border-danger-border focus:border-danger-fg focus:ring-danger-fg/25",
+              error && "border-danger-border focus:border-danger-fg focus:ring-danger-fg/20",
               className
             )}
             {...props}
@@ -57,11 +57,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </button>
           )}
         </div>
-        {error && <p className="flex items-center gap-1 text-xs text-danger-fg font-medium">{error}</p>}
+        {error && <p className="flex items-center gap-1 text-xs font-medium text-danger-fg">{error}</p>}
         {helperText && !error && <p className="text-xs text-muted">{helperText}</p>}
       </div>
     );
   }
 );
 
-Input.displayName = "Input";
+Input.displayName = "Input";

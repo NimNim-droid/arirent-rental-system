@@ -72,6 +72,11 @@ export interface Tenant {
   status: "pending_approval" | "active" | "inactive";
   balance: number;
   water_rate: number;
+  room_rent?: number;
+  latest_reading?: number;
+  move_in_date?: string | null;
+  billing_day?: number;
+  advance_paid?: number;
   lease_end: string | null;
   vacated_date?: string;
   created_at?: string;
@@ -83,6 +88,8 @@ export interface TenantUpdatePayload {
   phone?: string;
   room?: string;
   water_rate?: number;
+  move_in_date?: string | null;
+  advance_paid?: number;
   lease_end?: string | null;
 }
 
@@ -97,7 +104,7 @@ export interface Bill {
   total_amount: number;
   date: string;
   due_date: string;
-  status: "unpaid" | "pending_verification" | "paid";
+  status: "unpaid" | "pending_verification" | "paid" | "voided";
   gcash_ref?: string;
   receipt_url?: string;
   notes?: string;
@@ -110,6 +117,20 @@ export interface Bill {
     name: string;
     room: string;
   };
+}
+
+export interface CreateBillPayload {
+  tenant_id: string;
+  rent: number;
+  electricity?: number;
+  elec_usage?: number;
+  water?: number;
+  late_fee?: number;
+  date: string;
+  due_date: string;
+  notes?: string;
+  prev_reading?: number;
+  curr_reading?: number;
 }
 
 export interface BillGenerateResult {
@@ -139,7 +160,7 @@ export interface MaintenanceTicket {
   description: string;
   photo_url?: string;
   priority: "normal" | "urgent";
-  status: "pending" | "in_progress" | "resolved";
+  status: "pending" | "in_progress" | "resolved" | "archived";
   technician_name?: string;
   admin_notes?: string;
   resolved_date?: string;
@@ -149,6 +170,7 @@ export interface MaintenanceTicket {
 }
 
 export interface MaintenanceInput {
+  tenant_id?: string;
   type: MaintenanceTicket["type"];
   description: string;
   priority: MaintenanceTicket["priority"];
@@ -190,6 +212,7 @@ export interface TenantDashboardData {
     latest_reading: number;
     estimated_charge: number;
     elec_rate: number;
+    last_reading_date?: string | null;
   } | null;
   recent_maintenance?: MaintenanceTicket[];
   settings?: Settings | null;
@@ -198,10 +221,13 @@ export interface TenantDashboardData {
 export interface DocumentItem {
   id: string;
   name: string;
+  category?: string;
   type?: string;
   size?: number | string;
   url?: string;
   uploaded_at?: string;
+  uploaded_by?: string;
+  description?: string;
 }
 
 export interface ApiResponse<T> {
