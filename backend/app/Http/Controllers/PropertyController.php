@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Property\StorePropertyRequest;
+use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Http\Resources\PropertyResource;
 use App\Services\PropertyService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -57,22 +58,12 @@ class PropertyController extends Controller
     }
 
     /**
-     * Update an existing property.
+     * Update an existing property. Admin only.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdatePropertyRequest $request, int $id): JsonResponse
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'city' => 'sometimes|required|string|max:100',
-            'address' => 'sometimes|required|string|max:255',
-        ]);
-
         try {
-            $property = $this->propertyService->updateProperty($id, $validated);
+            $property = $this->propertyService->updateProperty($id, $request->validated());
 
             return response()->json([
                 'message' => 'Property updated successfully.',

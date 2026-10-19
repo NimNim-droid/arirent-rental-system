@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Room\StoreRoomRequest;
+use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Http\Resources\RoomResource;
 use App\Services\PropertyService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -51,22 +52,12 @@ class RoomController extends Controller
     }
 
     /**
-     * Update an existing room.
+     * Update an existing room. Admin only.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateRoomRequest $request, int $id): JsonResponse
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'room_number' => 'sometimes|required|string|max:50',
-            'rent' => 'sometimes|required|numeric|min:0',
-            'status' => 'sometimes|required|in:vacant,reserved,occupied',
-        ]);
-
         try {
-            $room = $this->propertyService->updateRoom($id, $validated);
+            $room = $this->propertyService->updateRoom($id, $request->validated());
 
             return response()->json([
                 'message' => 'Room updated successfully.',

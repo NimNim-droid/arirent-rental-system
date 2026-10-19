@@ -85,13 +85,13 @@ Rule of thumb: **Controllers** only receive the request, call one service method
 
 Each item: create the Request class → move the `validate([...])` rules into `rules()` → move the `role !== 'admin'` check into `authorize()` → change the controller method's parameter type → delete the inline code.
 
-- [ ] **F-B1** `Property/UpdatePropertyRequest.php` → [`PropertyController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/PropertyController.php) (currently inline validate + inline admin check)
-- [ ] **F-B2** `Room/UpdateRoomRequest.php` → [`RoomController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/RoomController.php) (same)
-- [ ] **F-B3** `Bill/VerifyPaymentRequest.php` → [`BillController::verify`](file:///c:/dev/rental-system/backend/app/Http/Controllers/BillController.php) (`approved`, `reject_reason`)
-- [ ] **F-B4** `Tenant/ApproveTenantRequest.php` → [`TenantController::approve`](file:///c:/dev/rental-system/backend/app/Http/Controllers/TenantController.php#L99-L127) (`move_in_date`, `advance_paid`)
-- [ ] **F-B5** `Maintenance/StoreMaintenanceRequest.php` + `UpdateMaintenanceRequest.php` → [`MaintenanceController`](file:///c:/dev/rental-system/backend/app/Http/Controllers/MaintenanceController.php) `store` / `update`
-- [ ] **F-B6** `Settings/UpdateSettingsRequest.php` → [`SettingsController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/SettingsController.php#L33-L45)
-- [ ] **F-B7** Add a unique rule for admin email edits in [`UpdateTenantRequest`](file:///c:/dev/rental-system/backend/app/Http/Requests/Tenant/UpdateTenantRequest.php#L48)
+- [x] **F-B1** `Property/UpdatePropertyRequest.php` → [`PropertyController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/PropertyController.php) (currently inline validate + inline admin check)
+- [x] **F-B2** `Room/UpdateRoomRequest.php` → [`RoomController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/RoomController.php) (same)
+- [x] **F-B3** `Bill/VerifyPaymentRequest.php` → [`BillController::verify`](file:///c:/dev/rental-system/backend/app/Http/Controllers/BillController.php) (`approved`, `reject_reason`)
+- [x] **F-B4** `Tenant/ApproveTenantRequest.php` → [`TenantController::approve`](file:///c:/dev/rental-system/backend/app/Http/Controllers/TenantController.php#L99-L127) (`move_in_date`, `advance_paid`)
+- [x] **F-B5** `Maintenance/StoreMaintenanceRequest.php` + `UpdateMaintenanceRequest.php` → [`MaintenanceController`](file:///c:/dev/rental-system/backend/app/Http/Controllers/MaintenanceController.php) `store` / `update`
+- [x] **F-B6** `Settings/UpdateSettingsRequest.php` → [`SettingsController::update`](file:///c:/dev/rental-system/backend/app/Http/Controllers/SettingsController.php#L33-L45)
+- [x] **F-B7** Add a unique rule for admin email edits in [`UpdateTenantRequest`](file:///c:/dev/rental-system/backend/app/Http/Requests/Tenant/UpdateTenantRequest.php#L48)
   - **Problem:** `tenants.email` is `unique` in the database, but the rule is only `nullable|email`. A duplicate email causes a database error (500) instead of a clear 422 message.
   - **Fix:** `Rule::unique('tenants', 'email')->ignore($this->route('id'))`.
 - [ ] **F-B8** Unused Request files: [`Reading/UpdateReadingRequest.php`](file:///c:/dev/rental-system/backend/app/Http/Requests/Reading/UpdateReadingRequest.php) (no reading-update route exists) and [`Tenant/StoreTenantRequest.php`](file:///c:/dev/rental-system/backend/app/Http/Requests/Tenant/StoreTenantRequest.php) (tenants are created via `/register`). **Decide:** delete them, or keep them for a planned feature.

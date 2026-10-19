@@ -6,6 +6,7 @@ use App\Http\Requests\Bill\GenerateBillsRequest;
 use App\Http\Requests\Bill\ProcessPaymentRequest;
 use App\Http\Requests\Bill\StoreBillRequest;
 use App\Http\Requests\Bill\UpdateBillRequest;
+use App\Http\Requests\Bill\VerifyPaymentRequest;
 use App\Http\Resources\BillResource;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -172,16 +173,9 @@ class BillController extends Controller
     /**
      * Landlord verifies or rejects a submitted payment. Admin only.
      */
-    public function verify(Request $request, int $id): JsonResponse
+    public function verify(VerifyPaymentRequest $request, int $id): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'approved' => 'required|boolean',
-            'reject_reason' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         try {
             $bill = $this->paymentService->verifyPayment(

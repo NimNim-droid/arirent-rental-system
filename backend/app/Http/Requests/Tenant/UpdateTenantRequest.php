@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTenantRequest extends FormRequest
 {
@@ -45,7 +46,7 @@ class UpdateTenantRequest extends FormRequest
 
         return [
             'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('tenants', 'email')->ignore((int) $this->route('id'))],
             'phone' => ['nullable', 'string', 'max:20'],
             'water_rate' => ['nullable', 'numeric', 'min:0'],
             'balance' => ['nullable', 'numeric'],

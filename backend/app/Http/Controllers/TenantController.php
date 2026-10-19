@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Tenant\ApproveTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Http\Resources\BillResource;
 use App\Http\Resources\MaintenanceResource;
@@ -109,16 +110,9 @@ class TenantController extends Controller
     /**
      * Approve a pending tenant application and assign room as occupied. Admin only.
      */
-    public function approve(Request $request, int $id): JsonResponse
+    public function approve(ApproveTenantRequest $request, int $id): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'move_in_date' => 'nullable|date',
-            'advance_paid' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             $tenant = $this->tenantService->approveTenant(

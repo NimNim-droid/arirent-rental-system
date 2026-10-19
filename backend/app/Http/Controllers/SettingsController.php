@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Settings\UpdateSettingsRequest;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,19 +31,9 @@ class SettingsController extends Controller
     /**
      * Update global utility rates or GCash details. Admin only.
      */
-    public function update(Request $request): JsonResponse
+    public function update(UpdateSettingsRequest $request): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'elec_rate' => 'nullable|numeric|min:0',
-            'water_rate' => 'nullable|numeric|min:0',
-            'gcash_name' => 'nullable|string|max:255',
-            'gcash_number' => 'nullable|string|max:50',
-            'gcash_qr' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
-        ]);
+        $validated = $request->validated();
 
         $setting = Setting::first();
 

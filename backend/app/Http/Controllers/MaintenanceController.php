@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Maintenance\StoreMaintenanceRequest;
+use App\Http\Requests\Maintenance\UpdateMaintenanceRequest;
 use App\Http\Resources\MaintenanceResource;
 use App\Models\MaintenanceTicket;
 use App\Models\Tenant;
@@ -66,21 +68,14 @@ class MaintenanceController extends Controller
     /**
      * Submit a new maintenance ticket.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreMaintenanceRequest $request): JsonResponse
     {
         $user = $request->user();
         $tenant = Tenant::where('user_id', $user->id)
             ->orWhere('email', $user->email)
             ->first();
 
-        $validated = $request->validate([
-            'tenant_id' => 'nullable|exists:tenants,id',
-            'type' => 'required|in:plumbing,electrical,appliances,general',
-            'description' => 'required|string|max:1000',
-            'priority' => 'required|in:normal,urgent',
-            'photo_url' => 'nullable|string',
-            'photo' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
-        ]);
+        $validated = $request->validated();
 
         $tenantId = ($user->role === 'tenant') ? $tenant?->id : ($validated['tenant_id'] ?? $tenant?->id);
 
@@ -118,25 +113,17 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Update ticket status, dispatch technician, or mark resolved.
+     * Update ticket status, dispatch technician, or mark resolved. Admin only.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateMaintenanceRequest $request, int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         $ticket = MaintenanceTicket::find($id);
 
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        $validated = $request->validate([
-            'status' => 'nullable|in:pending,in_progress,resolved,archived',
-            'technician_name' => 'nullable|string|max:100',
-            'admin_notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['status']) && $validated['status'] === 'resolved' && ! $ticket->resolved_date) {
             $ticket->resolved_date = now();
