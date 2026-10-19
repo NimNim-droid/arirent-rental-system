@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Bill;
-use App\Models\Setting;
-use App\Models\Tenant;
 use App\Models\UtilityReading;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
+use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -17,14 +16,15 @@ class UtilityService
     public function __construct(
         protected ReadingRepositoryInterface $readingRepo,
         protected BillRepositoryInterface $billRepo,
-        protected TenantRepositoryInterface $tenantRepo
+        protected TenantRepositoryInterface $tenantRepo,
+        protected SettingsRepositoryInterface $settingsRepo
     ) {}
 
     public function recordReading(int $tenantId, float $prev, float $curr, string $date): array
     {
         $usage = max(0, round($curr - $prev, 2));
 
-        $settings = Setting::getGlobal();
+        $settings = $this->settingsRepo->getGlobal();
         $elecRate = (float) $settings->elec_rate;
         $amount = round($usage * $elecRate, 2);
 
@@ -42,11 +42,7 @@ class UtilityService
         $monthStart = $readingDate->copy()->startOfMonth()->format('Y-m-d');
         $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
 
-        $unpaidBill = Bill::where('tenant_id', $tenantId)
-            ->where('status', 'unpaid')
-            ->whereBetween('date', [$monthStart, $monthEnd])
-            ->latest('date')
-            ->first();
+        $unpaidBill = $this->billRepo->findForTenantInMonth($tenantId, $monthStart, $monthEnd, 'unpaid');
 
         if ($unpaidBill) {
             $prevElec = (float) $unpaidBill->electricity;
@@ -82,17 +78,15 @@ class UtilityService
     {
         $reading = $this->readingRepo->find($id);
         if (! $reading) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Reading not found.');
+            throw new ModelNotFoundException('Reading not found.');
         }
 
-        // Reverse bill adjustment if a bill was updated by this reading
+        // Reverse bill adjustment if an unpaid bill was updated by this reading
         $readingDate = Carbon::parse($reading->date);
         $monthStart = $readingDate->copy()->startOfMonth()->format('Y-m-d');
         $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
 
-        $bill = Bill::where('tenant_id', $reading->tenant_id)
-            ->whereBetween('date', [$monthStart, $monthEnd])
-            ->first();
+        $bill = $this->billRepo->findForTenantInMonth($reading->tenant_id, $monthStart, $monthEnd, 'unpaid');
 
         if ($bill) {
             $oldElec = (float) $bill->electricity;
@@ -122,4 +116,3 @@ class UtilityService
         return $deleted;
     }
 }
-

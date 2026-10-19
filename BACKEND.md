@@ -127,32 +127,32 @@ backend/
 │   │
 │   ├── Repositories/
 │   │   ├── Contracts/
-│   │   │   ├── PropertyRepositoryInterface.php
-│   │   │   ├── RoomRepositoryInterface.php
-│   │   │   ├── TenantRepositoryInterface.php
 │   │   │   ├── BillRepositoryInterface.php
-│   │   │   ├── ReadingRepositoryInterface.php
 │   │   │   ├── MaintenanceRepositoryInterface.php
-│   │   │   └── SettingsRepositoryInterface.php
+│   │   │   ├── PropertyRepositoryInterface.php
+│   │   │   ├── ReadingRepositoryInterface.php
+│   │   │   ├── RoomRepositoryInterface.php
+│   │   │   ├── SettingsRepositoryInterface.php
+│   │   │   └── TenantRepositoryInterface.php
 │   │   │
-│   │   ├── PropertyRepository.php
-│   │   ├── RoomRepository.php
-│   │   ├── TenantRepository.php
-│   │   ├── BillRepository.php
-│   │   ├── ReadingRepository.php
-│   │   ├── MaintenanceRepository.php
-│   │   └── SettingsRepository.php
+│   │   └── Eloquent/
+│   │       ├── EloquentBillRepository.php
+│   │       ├── EloquentMaintenanceRepository.php
+│   │       ├── EloquentPropertyRepository.php
+│   │       ├── EloquentReadingRepository.php
+│   │       ├── EloquentRoomRepository.php
+│   │       ├── EloquentSettingsRepository.php
+│   │       └── EloquentTenantRepository.php
 │   │
 │   ├── Services/
-│   │   ├── AuthService.php
-│   │   ├── PropertyService.php
-│   │   ├── RoomService.php
-│   │   ├── TenantService.php
 │   │   ├── BillService.php
-│   │   ├── ReadingService.php
+│   │   ├── DashboardService.php
 │   │   ├── MaintenanceService.php
+│   │   ├── PaymentService.php
+│   │   ├── PropertyService.php
 │   │   ├── SettingsService.php
-│   │   └── DashboardService.php
+│   │   ├── TenantService.php
+│   │   └── UtilityService.php
 │   │
 │   └── Providers/
 │       └── AppServiceProvider.php
@@ -998,7 +998,7 @@ lateFee    = ₱250 per unpaid bill older than 30 days
 | **Form Request** | Validates and authorizes incoming data | `StoreBillRequest`, `UpdateTenantRequest` |
 | **Service** | Business logic, coordinates between controller and repository | `BillService::generateMonthlyInvoices()` |
 | **Repository Interface** | Defines data-access contract (no Eloquent details) | `TenantRepositoryInterface` |
-| **Repository** | Concrete Eloquent implementation of the interface | `TenantRepository` |
+| **Repository** | Concrete Eloquent implementation of the interface | `EloquentTenantRepository` |
 | **Model** | Represents database table, defines relationships | `Tenant`, `Bill` |
 | **API Resource** | Controls the public JSON response shape | `TenantResource`, `BillResource` |
 
@@ -1022,7 +1022,7 @@ class TenantService
 }
 
 // Binding in AppServiceProvider
-$this->app->bind(TenantRepositoryInterface::class, TenantRepository::class);
+$this->app->bind(TenantRepositoryInterface::class, EloquentTenantRepository::class);
 ```
 
 ### Why Layered Architecture?

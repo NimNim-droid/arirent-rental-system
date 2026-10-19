@@ -11,6 +11,8 @@ interface PropertyRepositoryInterface
 
     public function find(int $id, array $relations = []): ?Property;
 
+    public function findWithOccupiedCount(int $id): ?Property;
+
     public function create(array $attributes): Property;
 
     public function update(int $id, array $attributes): Property;

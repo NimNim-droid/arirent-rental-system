@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\Models\Bill;
-use App\Models\Setting;
-use App\Models\Tenant;
 use App\Models\UtilityReading;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
+use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -20,7 +19,8 @@ class BillService
         protected BillRepositoryInterface $billRepo,
         protected TenantRepositoryInterface $tenantRepo,
         protected RoomRepositoryInterface $roomRepo,
-        protected ReadingRepositoryInterface $readingRepo
+        protected ReadingRepositoryInterface $readingRepo,
+        protected SettingsRepositoryInterface $settingsRepo
     ) {}
 
     public function createBill(array $data, ?float $prevReading = null, ?float $currReading = null): Bill
@@ -96,7 +96,7 @@ class BillService
         $today = now()->format('Y-m-d');
         $overdueTenantIds = $this->billRepo->getOverdueTenantIds($today);
 
-        $defaultWaterRate = (float) Setting::getGlobal()->water_rate;
+        $defaultWaterRate = (float) $this->settingsRepo->getGlobal()->water_rate;
 
         $generated = 0;
         $skipped = 0;
@@ -181,7 +181,7 @@ class BillService
                 $this->billRepo->insertBatch($billsToInsert);
 
                 foreach ($balanceIncrements as $tId => $inc) {
-                    Tenant::where('id', $tId)->increment('balance', $inc);
+                    $this->tenantRepo->incrementBalance($tId, $inc);
                 }
             }
         });

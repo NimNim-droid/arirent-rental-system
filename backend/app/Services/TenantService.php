@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Tenant;
-use App\Models\User;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
@@ -99,11 +98,7 @@ class TenantService
         }
 
         if ($room->status === 'occupied') {
-            $otherTenant = Tenant::where('property_id', $tenant->property_id)
-                ->where('room', $tenant->room)
-                ->where('status', 'active')
-                ->where('id', '!=', $tenant->id)
-                ->first();
+            $otherTenant = $this->tenantRepo->findActiveInRoom($tenant->property_id, $tenant->room, $tenant->id);
 
             if ($otherTenant) {
                 throw new \RuntimeException("Room {$tenant->room} is already occupied by {$otherTenant->name}.");
@@ -209,7 +204,7 @@ class TenantService
             }
 
             if ($tenant->user_id) {
-                User::where('id', $tenant->user_id)->delete();
+                $this->tenantRepo->deleteUser($tenant->user_id);
             }
 
             $deleted = $this->tenantRepo->delete($tenant->id);

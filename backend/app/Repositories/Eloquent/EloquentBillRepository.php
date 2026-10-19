@@ -74,4 +74,16 @@ class EloquentBillRepository implements BillRepositoryInterface
             ->flip()
             ->all();
     }
+
+    public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill
+    {
+        $query = Bill::where('tenant_id', $tenantId)
+            ->whereBetween('date', [$monthStart, $monthEnd]);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->latest('date')->first();
+    }
 }

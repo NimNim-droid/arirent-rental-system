@@ -7,16 +7,21 @@ use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
+use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Eloquent\EloquentBillRepository;
 use App\Repositories\Eloquent\EloquentMaintenanceRepository;
 use App\Repositories\Eloquent\EloquentPropertyRepository;
 use App\Repositories\Eloquent\EloquentReadingRepository;
 use App\Repositories\Eloquent\EloquentRoomRepository;
+use App\Repositories\Eloquent\EloquentSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
 use App\Services\BillService;
+use App\Services\DashboardService;
+use App\Services\MaintenanceService;
 use App\Services\PaymentService;
 use App\Services\PropertyService;
+use App\Services\SettingsService;
 use App\Services\TenantService;
 use App\Services\UtilityService;
 use Tests\TestCase;
@@ -31,6 +36,7 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(EloquentPropertyRepository::class, app(PropertyRepositoryInterface::class));
         $this->assertInstanceOf(EloquentRoomRepository::class, app(RoomRepositoryInterface::class));
         $this->assertInstanceOf(EloquentMaintenanceRepository::class, app(MaintenanceRepositoryInterface::class));
+        $this->assertInstanceOf(EloquentSettingsRepository::class, app(SettingsRepositoryInterface::class));
     }
 
     public function test_domain_services_resolve_correctly_with_autowiring(): void
@@ -40,5 +46,9 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(PaymentService::class, app(PaymentService::class));
         $this->assertInstanceOf(UtilityService::class, app(UtilityService::class));
         $this->assertInstanceOf(PropertyService::class, app(PropertyService::class));
+        $this->assertInstanceOf(MaintenanceService::class, app(MaintenanceService::class));
+        $this->assertInstanceOf(SettingsService::class, app(SettingsService::class));
+        $this->assertInstanceOf(DashboardService::class, app(DashboardService::class));
+        $this->assertInstanceOf(\App\Services\AuthService::class, app(\App\Services\AuthService::class));
     }
 }

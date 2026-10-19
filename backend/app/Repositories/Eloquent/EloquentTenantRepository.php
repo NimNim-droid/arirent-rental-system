@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Tenant;
+use App\Models\User;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -48,6 +49,29 @@ class EloquentTenantRepository implements TenantRepositoryInterface
         return Tenant::where('user_id', $userId)
             ->orWhere('email', $email)
             ->first();
+    }
+
+    public function findActiveInRoom(int $propertyId, string $room, ?int $excludeTenantId = null): ?Tenant
+    {
+        $query = Tenant::where('property_id', $propertyId)
+            ->where('room', $room)
+            ->where('status', 'active');
+
+        if ($excludeTenantId) {
+            $query->where('id', '!=', $excludeTenantId);
+        }
+
+        return $query->first();
+    }
+
+    public function incrementBalance(int $tenantId, float $amount): bool
+    {
+        return (bool) Tenant::where('id', $tenantId)->increment('balance', $amount);
+    }
+
+    public function deleteUser(int $userId): bool
+    {
+        return (bool) User::where('id', $userId)->delete();
     }
 
     public function create(array $attributes): Tenant

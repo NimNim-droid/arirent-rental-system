@@ -100,25 +100,25 @@ Each item: create the Request class → move the `validate([...])` rules into `r
 
 ### Group C — Finish Phase 4 (Services & Repositories)
 
-- [ ] **F-C1 `MaintenanceController` still talks to Models directly**
+- [x] **F-C1 `MaintenanceController` still talks to Models directly**
   - **Proof:** `MaintenanceRepositoryInterface` is bound in `AppServiceProvider` and tested in `ArchitectureTest`, but **no controller or service uses it**.
   - **Steps:** Create `app/Services/MaintenanceService.php` (list by role, create with photo upload, update with `resolved_date`, delete) → inject `MaintenanceRepositoryInterface` + `TenantRepositoryInterface` → make the controller call the service only.
-- [ ] **F-C2 `SettingsController` is a fat controller**
+- [x] **F-C2 `SettingsController` is a fat controller**
   - **Steps:** Create `SettingsRepositoryInterface` + `EloquentSettingsRepository` (wrap `Setting::getGlobal()` / save) → `SettingsService` (rates, GCash, QR upload) → `SettingsResource` → bind in `AppServiceProvider`.
-- [ ] **F-C3 `DashboardController` runs queries itself**
+- [x] **F-C3 `DashboardController` runs queries itself**
   - **Steps:** Create `DashboardService` with `adminStats(?propertyId)` and `tenantDashboard(User)`, and move the existing query code and cache keys there unchanged. Don't change the numbers it returns.
-- [ ] **F-C4 Remove direct `Model::` calls inside Services** (add the needed repository methods):
+- [x] **F-C4 Remove direct `Model::` calls inside Services** (add the needed repository methods):
   - [`UtilityService`](file:///c:/dev/rental-system/backend/app/Services/UtilityService.php#L45) → `Bill::where(...)` in `recordReading` and `deleteReading` → `billRepo->findForTenantInMonth(...)`
   - [`PropertyService::deleteProperty`](file:///c:/dev/rental-system/backend/app/Services/PropertyService.php#L71) → `Property::withCount(...)` → `propertyRepo->findWithOccupiedCount($id)`
   - [`TenantService::approveTenant`](file:///c:/dev/rental-system/backend/app/Services/TenantService.php#L102) → `Tenant::where(...)` → `tenantRepo->findActiveInRoom(...)`; `deleteTenant` → `User::where(...)->delete()`
   - [`BillService::generateMonthlyBills`](file:///c:/dev/rental-system/backend/app/Services/BillService.php#L184) → `Tenant::where(...)->increment(...)` → `tenantRepo->incrementBalance(...)`
   - `Setting::getGlobal()` in `BillService` / `UtilityService` → switch to `SettingsRepositoryInterface` after F-C2.
-- [ ] **F-C5** Extend [`ArchitectureTest`](file:///c:/dev/rental-system/backend/tests/Feature/ArchitectureTest.php) with the new services/repositories.
-- [ ] **F-C6 Make [BACKEND.md](file:///c:/dev/rental-system/BACKEND.md) match reality** (documentation drift)
+- [x] **F-C5** Extend [`ArchitectureTest`](file:///c:/dev/rental-system/backend/tests/Feature/ArchitectureTest.php) with the new services/repositories.
+- [x] **F-C6 Make [BACKEND.md](file:///c:/dev/rental-system/BACKEND.md) match reality** (documentation drift)
   - BACKEND.md lists `RoomService`, `ReadingService`, `AuthService`, `MaintenanceService`, `SettingsService`, `DashboardService` and puts repositories directly in `app/Repositories/`.
   - The actual code uses `PropertyService` (properties + rooms), `UtilityService` (readings), `PaymentService`, and puts repositories in `app/Repositories/Eloquent/`.
   - **Decide:** update BACKEND.md to the real structure (recommended, less churn).
-- [ ] **F-C7 (Optional)** `AuthController::register` creates `User` / `Tenant` / updates `Room` directly. Move this into an `AuthService` to complete the pattern.
+- [x] **F-C7 (Optional)** `AuthController::register` creates `User` / `Tenant` / updates `Room` directly. Move this into an `AuthService` to complete the pattern.
 
 ---
 

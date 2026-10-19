@@ -22,4 +22,6 @@ interface BillRepositoryInterface
     public function getBilledTenantIdsForMonth(array $tenantIds, string $monthStart, string $monthEnd): array;
 
     public function getOverdueTenantIds(string $today): array;
+
+    public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill;
 }

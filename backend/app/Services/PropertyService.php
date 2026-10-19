@@ -68,11 +68,7 @@ class PropertyService
      */
     public function deleteProperty(int $id): bool
     {
-        $property = Property::withCount([
-            'rooms as occupied_rooms' => function ($q) {
-                $q->where('status', 'occupied');
-            },
-        ])->find($id);
+        $property = $this->propertyRepo->findWithOccupiedCount($id);
 
         if (! $property) {
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Property not found.');

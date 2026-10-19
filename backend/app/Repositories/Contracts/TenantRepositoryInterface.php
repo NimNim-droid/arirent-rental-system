@@ -14,6 +14,12 @@ interface TenantRepositoryInterface
 
     public function findByUserIdOrEmail(int $userId, string $email): ?Tenant;
 
+    public function findActiveInRoom(int $propertyId, string $room, ?int $excludeTenantId = null): ?Tenant;
+
+    public function incrementBalance(int $tenantId, float $amount): bool;
+
+    public function deleteUser(int $userId): bool;
+
     public function create(array $attributes): Tenant;
 
     public function update(int $id, array $attributes): Tenant;

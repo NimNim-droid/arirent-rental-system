@@ -1,0 +1,176 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\MaintenanceTicket;
+use App\Models\Property;
+use App\Models\Room;
+use App\Models\Setting;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class MaintenanceAndSettingsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $admin;
+    private User $tenantUser;
+    private Tenant $tenant;
+    private Property $property;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->property = Property::create([
+            'name' => 'Makati Suites',
+            'city' => 'Makati',
+            'address' => 'Ayala Ave',
+        ]);
+
+        Room::create([
+            'property_id' => $this->property->id,
+            'room_number' => '101',
+            'rent' => 10000.00,
+            'status' => 'occupied',
+        ]);
+
+        $this->admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('secret'),
+            'role' => 'admin',
+        ]);
+
+        $this->tenantUser = User::create([
+            'name' => 'Tenant Bob',
+            'email' => 'bob@example.com',
+            'password' => Hash::make('secret'),
+            'role' => 'tenant',
+        ]);
+
+        $this->tenant = Tenant::create([
+            'user_id' => $this->tenantUser->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'username' => 'bob101',
+            'name' => 'Tenant Bob',
+            'email' => 'bob@example.com',
+            'phone' => '09170000001',
+            'password' => Hash::make('secret'),
+            'status' => 'active',
+            'balance' => 0.00,
+            'water_rate' => 350.00,
+            'lease_end' => '2027-01-01',
+        ]);
+    }
+
+    public function test_admin_can_update_settings(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $response = $this->postJson('/api/settings', [
+            'elec_rate' => 14.50,
+            'water_rate' => 450.00,
+            'gcash_name' => 'AriRent Landlord',
+            'gcash_number' => '0917-999-8888',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('settings', [
+            'elec_rate' => 14.50,
+            'water_rate' => 450.00,
+            'gcash_name' => 'AriRent Landlord',
+            'gcash_number' => '0917-999-8888',
+        ]);
+    }
+
+    public function test_tenant_cannot_update_settings(): void
+    {
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->postJson('/api/settings', [
+            'elec_rate' => 5.00,
+            'water_rate' => 100.00,
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_tenant_can_submit_ticket_and_admin_can_resolve(): void
+    {
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->postJson('/api/maintenance', [
+            'type' => 'plumbing',
+            'description' => 'Leaking bathroom sink faucet',
+            'priority' => 'urgent',
+        ]);
+
+        $response->assertStatus(201);
+        $ticketId = $response->json('data.id');
+
+        $this->assertDatabaseHas('maintenance_tickets', [
+            'id' => $ticketId,
+            'tenant_id' => $this->tenant->id,
+            'status' => 'pending',
+            'priority' => 'urgent',
+        ]);
+
+        // Admin updates status to resolved
+        Sanctum::actingAs($this->admin);
+
+        $updateResponse = $this->putJson("/api/maintenance/{$ticketId}", [
+            'status' => 'resolved',
+            'technician_name' => 'Mario',
+            'admin_notes' => 'Fixed valve replaced',
+        ]);
+
+        $updateResponse->assertStatus(200);
+        $this->assertDatabaseHas('maintenance_tickets', [
+            'id' => $ticketId,
+            'status' => 'resolved',
+            'technician_name' => 'Mario',
+        ]);
+        $this->assertNotNull(MaintenanceTicket::find($ticketId)->resolved_date);
+    }
+
+    public function test_tenant_cannot_resolve_or_delete_ticket(): void
+    {
+        $ticket = MaintenanceTicket::create([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'electrical',
+            'description' => 'Light switch broken',
+            'priority' => 'normal',
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $updateRes = $this->putJson("/api/maintenance/{$ticket->id}", [
+            'status' => 'resolved',
+        ]);
+        $updateRes->assertStatus(403);
+
+        $deleteRes = $this->deleteJson("/api/maintenance/{$ticket->id}");
+        $deleteRes->assertStatus(403);
+    }
+
+    public function test_tenant_dashboard_returns_unit_and_balance_data(): void
+    {
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->getJson('/api/tenant/dashboard');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.unit.room', '101')
+            ->assertJsonPath('data.unit.property_name', 'Makati Suites')
+            ->assertJsonPath('data.outstanding_balance', 0);
+    }
+}

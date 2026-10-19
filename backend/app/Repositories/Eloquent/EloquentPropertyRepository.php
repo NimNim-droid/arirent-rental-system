@@ -27,6 +27,15 @@ class EloquentPropertyRepository implements PropertyRepositoryInterface
         return $query->find($id);
     }
 
+    public function findWithOccupiedCount(int $id): ?Property
+    {
+        return Property::withCount([
+            'rooms as occupied_rooms' => function ($q) {
+                $q->where('status', 'occupied');
+            },
+        ])->find($id);
+    }
+
     public function create(array $attributes): Property
     {
         return Property::create($attributes);
