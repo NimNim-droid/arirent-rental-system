@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Models\Bill;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 
 class PaymentService
 {
@@ -20,15 +23,15 @@ class PaymentService
     {
         $bill = $this->billRepo->find($billId);
         if (! $bill) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Bill not found.');
+            throw new ModelNotFoundException('Bill not found.');
         }
 
         if ($bill->status === 'paid') {
-            throw new \InvalidArgumentException('This invoice has already been paid.');
+            throw new InvalidArgumentException('This invoice has already been paid.');
         }
 
         if ($bill->status === 'voided') {
-            throw new \InvalidArgumentException('This invoice has been voided.');
+            throw new InvalidArgumentException('This invoice has been voided.');
         }
 
         $receiptUrl = $bill->receipt_url;
@@ -61,30 +64,37 @@ class PaymentService
     {
         $bill = $this->billRepo->find($billId);
         if (! $bill) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Bill not found.');
+            throw new ModelNotFoundException('Bill not found.');
         }
 
         if ($approved) {
             if ($bill->status !== 'pending_verification') {
-                throw new \InvalidArgumentException('This bill cannot be approved. Current status: ' . $bill->status);
+                throw new InvalidArgumentException('This bill cannot be approved. Current status: ' . $bill->status);
             }
 
-            $bill = $this->billRepo->update($billId, [
-                'status' => 'paid',
-                'approved_date' => now(),
-                'reject_reason' => null,
-            ]);
+            return DB::transaction(function () use ($billId) {
+                $bill = $this->billRepo->update($billId, [
+                    'status' => 'paid',
+                    'approved_date' => now(),
+                    'reject_reason' => null,
+                ]);
 
-            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-            if ($tenant) {
-                $tenant->decrement('balance', (float) $bill->total_amount);
-            }
-        } else {
-            $bill = $this->billRepo->update($billId, [
-                'status' => 'unpaid',
-                'reject_reason' => $rejectReason ?? 'Invalid or unverified GCash reference number.',
-            ]);
+                $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
+                if ($tenant) {
+                    $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
+                }
+
+                Cache::forget('admin_stats_all');
+                Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+
+                return $bill;
+            });
         }
+
+        $bill = $this->billRepo->update($billId, [
+            'status' => 'unpaid',
+            'reject_reason' => $rejectReason ?? 'Invalid or unverified GCash reference number.',
+        ]);
 
         Cache::forget('admin_stats_all');
         Cache::forget("tenant_dashboard_{$bill->tenant_id}");

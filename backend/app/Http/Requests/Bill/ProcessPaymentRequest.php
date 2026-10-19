@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Bill;
 
-use App\Models\Bill;
-use App\Models\Tenant;
+use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProcessPaymentRequest extends FormRequest
@@ -24,14 +24,12 @@ class ProcessPaymentRequest extends FormRequest
 
         if ($user->role === 'tenant') {
             $billId = (int) $this->route('id');
-            $bill = Bill::find($billId);
+            $bill = app(BillRepositoryInterface::class)->find($billId);
             if (! $bill) {
                 return false;
             }
 
-            $tenant = Tenant::where('user_id', $user->id)
-                ->orWhere('email', $user->email)
-                ->first();
+            $tenant = app(TenantRepositoryInterface::class)->findByUserIdOrEmail($user->id, $user->email);
 
             return $tenant && $bill->tenant_id === $tenant->id;
         }

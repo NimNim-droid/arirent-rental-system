@@ -129,25 +129,25 @@ Each item: create the Request class → move the `validate([...])` rules into `r
   - **Scenario:** Oct 20 reading is recorded → [`UtilityService::recordReading`](file:///c:/dev/rental-system/backend/app/Services/UtilityService.php#L45-L69) adds it to the **unpaid October bill**. Nov 5 bills are generated with no new reading → the **same Oct 20 reading** is added to the November bill too.
   - **Decide the rule first:** Is electricity billed in the **same** month as the reading, or the **next** month (in arrears)?
   - **Fix options:** (a) add `bill_id` to `utility_readings` and skip readings already attached to a bill; or (b) keep only one path: either auto-sync on reading *or* pick up at generation, not both.
-- [ ] **F-D2 Deleting a reading can change a PAID bill**
+- [x] **F-D2 Deleting a reading can change a PAID bill**
   - **Where:** [`UtilityService::deleteReading`](file:///c:/dev/rental-system/backend/app/Services/UtilityService.php#L93-L95). The bill lookup has no `status` filter.
   - **Fix:** Only reverse on `unpaid` bills (same filter `recordReading` already uses).
-- [ ] **F-D3 Multi-step money changes are not atomic**
+- [x] **F-D3 Multi-step money changes are not atomic**
   - **Where:** `recordReading`, `deleteReading` (UtilityService), `verifyPayment` (PaymentService), `createBill`, `deleteBill` (BillService). Each one updates a bill **and** the tenant balance with no `DB::transaction`.
   - **Fix:** Wrap each in `DB::transaction(...)` the same way `generateMonthlyBills` and the TenantService methods already are.
-- [ ] **F-D4 Unify the balance floor rule** (low)
+- [x] **F-D4 Unify the balance floor rule** (low)
   - Void and delete use `min(balance, total)` (balance never below 0), but [`verifyPayment`](file:///c:/dev/rental-system/backend/app/Services/PaymentService.php#L72) and `updateBill` (paid) decrement without a floor. Pick one rule and apply it everywhere.
-- [ ] **F-D5 Remove duplicated "find tenant for logged-in user" code** (low, cleanup)
+- [x] **F-D5 Remove duplicated "find tenant for logged-in user" code** (low, cleanup)
   - The same `Tenant::where('user_id')->orWhere('email')` query is copied in `MaintenanceController`, `DashboardController`, `AuthController` and `ProcessPaymentRequest`. Use `TenantRepositoryInterface::findByUserIdOrEmail` everywhere.
   - Low risk today because `users.email` and `tenants.email` are both unique.
 
 ---
 
 ### Group E — Phase 6 (corrected)
-- [ ] **F-E1 Storage symlink:** `backend/public/storage` shows no visible target from Windows (it was probably created inside Docker). Run `php artisan storage:link` where the app actually runs, then open an uploaded receipt URL to confirm it loads.
-- [ ] **F-E2 CORS for production:** [`config/cors.php`](file:///c:/dev/rental-system/backend/config/cors.php#L22) has `allowed_origins => ['*']` hardcoded. Change it to `explode(',', env('CORS_ALLOWED_ORIGINS', '*'))` and add `CORS_ALLOWED_ORIGINS=` to `.env.example`.
+- [x] **F-E1 Storage symlink:** `backend/public/storage` shows no visible target from Windows (it was probably created inside Docker). Run `php artisan storage:link` where the app actually runs, then open an uploaded receipt URL to confirm it loads.
+- [x] **F-E2 CORS for production:** [`config/cors.php`](file:///c:/dev/rental-system/backend/config/cors.php#L22) has `allowed_origins => ['*']` hardcoded. Change it to `explode(',', env('CORS_ALLOWED_ORIGINS', '*'))` and add `CORS_ALLOWED_ORIGINS=` to `.env.example`.
   - Note: `SANCTUM_STATEFUL_DOMAINS` is **not** needed, because the frontend uses Bearer tokens ([`axios.ts` line 16](file:///c:/dev/rental-system/frontend/src/lib/axios.ts#L16)), not cookies.
-- [ ] **F-E3 Indexes are mostly done already.** [`2026_09_12_000001_add_performance_indexes.php`](file:///c:/dev/rental-system/backend/database/migrations/2026_09_12_000001_add_performance_indexes.php) already indexes `bills`, `tenants`, `rooms` and `utility_readings`. Only `maintenance_tickets.status` is missing (optional, via a new migration).
+- [x] **F-E3 Indexes are mostly done already.** [`2026_09_12_000001_add_performance_indexes.php`](file:///c:/dev/rental-system/backend/database/migrations/2026_09_12_000001_add_performance_indexes.php) already indexes `bills`, `tenants`, `rooms` and `utility_readings`. Only `maintenance_tickets.status` is missing (optional, via a new migration).
 
 ---
 

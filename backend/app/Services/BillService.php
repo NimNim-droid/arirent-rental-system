@@ -9,9 +9,11 @@ use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class BillService
 {
@@ -25,55 +27,60 @@ class BillService
 
     public function createBill(array $data, ?float $prevReading = null, ?float $currReading = null): Bill
     {
-        $rent = (float) $data['rent'];
-        $elec = (float) ($data['electricity'] ?? 0);
-        $elecUsage = (float) ($data['elec_usage'] ?? 0);
-        $water = (float) ($data['water'] ?? 0);
-        $lateFee = (float) ($data['late_fee'] ?? 0);
-        $total = $rent + $elec + $water + $lateFee;
+        return DB::transaction(function () use ($data, $prevReading, $currReading) {
+            $rent = (float) $data['rent'];
+            $elec = (float) ($data['electricity'] ?? 0);
+            $elecUsage = (float) ($data['elec_usage'] ?? 0);
+            $water = (float) ($data['water'] ?? 0);
+            $lateFee = (float) ($data['late_fee'] ?? 0);
+            $total = $rent + $elec + $water + $lateFee;
 
-        $bill = $this->billRepo->create([
-            'tenant_id' => $data['tenant_id'],
-            'rent' => $rent,
-            'electricity' => $elec,
-            'elec_usage' => $elecUsage,
-            'water' => $water,
-            'late_fee' => $lateFee,
-            'total_amount' => $total,
-            'date' => $data['date'],
-            'due_date' => $data['due_date'],
-            'status' => 'unpaid',
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        if ($elecUsage > 0 || $elec > 0) {
-            $prev = (float) ($prevReading ?? 0);
-            $curr = (float) ($currReading ?? ($prev + $elecUsage));
-
-            $this->readingRepo->create([
+            $bill = $this->billRepo->create([
                 'tenant_id' => $data['tenant_id'],
-                'prev_reading' => $prev,
-                'curr_reading' => $curr,
-                'usage_kwh' => $elecUsage,
-                'amount' => $elec,
+                'rent' => $rent,
+                'electricity' => $elec,
+                'elec_usage' => $elecUsage,
+                'water' => $water,
+                'late_fee' => $lateFee,
+                'total_amount' => $total,
                 'date' => $data['date'],
+                'due_date' => $data['due_date'],
+                'status' => 'unpaid',
+                'notes' => $data['notes'] ?? null,
             ]);
-        }
 
-        $tenant = $this->tenantRepo->find((int) $data['tenant_id']);
-        if ($tenant) {
-            $tenant->increment('balance', $total);
-        }
+            if ($elecUsage > 0 || $elec > 0) {
+                $prev = (float) ($prevReading ?? 0);
+                $curr = (float) ($currReading ?? ($prev + $elecUsage));
 
-        Cache::forget('admin_stats_all');
-        Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+                $this->readingRepo->create([
+                    'tenant_id' => $data['tenant_id'],
+                    'prev_reading' => $prev,
+                    'curr_reading' => $curr,
+                    'usage_kwh' => $elecUsage,
+                    'amount' => $elec,
+                    'date' => $data['date'],
+                ]);
+            }
 
-        return $bill;
+            $tenant = $this->tenantRepo->find((int) $data['tenant_id']);
+            if ($tenant) {
+                $tenant->increment('balance', $total);
+            }
+
+            Cache::forget('admin_stats_all');
+            Cache::forget("tenant_dashboard_{$data['tenant_id']}");
+
+            return $bill;
+        });
     }
 
-    public function generateMonthlyBills(?string $date = null): array
+    /**
+     * Batch-generate monthly bills for all active tenants.
+     */
+    public function generateMonthlyBills(?string $customDate = null): array
     {
-        $billingDate = $date ? Carbon::parse($date) : now();
+        $billingDate = $customDate ? Carbon::parse($customDate) : now();
         $monthStart = $billingDate->copy()->startOfMonth()->format('Y-m-d');
         $monthEnd = $billingDate->copy()->endOfMonth()->format('Y-m-d');
 
@@ -202,7 +209,7 @@ class BillService
     {
         $bill = $this->billRepo->find($id);
         if (! $bill) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Bill not found.');
+            throw new ModelNotFoundException('Bill not found.');
         }
 
         $financialFields = ['rent', 'electricity', 'elec_usage', 'water', 'late_fee'];
@@ -215,7 +222,7 @@ class BillService
         }
 
         if ($bill->status === 'paid' && $hasFinancialChanges) {
-            throw new \InvalidArgumentException('Cannot modify financial amounts on an invoice that has already been paid.');
+            throw new InvalidArgumentException('Cannot modify financial amounts on an invoice that has already been paid.');
         }
 
         $oldTotal = (float) $bill->total_amount;
@@ -231,56 +238,61 @@ class BillService
             $data['total_amount'] = $newTotal;
         }
 
-        $bill = $this->billRepo->update($id, $data);
+        return DB::transaction(function () use ($id, $data, $bill, $oldTotal, $oldStatus, $newStatus, $hasFinancialChanges) {
+            $bill = $this->billRepo->update($id, $data);
 
-        // Reconcile tenant balance accurately
-        $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-        if ($tenant) {
-            if ($newStatus === 'voided' && $oldStatus !== 'voided') {
-                if (in_array($oldStatus, ['unpaid', 'pending_verification'])) {
-                    $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
-                }
-            } elseif ($oldStatus === 'voided' && $newStatus !== 'voided') {
-                $tenant->increment('balance', (float) $bill->total_amount);
-            } elseif ($newStatus === 'paid' && $oldStatus === 'unpaid') {
-                $tenant->decrement('balance', (float) $bill->total_amount);
-            } elseif ($newStatus === 'unpaid' && $oldStatus === 'paid') {
-                $tenant->increment('balance', (float) $bill->total_amount);
-            } elseif (in_array($bill->status, ['unpaid', 'pending_verification']) && $hasFinancialChanges) {
-                $diff = (float) $bill->total_amount - $oldTotal;
-                if ($diff != 0) {
-                    $tenant->increment('balance', $diff);
+            // Reconcile tenant balance accurately with non-negative clamping
+            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
+            if ($tenant) {
+                if ($newStatus === 'voided' && $oldStatus !== 'voided') {
+                    if (in_array($oldStatus, ['unpaid', 'pending_verification'])) {
+                        $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
+                    }
+                } elseif ($oldStatus === 'voided' && $newStatus !== 'voided') {
+                    $tenant->increment('balance', (float) $bill->total_amount);
+                } elseif ($newStatus === 'paid' && $oldStatus === 'unpaid') {
+                    $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
+                } elseif ($newStatus === 'unpaid' && $oldStatus === 'paid') {
+                    $tenant->increment('balance', (float) $bill->total_amount);
+                } elseif (in_array($bill->status, ['unpaid', 'pending_verification']) && $hasFinancialChanges) {
+                    $diff = (float) $bill->total_amount - $oldTotal;
+                    if ($diff > 0) {
+                        $tenant->increment('balance', $diff);
+                    } elseif ($diff < 0) {
+                        $tenant->decrement('balance', min((float) $tenant->balance, abs($diff)));
+                    }
                 }
             }
-        }
 
-        Cache::forget('admin_stats_all');
-        Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+            Cache::forget('admin_stats_all');
+            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
 
-        return $bill;
+            return $bill;
+        });
     }
 
     public function deleteBill(int $id): bool
     {
         $bill = $this->billRepo->find($id);
         if (! $bill) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Bill not found.');
+            throw new ModelNotFoundException('Bill not found.');
         }
 
-        if (in_array($bill->status, ['unpaid', 'pending_verification'])) {
-            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-            if ($tenant) {
-                $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
+        return DB::transaction(function () use ($id, $bill) {
+            if (in_array($bill->status, ['unpaid', 'pending_verification'])) {
+                $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
+                if ($tenant) {
+                    $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
+                }
             }
-        }
 
-        $tenantId = $bill->tenant_id;
-        $deleted = $this->billRepo->delete($id);
+            $tenantId = $bill->tenant_id;
+            $deleted = $this->billRepo->delete($id);
 
-        Cache::forget('admin_stats_all');
-        Cache::forget("tenant_dashboard_{$tenantId}");
+            Cache::forget('admin_stats_all');
+            Cache::forget("tenant_dashboard_{$tenantId}");
 
-        return $deleted;
+            return $deleted;
+        });
     }
 }
-
