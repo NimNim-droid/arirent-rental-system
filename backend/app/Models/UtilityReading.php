@@ -12,6 +12,7 @@ class UtilityReading extends Model
 
     protected $fillable = [
         'tenant_id',
+        'bill_id',
         'prev_reading',
         'curr_reading',
         'usage_kwh',
@@ -33,5 +34,10 @@ class UtilityReading extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function bill(): BelongsTo
+    {
+        return $this->belongsTo(Bill::class);
     }
 }

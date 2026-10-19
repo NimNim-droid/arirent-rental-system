@@ -14,9 +14,11 @@ interface ReadingRepositoryInterface
 
     public function create(array $attributes): UtilityReading;
 
+    public function update(int $id, array $attributes): UtilityReading;
+
     public function delete(int $id): bool;
 
     public function getLatestReadingForTenant(int $tenantId): ?UtilityReading;
 
-    public function getLatestReadingsForTenants(array $tenantIds): Collection;
+    public function getLatestReadingsForTenants(array $tenantIds, bool $unbilledOnly = true): Collection;
 }

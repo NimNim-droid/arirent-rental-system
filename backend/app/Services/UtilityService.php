@@ -34,8 +34,11 @@ class UtilityService
         $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
 
         return DB::transaction(function () use ($tenantId, $prev, $curr, $usage, $amount, $date, $monthStart, $monthEnd, $elecRate) {
+            $unpaidBill = $this->billRepo->findForTenantInMonth($tenantId, $monthStart, $monthEnd, 'unpaid');
+
             $reading = $this->readingRepo->create([
                 'tenant_id' => $tenantId,
+                'bill_id' => $unpaidBill ? $unpaidBill->id : null,
                 'prev_reading' => $prev,
                 'curr_reading' => $curr,
                 'usage_kwh' => $usage,
@@ -44,7 +47,6 @@ class UtilityService
             ]);
 
             $billUpdated = false;
-            $unpaidBill = $this->billRepo->findForTenantInMonth($tenantId, $monthStart, $monthEnd, 'unpaid');
 
             if ($unpaidBill) {
                 $prevElec = (float) $unpaidBill->electricity;

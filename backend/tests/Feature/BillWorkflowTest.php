@@ -260,4 +260,43 @@ class BillWorkflowTest extends TestCase
                 'message' => 'This invoice has been voided.',
             ]);
     }
+
+    public function test_electricity_reading_is_only_billed_once_across_months(): void
+    {
+        Sanctum::actingAs($this->adminUser);
+
+        // 1. Generate bills for Feb
+        $this->postJson('/api/bills/generate', ['date' => '2026-02-05'])->assertStatus(200);
+        $febBill = Bill::where('tenant_id', $this->tenant->id)->whereDate('date', '2026-02-05')->first();
+        $this->assertNotNull($febBill);
+        $this->assertEquals(0.00, (float) $febBill->electricity);
+
+        // 2. Record reading for Feb (50 kWh * 12.50 = 625.00)
+        $readingRes = $this->postJson('/api/readings', [
+            'tenant_id' => $this->tenant->id,
+            'prev_reading' => 100,
+            'curr_reading' => 150,
+            'date' => '2026-02-20',
+        ]);
+        $readingRes->assertStatus(201);
+        $readingId = $readingRes->json('data.id');
+
+        // Verify the Feb bill was updated with 625.00 electricity and reading was linked to Feb bill
+        $this->assertEquals(625.00, (float) $febBill->fresh()->electricity);
+        $this->assertDatabaseHas('utility_readings', [
+            'id' => $readingId,
+            'bill_id' => $febBill->id,
+        ]);
+
+        // 3. Generate bills for March (without entering any new reading)
+        $this->postJson('/api/bills/generate', ['date' => '2026-03-05'])->assertStatus(200);
+        $marBill = Bill::where('tenant_id', $this->tenant->id)->whereDate('date', '2026-03-05')->first();
+        $this->assertNotNull($marBill);
+
+        // March bill MUST have 0 electricity because the Feb reading was already attached to Feb bill
+        $this->assertEquals(0.00, (float) $marBill->electricity);
+        $this->assertEquals(10000.00, (float) $marBill->rent);
+        $this->assertEquals(500.00, (float) $marBill->water);
+        $this->assertEquals(10750.00, (float) $marBill->total_amount); // 10000 rent + 500 water + 250 overdue late fee
+    }
 }

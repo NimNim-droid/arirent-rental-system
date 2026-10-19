@@ -55,6 +55,7 @@ class BillService
 
                 $this->readingRepo->create([
                     'tenant_id' => $data['tenant_id'],
+                    'bill_id' => $bill->id,
                     'prev_reading' => $prev,
                     'curr_reading' => $curr,
                     'usage_kwh' => $elecUsage,
@@ -98,7 +99,7 @@ class BillService
 
         $existingBilledTenantIds = $this->billRepo->getBilledTenantIdsForMonth($tenantIds, $monthStart, $monthEnd);
         $rooms = $this->roomRepo->getRoomsByPropertyIds($propertyIds);
-        $readings = $this->readingRepo->getLatestReadingsForTenants($tenantIds);
+        $readings = $this->readingRepo->getLatestReadingsForTenants($tenantIds, true);
 
         $today = now()->format('Y-m-d');
         $overdueTenantIds = $this->billRepo->getOverdueTenantIds($today);
@@ -119,9 +120,6 @@ class BillService
             &$generated,
             &$skipped
         ) {
-            $billsToInsert = [];
-            $balanceIncrements = [];
-            $now = now();
             $formattedBillingDate = $billingDate->format('Y-m-d');
 
             foreach ($activeTenants as $tenant) {
@@ -164,7 +162,7 @@ class BillService
                 $lateFee = isset($overdueTenantIds[$tenant->id]) ? 250.00 : 0.00;
                 $total = $rent + $elec + $water + $lateFee;
 
-                $billsToInsert[] = [
+                $bill = $this->billRepo->create([
                     'tenant_id' => $tenant->id,
                     'rent' => $rent,
                     'electricity' => $elec,
@@ -176,20 +174,14 @@ class BillService
                     'due_date' => $tenantDueDate->format('Y-m-d'),
                     'status' => 'unpaid',
                     'notes' => $coverageNote,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
+                ]);
 
-                $balanceIncrements[$tenant->id] = ($balanceIncrements[$tenant->id] ?? 0) + $total;
-                $generated++;
-            }
-
-            if (! empty($billsToInsert)) {
-                $this->billRepo->insertBatch($billsToInsert);
-
-                foreach ($balanceIncrements as $tId => $inc) {
-                    $this->tenantRepo->incrementBalance($tId, $inc);
+                if ($latestReading && ! empty($latestReading->id)) {
+                    $this->readingRepo->update($latestReading->id, ['bill_id' => $bill->id]);
                 }
+
+                $this->tenantRepo->incrementBalance($tenant->id, $total);
+                $generated++;
             }
         });
 

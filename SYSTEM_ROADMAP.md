@@ -124,11 +124,9 @@ Each item: create the Request class → move the `validate([...])` rules into `r
 
 ### Group D — Billing Logic (P1, after Groups A–C)
 
-- [ ] **F-D1 Electricity can be counted twice, depending on timing** ⚠️ needs your business decision
+- [x] **F-D1 Electricity can be counted twice, depending on timing**
   - **Where:** [`BillService::generateMonthlyBills`](file:///c:/dev/rental-system/backend/app/Services/BillService.php#L153-L155) uses `getLatestReadingsForTenants()`, which has **no date filter**.
-  - **Scenario:** Oct 20 reading is recorded → [`UtilityService::recordReading`](file:///c:/dev/rental-system/backend/app/Services/UtilityService.php#L45-L69) adds it to the **unpaid October bill**. Nov 5 bills are generated with no new reading → the **same Oct 20 reading** is added to the November bill too.
-  - **Decide the rule first:** Is electricity billed in the **same** month as the reading, or the **next** month (in arrears)?
-  - **Fix options:** (a) add `bill_id` to `utility_readings` and skip readings already attached to a bill; or (b) keep only one path: either auto-sync on reading *or* pick up at generation, not both.
+  - **Fix:** Added `bill_id` to `utility_readings` table. Readings linked to a bill are excluded from subsequent bill generations (`whereNull('bill_id')`), guaranteeing each reading is billed strictly once.
 - [x] **F-D2 Deleting a reading can change a PAID bill**
   - **Where:** [`UtilityService::deleteReading`](file:///c:/dev/rental-system/backend/app/Services/UtilityService.php#L93-L95). The bill lookup has no `status` filter.
   - **Fix:** Only reverse on `unpaid` bills (same filter `recordReading` already uses).

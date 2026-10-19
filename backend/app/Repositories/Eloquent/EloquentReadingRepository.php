@@ -46,6 +46,13 @@ class EloquentReadingRepository implements ReadingRepositoryInterface
         return UtilityReading::create($attributes);
     }
 
+    public function update(int $id, array $attributes): UtilityReading
+    {
+        $reading = UtilityReading::findOrFail($id);
+        $reading->update($attributes);
+        return $reading;
+    }
+
     public function delete(int $id): bool
     {
         $reading = UtilityReading::find($id);
@@ -57,11 +64,16 @@ class EloquentReadingRepository implements ReadingRepositoryInterface
         return UtilityReading::where('tenant_id', $tenantId)->latest('date')->first();
     }
 
-    public function getLatestReadingsForTenants(array $tenantIds): Collection
+    public function getLatestReadingsForTenants(array $tenantIds, bool $unbilledOnly = true): Collection
     {
-        return UtilityReading::whereIn('tenant_id', $tenantIds)
-            ->orderBy('date', 'desc')
-            ->get(['tenant_id', 'curr_reading', 'amount', 'usage_kwh', 'date'])
+        $query = UtilityReading::whereIn('tenant_id', $tenantIds);
+
+        if ($unbilledOnly) {
+            $query->whereNull('bill_id');
+        }
+
+        return $query->orderBy('date', 'desc')
+            ->get(['id', 'tenant_id', 'bill_id', 'curr_reading', 'amount', 'usage_kwh', 'date'])
             ->groupBy('tenant_id')
             ->map(fn ($g) => $g->first());
     }
