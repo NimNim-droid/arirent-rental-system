@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Search, AlertTriangle, RefreshCw, CheckCircle } from "lucide-react";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import {
   useTenants,
   TenantApprovalCard,
   TenantTable,
   TenantDetailModal,
 } from "@/components/features/tenant";
+
 import { CreateBillModal } from "@/components/features/billing";
 import type { Tenant } from "@/lib/types";
 
@@ -42,21 +43,13 @@ export default function AdminTenants() {
       />
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => loadTenants(searchTerm || undefined)}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
+        <AlertBanner
+          variant="danger"
+          message={error}
+          onRetry={() => loadTenants(searchTerm || undefined)}
+        />
       )}
+
 
       {/* Pending Applications Queue */}
       {!loading && !error && pendingApplicants.length > 0 && (
@@ -81,22 +74,13 @@ export default function AdminTenants() {
       )}
 
       {successMessage && (
-        <div
-          className="flex animate-fade-in-up items-center justify-between rounded-xl border border-success-border bg-success-bg p-4 text-sm font-semibold text-success-fg"
-          role="status"
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            <span>{successMessage}</span>
-          </div>
-          <button
-            onClick={() => setSuccessMessage("")}
-            className="text-xs text-success-fg/75 hover:text-success-fg font-bold"
-          >
-            ✕
-          </button>
-        </div>
+        <AlertBanner
+          variant="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage("")}
+        />
       )}
+
 
       {/* Active Residents Table */}
       <div className="space-y-4">

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, RefreshCw, AlertTriangle } from "lucide-react";
+import { Eye, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import {
   Table,
   TableHeader,
@@ -14,72 +14,31 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { billingService } from "@/lib/services/billing";
-import { settingsService } from "@/lib/services/settings";
-import { getErrorMessage } from "@/lib/errors";
 import { formatCurrency } from "@/lib/formatters";
 import {
+  useTenantBilling,
   BillingStats,
   GCashPaymentModal,
   TenantStatementModal,
 } from "@/components/features/billing";
-import type { Bill, Settings } from "@/lib/types";
 
 export default function TenantBilling() {
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<Bill | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showStatementModal, setShowStatementModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadBills = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const billsRes = await billingService.getBills({ per_page: 100 });
-      setBills(billsRes.data);
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to load your invoices."));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadSettings = useCallback(async () => {
-    if (settings) return;
-    try {
-      const s = await settingsService.getSettings();
-      setSettings(s);
-    } catch {
-      // Handled gracefully
-    }
-  }, [settings]);
-
-  useEffect(() => {
-    loadBills();
-    loadSettings();
-  }, [loadBills, loadSettings]);
-
-  const openPayment = (bill: Bill) => {
-    setSelectedInvoice(bill);
-    setShowPaymentModal(true);
-  };
-
-  const openStatement = (bill: Bill) => {
-    setSelectedInvoice(bill);
-    setShowStatementModal(true);
-  };
-
-  const unpaidBills = useMemo(
-    () => bills.filter((b) => b.status === "unpaid"),
-    [bills]
-  );
-  const unpaidTotal = useMemo(
-    () => unpaidBills.reduce((sum, b) => sum + b.total_amount, 0),
-    [unpaidBills]
-  );
+  const {
+    bills,
+    settings,
+    selectedInvoice,
+    showPaymentModal,
+    showStatementModal,
+    loading,
+    error,
+    unpaidBills,
+    unpaidTotal,
+    loadBills,
+    openPayment,
+    openStatement,
+    closePaymentModal,
+    closeStatementModal,
+  } = useTenantBilling();
 
   return (
     <div className="space-y-8">
@@ -88,18 +47,7 @@ export default function TenantBilling() {
         subtitle="View breakdown of room rent, electricity consumption, and pay via GCash"
       />
 
-      {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
-          </span>
-          <Button variant="ghost" size="sm" onClick={loadBills}>
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      )}
+      {error && <AlertBanner variant="danger" message={error} onRetry={loadBills} />}
 
       {/* Outstanding balance banner */}
       {!loading && (
@@ -110,7 +58,7 @@ export default function TenantBilling() {
       )}
 
       {/* Invoices List */}
-      <Card className="p-0 overflow-hidden">
+      <Card className="overflow-hidden p-0">
         {loading ? (
           <div className="p-5">
             <SkeletonRows rows={4} />
@@ -138,22 +86,22 @@ export default function TenantBilling() {
               <TableBody>
                 {bills.map((bill) => (
                   <TableRow key={bill.id}>
-                    <TableCell className="font-mono font-bold text-fg-soft whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap font-mono font-bold text-fg-soft">
                       {bill.id}
                     </TableCell>
-                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
                       {formatCurrency(bill.rent)}
                     </TableCell>
-                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
                       {formatCurrency(bill.electricity)}
                     </TableCell>
-                    <TableCell className="text-right text-xs font-semibold text-muted tabular-nums">
+                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
                       {formatCurrency(bill.water)}
                     </TableCell>
-                    <TableCell className="text-right font-bold text-fg tabular-nums whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap text-right font-bold tabular-nums text-fg">
                       {formatCurrency(bill.total_amount)}
                     </TableCell>
-                    <TableCell className="text-xs text-muted whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap text-xs text-muted">
                       {bill.due_date}
                     </TableCell>
                     <TableCell>
@@ -177,7 +125,10 @@ export default function TenantBilling() {
                             : bill.status}
                         </Badge>
                         {bill.status === "unpaid" && bill.reject_reason && (
-                          <p className="text-[10px] text-danger-fg font-semibold flex items-center gap-1" title={bill.reject_reason}>
+                          <p
+                            className="flex items-center gap-1 text-[10px] font-semibold text-danger-fg"
+                            title={bill.reject_reason}
+                          >
                             <AlertTriangle className="h-3 w-3 shrink-0" />
                             Rejected
                           </p>
@@ -212,10 +163,7 @@ export default function TenantBilling() {
       {/* GCash Payment Modal */}
       <GCashPaymentModal
         open={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setSelectedInvoice(null);
-        }}
+        onClose={closePaymentModal}
         invoice={selectedInvoice}
         settings={settings}
         onPaymentSuccess={loadBills}
@@ -224,10 +172,7 @@ export default function TenantBilling() {
       {/* Invoice Statement Modal */}
       <TenantStatementModal
         open={showStatementModal}
-        onClose={() => {
-          setShowStatementModal(false);
-          setSelectedInvoice(null);
-        }}
+        onClose={closeStatementModal}
         invoice={selectedInvoice}
         onPayGCash={openPayment}
       />

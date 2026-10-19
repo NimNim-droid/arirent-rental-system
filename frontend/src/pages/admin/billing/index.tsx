@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, CheckCircle, AlertTriangle, RefreshCw, Receipt } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
+import { AlertBanner } from "@/components/ui/alert-banner";
+
 import {
   useBilling,
   PendingVerifications,
@@ -83,28 +85,10 @@ export default function AdminBilling() {
         }
       />
 
-      {message && (
-        <div
-          className="flex animate-fade-in-up items-center gap-2 rounded-xl border border-success-border bg-success-bg p-4 text-sm font-semibold text-success-fg"
-          role="status"
-        >
-          <CheckCircle className="h-5 w-5" />
-          {message}
-        </div>
-      )}
+      {message && <AlertBanner variant="success" message={message} />}
 
-      {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
-          </span>
-          <Button variant="ghost" size="sm" onClick={loadBills}>
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      )}
+      {error && <AlertBanner variant="danger" message={error} onRetry={loadBills} />}
+
 
       {/* Upcoming Rent Due Dates Alert */}
       <UpcomingDueBanner
