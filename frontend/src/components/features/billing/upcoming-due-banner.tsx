@@ -40,7 +40,7 @@ export function UpcomingDueBanner({ tenants, onBillTenant }: UpcomingDueBannerPr
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-accent" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
-            Anniversary Rent Due This Week ({upcomingTenants.length})
+            Upcoming Rent Due This Week ({upcomingTenants.length})
           </h3>
         </div>
         <span className="text-[11px] text-muted">

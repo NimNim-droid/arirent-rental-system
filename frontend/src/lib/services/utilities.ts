@@ -25,6 +25,8 @@ export const utilitiesService = {
   async createReading(payload: ReadingPayload): Promise<UtilityReading> {
     const res = await api.post<{ data: UtilityReading }>("/readings", payload);
     clientCache.invalidate("readings");
+    clientCache.invalidate("bills");
+    clientCache.invalidate("tenants");
     clientCache.invalidate("dashboard");
     return res.data.data;
   },

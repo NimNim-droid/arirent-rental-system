@@ -95,7 +95,7 @@ export function CreateBillModal({
     const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
     const safeDay = Math.min(billingDay, daysInMonth);
     const calculatedDueDate = new Date(targetYear, targetMonth, safeDay);
-    const formattedDue = calculatedDueDate.toISOString().split("T")[0];
+    const formattedDue = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
     setDueDate(formattedDue);
 
     // Coverage period notes

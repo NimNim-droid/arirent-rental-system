@@ -20,8 +20,9 @@ return new class extends Migration
             $table->text('description');
             $table->string('photo_url')->nullable();
             $table->enum('priority', ['normal', 'urgent'])->default('normal');
-            $table->enum('status', ['pending', 'in_progress', 'resolved'])->default('pending');
+            $table->enum('status', ['pending', 'in_progress', 'resolved', 'archived'])->default('pending');
             $table->string('technician_name')->nullable();
+
             $table->text('admin_notes')->nullable();
             $table->timestamp('resolved_date')->nullable();
             $table->timestamps();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\MaintenanceResource;
 use App\Models\MaintenanceTicket;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
@@ -43,30 +44,11 @@ class MaintenanceController extends Controller
             }
         }
 
-        $formatTicket = fn ($t) => [
-            'id' => (string) $t->id,
-            'tenant_id' => (string) $t->tenant_id,
-            'tenant_name' => $t->tenant?->name,
-            'property_id' => (string) $t->property_id,
-            'property_name' => $t->tenant?->property?->name,
-            'room' => $t->room,
-            'type' => $t->type,
-            'description' => $t->description,
-            'photo_url' => $t->photo_url,
-            'priority' => $t->priority,
-            'status' => $t->status,
-            'technician_name' => $t->technician_name,
-            'admin_notes' => $t->admin_notes,
-            'resolved_date' => $t->resolved_date ? $t->resolved_date->format('Y-m-d H:i:s') : null,
-            'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
-            'created_at' => $t->created_at ? $t->created_at->format('Y-m-d H:i:s') : null,
-        ];
-
         $perPage = min((int) $request->input('per_page', 50), 250);
         $paginated = $query->paginate($perPage);
 
         return response()->json([
-            'data' => $paginated->getCollection()->map($formatTicket),
+            'data' => MaintenanceResource::collection($paginated->getCollection()),
             'links' => [
                 'first' => $paginated->url(1),
                 'last' => $paginated->url($paginated->lastPage()),
@@ -131,7 +113,7 @@ class MaintenanceController extends Controller
 
         return response()->json([
             'message' => 'Maintenance ticket submitted successfully.',
-            'data' => $ticket,
+            'data' => new MaintenanceResource($ticket),
         ], 201);
     }
 
@@ -164,7 +146,7 @@ class MaintenanceController extends Controller
 
         return response()->json([
             'message' => 'Ticket updated successfully.',
-            'data' => $ticket,
+            'data' => new MaintenanceResource($ticket),
         ]);
     }
 

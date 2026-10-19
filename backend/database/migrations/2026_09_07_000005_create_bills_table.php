@@ -22,8 +22,9 @@ return new class extends Migration
             $table->decimal('total_amount', 10, 2)->default(0.00);
             $table->date('date');
             $table->date('due_date');
-            $table->enum('status', ['unpaid', 'pending_verification', 'paid'])->default('unpaid');
+            $table->enum('status', ['unpaid', 'pending_verification', 'paid', 'voided'])->default('unpaid');
             $table->string('gcash_ref')->nullable();
+
             $table->string('receipt_url')->nullable();
             $table->text('notes')->nullable();
             $table->timestamp('payment_date')->nullable();

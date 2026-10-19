@@ -106,7 +106,7 @@ export default function AdminBilling() {
         </div>
       )}
 
-      {/* Upcoming Anniversary Due Dates Alert */}
+      {/* Upcoming Rent Due Dates Alert */}
       <UpcomingDueBanner
         tenants={activeTenants}
         onBillTenant={(t) => handleOpenCreateModal(t)}

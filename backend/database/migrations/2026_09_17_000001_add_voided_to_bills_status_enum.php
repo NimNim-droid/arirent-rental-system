@@ -10,7 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE bills MODIFY COLUMN status ENUM('unpaid', 'pending_verification', 'paid', 'voided') NOT NULL DEFAULT 'unpaid'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE bills MODIFY COLUMN status ENUM('unpaid', 'pending_verification', 'paid', 'voided') NOT NULL DEFAULT 'unpaid'");
+        }
     }
 
     /**
@@ -18,6 +20,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE bills MODIFY COLUMN status ENUM('unpaid', 'pending_verification', 'paid') NOT NULL DEFAULT 'unpaid'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE bills MODIFY COLUMN status ENUM('unpaid', 'pending_verification', 'paid') NOT NULL DEFAULT 'unpaid'");
+        }
     }
 };
+

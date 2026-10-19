@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\Models\Bill;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+interface BillRepositoryInterface
+{
+    public function paginate(int $perPage = 50, array $filters = []): LengthAwarePaginator;
+
+    public function find(int $id, array $relations = []): ?Bill;
+
+    public function create(array $attributes): Bill;
+
+    public function update(int $id, array $attributes): Bill;
+
+    public function delete(int $id): bool;
+
+    public function insertBatch(array $records): bool;
+
+    public function getBilledTenantIdsForMonth(array $tenantIds, string $monthStart, string $monthEnd): array;
+
+    public function getOverdueTenantIds(string $today): array;
+}

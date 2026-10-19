@@ -2,79 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Room;
+use App\Http\Requests\Room\StoreRoomRequest;
+use App\Http\Resources\RoomResource;
+use App\Services\PropertyService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RoomController extends Controller
 {
+    public function __construct(
+        protected PropertyService $propertyService
+    ) {}
+
     /**
      * List all rooms with optional filtering by property_id or status.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Room::with('property:id,name,city,address');
+        $filters = [];
 
         if ($request->filled('property_id')) {
-            $query->where('property_id', $request->property_id);
+            $filters['property_id'] = $request->property_id;
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $filters['status'] = $request->status;
         }
 
-        $rooms = $query->get();
-
-        $data = $rooms->map(function ($r) {
-            return [
-                'id' => (string) $r->id,
-                'property_id' => (string) $r->property_id,
-                'room_number' => $r->room_number,
-                'rent' => (float) $r->rent,
-                'status' => $r->status,
-                'property' => $r->property ? [
-                    'id' => (string) $r->property->id,
-                    'name' => $r->property->name,
-                    'city' => $r->property->city,
-                    'address' => $r->property->address,
-                ] : null,
-            ];
-        });
+        $rooms = $this->propertyService->getRooms($filters);
 
         return response()->json([
-            'data' => $data,
+            'data' => RoomResource::collection($rooms),
         ]);
     }
 
     /**
      * Create a new room.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreRoomRequest $request): JsonResponse
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'room_number' => 'required|string|max:50',
-            'rent' => 'required|numeric|min:0',
-            'status' => 'nullable|in:vacant,reserved,occupied',
-        ]);
-
-        $room = Room::create($validated);
-        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
-        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+        $room = $this->propertyService->createRoom($request->validated());
 
         return response()->json([
             'message' => 'Room created successfully.',
-            'data' => [
-                'id' => (string) $room->id,
-                'property_id' => (string) $room->property_id,
-                'room_number' => $room->room_number,
-                'rent' => (float) $room->rent,
-                'status' => $room->status,
-            ],
+            'data' => new RoomResource($room),
         ], 201);
     }
 
@@ -87,31 +59,22 @@ class RoomController extends Controller
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
-        $room = Room::find($id);
-        if (! $room) {
-            return response()->json(['message' => 'Room not found.'], 404);
-        }
-
         $validated = $request->validate([
             'room_number' => 'sometimes|required|string|max:50',
             'rent' => 'sometimes|required|numeric|min:0',
             'status' => 'sometimes|required|in:vacant,reserved,occupied',
         ]);
 
-        $room->update($validated);
-        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
-        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
+        try {
+            $room = $this->propertyService->updateRoom($id, $validated);
 
-        return response()->json([
-            'message' => 'Room updated successfully.',
-            'data' => [
-                'id' => (string) $room->id,
-                'property_id' => (string) $room->property_id,
-                'room_number' => $room->room_number,
-                'rent' => (float) $room->rent,
-                'status' => $room->status,
-            ],
-        ]);
+            return response()->json([
+                'message' => 'Room updated successfully.',
+                'data' => new RoomResource($room),
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Room not found.'], 404);
+        }
     }
 
     /**
@@ -123,21 +86,14 @@ class RoomController extends Controller
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
-        $room = Room::find($id);
-        if (! $room) {
+        try {
+            $this->propertyService->deleteRoom($id);
+
+            return response()->json(['message' => 'Room deleted successfully.']);
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Room not found.'], 404);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        if ($room->status === 'occupied') {
-            return response()->json([
-                'message' => 'Cannot delete an occupied room. Please vacate the tenant first.',
-            ], 422);
-        }
-
-        $room->delete();
-        \Illuminate\Support\Facades\Cache::forget('all_properties_with_counts');
-        \Illuminate\Support\Facades\Cache::forget('admin_stats_all');
-
-        return response()->json(['message' => 'Room deleted successfully.']);
     }
 }

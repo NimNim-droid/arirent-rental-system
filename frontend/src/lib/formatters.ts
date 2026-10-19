@@ -16,10 +16,21 @@ export function formatCurrency(amount: number | null | undefined): string {
 
 /**
  * Formats a date string into a localized readable date.
+ * Guarantees correct calendar day for YYYY-MM-DD dates regardless of user timezone.
  */
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return "—";
   try {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split("-").map(Number);
+      const d = new Date(year, month - 1, day);
+      return d.toLocaleDateString("en-PH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
     return d.toLocaleDateString("en-PH", {
@@ -31,6 +42,15 @@ export function formatDate(dateString: string | null | undefined): string {
     return dateString;
   }
 }
+
+/**
+ * Returns a YYYY-MM-DD string representing the local calendar date.
+ */
+export function formatLocalDateString(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 
 /**
  * Formats kilowatt-hours usage.
