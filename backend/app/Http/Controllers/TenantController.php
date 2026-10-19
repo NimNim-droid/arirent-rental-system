@@ -18,10 +18,15 @@ class TenantController extends Controller
     ) {}
 
     /**
-     * List all tenants with filters (status, search, property_id).
+     * List all tenants with filters (status, search, property_id). Admin only.
      */
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (! $user || $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $filters = [];
 
         if ($request->filled('status')) {
@@ -60,10 +65,18 @@ class TenantController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
+        $user = $request->user();
         $tenant = $this->tenantService->getTenantDetails($id);
 
         if (! $tenant) {
             return response()->json(['message' => 'Tenant not found.'], 404);
+        }
+
+        if ($user && $user->role === 'tenant') {
+            $isOwn = ($tenant->user_id && $tenant->user_id === $user->id) || ($tenant->email === $user->email);
+            if (! $isOwn) {
+                return response()->json(['message' => 'Unauthorized to view this tenant profile.'], 403);
+            }
         }
 
         $data = (new TenantResource($tenant))->toArray($request);

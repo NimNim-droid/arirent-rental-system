@@ -23,6 +23,14 @@ class PaymentService
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Bill not found.');
         }
 
+        if ($bill->status === 'paid') {
+            throw new \InvalidArgumentException('This invoice has already been paid.');
+        }
+
+        if ($bill->status === 'voided') {
+            throw new \InvalidArgumentException('This invoice has been voided.');
+        }
+
         $receiptUrl = $bill->receipt_url;
 
         if ($receipt) {

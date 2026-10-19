@@ -3,10 +3,11 @@ import { tenantsService } from "@/lib/services/tenants";
 import { utilitiesService } from "@/lib/services/utilities";
 import { settingsService } from "@/lib/services/settings";
 import { getErrorMessage } from "@/lib/errors";
+import { formatLocalDateString } from "@/lib/formatters";
 import type { Settings, Tenant, UtilityReading } from "@/lib/types";
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalDateString();
 }
 
 export function useUtilities() {

@@ -220,4 +220,44 @@ class BillWorkflowTest extends TestCase
         $this->assertEquals('voided', $bill->fresh()->status);
         $this->assertEquals(0.00, (float) $this->tenant->fresh()->balance);
     }
+
+    public function test_cannot_pay_already_paid_or_voided_bill(): void
+    {
+        $paidBill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10000.00,
+            'date' => '2026-02-05',
+            'due_date' => '2026-02-10',
+            'status' => 'paid',
+        ]);
+
+        Sanctum::actingAs($this->tenantUser);
+        $responsePaid = $this->postJson("/api/bills/{$paidBill->id}/pay", [
+            'gcash_ref' => '123456789012',
+        ]);
+
+        $responsePaid->assertStatus(422)
+            ->assertJson([
+                'message' => 'This invoice has already been paid.',
+            ]);
+
+        $voidedBill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10000.00,
+            'date' => '2026-02-05',
+            'due_date' => '2026-02-10',
+            'status' => 'voided',
+        ]);
+
+        $responseVoided = $this->postJson("/api/bills/{$voidedBill->id}/pay", [
+            'gcash_ref' => '123456789012',
+        ]);
+
+        $responseVoided->assertStatus(422)
+            ->assertJson([
+                'message' => 'This invoice has been voided.',
+            ]);
+    }
 }

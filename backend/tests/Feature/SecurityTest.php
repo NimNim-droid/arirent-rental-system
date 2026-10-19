@@ -187,4 +187,44 @@ class SecurityTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_tenant_cannot_list_tenants(): void
+    {
+        Sanctum::actingAs($this->tenantUserA);
+
+        $response = $this->getJson('/api/tenants');
+        $response->assertStatus(403)
+            ->assertJson([
+                'message' => 'Unauthorized. Admin access required.',
+            ]);
+    }
+
+    public function test_tenant_cannot_view_another_tenant_profile(): void
+    {
+        Sanctum::actingAs($this->tenantUserA);
+
+        // Alice attempts to inspect Bob's tenant profile
+        $response = $this->getJson("/api/tenants/{$this->tenantB->id}");
+        $response->assertStatus(403)
+            ->assertJson([
+                'message' => 'Unauthorized to view this tenant profile.',
+            ]);
+    }
+
+    public function test_tenant_can_view_own_profile(): void
+    {
+        Sanctum::actingAs($this->tenantUserA);
+
+        // Alice views her own tenant profile
+        $response = $this->getJson("/api/tenants/{$this->tenantA->id}");
+        $response->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'id' => (string) $this->tenantA->id,
+                    'name' => 'Tenant Alice',
+                    'email' => 'alice@example.com',
+                ],
+            ]);
+    }
 }
+

@@ -3,7 +3,7 @@ import { Zap, Calendar, Home, AlertCircle, Calculator, ChevronDown, ChevronUp } 
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatLocalDateString } from "@/lib/formatters";
 import { billingService } from "@/lib/services/billing";
 import { getErrorMessage } from "@/lib/errors";
 import type { Tenant } from "@/lib/types";
@@ -32,7 +32,7 @@ export function CreateBillModal({
   const [water, setWater] = useState<number>(500);
   const [lateFee, setLateFee] = useState<number>(0);
   const [dueDate, setDueDate] = useState<string>("");
-  const [billingDate, setBillingDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [billingDate, setBillingDate] = useState<string>(formatLocalDateString());
   const [notes, setNotes] = useState<string>("");
 
   // Optional Sub-meter calculator toggle

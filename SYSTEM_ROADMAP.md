@@ -44,7 +44,7 @@ Rule of thumb: **Controllers** only receive the request, call one service method
 ---
 
 ### Group 0 — Checkpoint
-- [ ] **F-0 Commit the current state** (all 37 tests are green right now)
+- [x] **F-0 Commit the current state** (all 37 tests are green right now)
   - **Why:** Every new Service, Repository, Request, Resource and test is still **untracked** in git. One bad edit could lose it.
   - **Steps:** `git add -A` → `git commit -m "refactor: layered architecture (phases 1-5)"`
 
@@ -52,7 +52,7 @@ Rule of thumb: **Controllers** only receive the request, call one service method
 
 ### Group A — Security & Correctness (P0, do first)
 
-- [ ] **F-A1 A paid or voided bill can be paid again** (regression from the refactor)
+- [x] **F-A1 A paid or voided bill can be paid again** (regression from the refactor)
   - **Where:** [`PaymentService::submitPayment`](file:///c:/dev/rental-system/backend/app/Services/PaymentService.php#L19-L50)
   - **Problem:** The old `BillController::pay` returned 422 when `status === 'paid'`. When the logic moved to the service, that check was dropped, and [`ProcessPaymentRequest`](file:///c:/dev/rental-system/backend/app/Http/Requests/Bill/ProcessPaymentRequest.php) only checks *ownership*, not *status*.
   - **What can go wrong:** Tenant pays → admin approves (balance −₱10,500) → tenant submits again on the same bill → status back to `pending_verification` → admin approves → balance −₱10,500 **again**.
@@ -61,7 +61,7 @@ Rule of thumb: **Controllers** only receive the request, call one service method
     2. Nothing to change in the controller. [`BillController::pay`](file:///c:/dev/rental-system/backend/app/Http/Controllers/BillController.php#L151-L172) already turns `InvalidArgumentException` into a 422.
   - **Test:** In `BillWorkflowTest`, add `test_cannot_pay_already_paid_bill` (expects 422 and an unchanged balance).
 
-- [ ] **F-A2 Any logged-in tenant can list/view all tenants** (data leak)
+- [x] **F-A2 Any logged-in tenant can list/view all tenants** (data leak)
   - **Where:** [`TenantController::index` and `show`](file:///c:/dev/rental-system/backend/app/Http/Controllers/TenantController.php#L23-L76). Routes `GET /api/tenants` and `GET /api/tenants/{id}` only use `auth:sanctum`.
   - **Problem:** No role check, so a tenant can see every tenant's name, email, phone, balance, bills and tickets.
   - **Safe to restrict? Yes, checked:** The frontend calls `GET /tenants` only from **admin** pages (`admin/billing`, `admin/utilities`, `admin/tenants`). `GET /tenants/{id}` is not called by the frontend at all.
@@ -71,7 +71,7 @@ Rule of thumb: **Controllers** only receive the request, call one service method
     3. (Group B will later move these checks into Form Requests.)
   - **Test:** In `SecurityTest`, add `test_tenant_cannot_list_tenants` and `test_tenant_cannot_view_another_tenant_profile`.
 
-- [ ] **F-A3 The "one day early" date bug still exists in 2 places** (roadmap item 1.4 was only partly fixed)
+- [x] **F-A3 The "one day early" date bug still exists in 2 places** (roadmap item 1.4 was only partly fixed)
   - **Where:**
     - [`create-bill-modal.tsx` line 35](file:///c:/dev/rental-system/frontend/src/components/features/billing/create-bill-modal.tsx#L35): `new Date().toISOString().split("T")[0]`
     - [`useUtilities.ts` line 9](file:///c:/dev/rental-system/frontend/src/components/features/utilities/hooks/useUtilities.ts#L9): `new Date().toISOString().slice(0, 10)`
