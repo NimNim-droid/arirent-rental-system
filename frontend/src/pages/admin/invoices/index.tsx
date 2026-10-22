@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useBilling,
-  PendingVerifications,
+  PendingVerificationsBanner,
+  PaymentReviewModal,
   InvoiceTable,
   InvoiceModal,
   DirectPaymentModal,
@@ -32,6 +33,7 @@ export default function AdminInvoices() {
   const [search, setSearch] = useState<string>("");
 
   // Modals state
+  const [isReviewQueueOpen, setIsReviewQueueOpen] = useState<boolean>(false);
   const [directPaymentInvoice, setDirectPaymentInvoice] = useState<Bill | null>(null);
   const [voidingBill, setVoidingBill] = useState<Bill | null>(null);
   const [isVoidingBill, setIsVoidingBill] = useState<boolean>(false);
@@ -210,22 +212,27 @@ export default function AdminInvoices() {
         </div>
       )}
 
-      {/* Pending GCash Verifications - Only shown when payments require review */}
-      {pendingPayments.length > 0 && (
-        <PendingVerifications
-          payments={pendingPayments}
-          loading={loading}
-          busyId={busyId}
-          onApprove={async (id: string) => {
-            await runVerify(id, true);
-            loadDelinquencies();
-          }}
-          onReject={async (id: string, reason?: string) => {
-            await runVerify(id, false, reason);
-            loadDelinquencies();
-          }}
-        />
-      )}
+      {/* Pending Payment Verifications Banner (Compact alert bar with Review Queue modal) */}
+      <PendingVerificationsBanner
+        payments={pendingPayments}
+        onOpenReview={() => setIsReviewQueueOpen(true)}
+      />
+
+      {/* Payment Review Queue Modal */}
+      <PaymentReviewModal
+        open={isReviewQueueOpen}
+        onClose={() => setIsReviewQueueOpen(false)}
+        payments={pendingPayments}
+        busyId={busyId}
+        onApprove={async (id: string) => {
+          await runVerify(id, true);
+          loadDelinquencies();
+        }}
+        onReject={async (id: string, reason?: string) => {
+          await runVerify(id, false, reason);
+          loadDelinquencies();
+        }}
+      />
 
       {/* Filter Toolbar (Matching Figma Slide: Properties | Tenants | Statuses | Search) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">

@@ -12,4 +12,6 @@ export { UpcomingDueBanner } from "./upcoming-due-banner";
 export { DirectPaymentModal } from "./direct-payment-modal";
 export { ExcessChargeModal } from "./excess-charge-modal";
 export { ReceiptCard } from "./receipt-card";
+export { PendingVerificationsBanner } from "./pending-verifications-banner";
+export { PaymentReviewModal } from "./payment-review-modal";
 
