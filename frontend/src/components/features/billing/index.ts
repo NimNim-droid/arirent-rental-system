@@ -11,4 +11,5 @@ export { CreateBillModal } from "./create-bill-modal";
 export { UpcomingDueBanner } from "./upcoming-due-banner";
 export { DirectPaymentModal } from "./direct-payment-modal";
 export { ExcessChargeModal } from "./excess-charge-modal";
+export { ReceiptCard } from "./receipt-card";
 
