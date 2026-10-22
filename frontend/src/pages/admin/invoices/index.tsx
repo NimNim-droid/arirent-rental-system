@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Search, RotateCw, AlertOctagon } from "lucide-react";
+import { Search, RotateCw, AlertOctagon } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   InvoiceTable,
   InvoiceModal,
   DirectPaymentModal,
-  CreateBillModal,
 } from "@/components/features/billing";
 import { billingService } from "@/lib/services/billing";
 import { propertiesService } from "@/lib/services/properties";
@@ -33,7 +32,6 @@ export default function AdminInvoices() {
   const [search, setSearch] = useState<string>("");
 
   // Modals state
-  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [directPaymentInvoice, setDirectPaymentInvoice] = useState<Bill | null>(null);
   const [voidingBill, setVoidingBill] = useState<Bill | null>(null);
   const [isVoidingBill, setIsVoidingBill] = useState<boolean>(false);
@@ -156,19 +154,9 @@ export default function AdminInvoices() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header (Matching Figma slide) */}
       <PageHeader
         title="Invoice"
-        subtitle="Create and manage invoices for tenants."
-        action={
-          <Button
-            onClick={() => setIsCreateOpen(true)}
-            className="gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Invoice</span>
-          </Button>
-        }
+        subtitle="View and manage official tenant invoice records and payment history."
       />
 
       {(message || successMessage) && (
@@ -222,20 +210,22 @@ export default function AdminInvoices() {
         </div>
       )}
 
-      {/* Pending GCash Verifications */}
-      <PendingVerifications
-        payments={pendingPayments}
-        loading={loading}
-        busyId={busyId}
-        onApprove={async (id: string) => {
-          await runVerify(id, true);
-          loadDelinquencies();
-        }}
-        onReject={async (id: string, reason?: string) => {
-          await runVerify(id, false, reason);
-          loadDelinquencies();
-        }}
-      />
+      {/* Pending GCash Verifications - Only shown when payments require review */}
+      {pendingPayments.length > 0 && (
+        <PendingVerifications
+          payments={pendingPayments}
+          loading={loading}
+          busyId={busyId}
+          onApprove={async (id: string) => {
+            await runVerify(id, true);
+            loadDelinquencies();
+          }}
+          onReject={async (id: string, reason?: string) => {
+            await runVerify(id, false, reason);
+            loadDelinquencies();
+          }}
+        />
+      )}
 
       {/* Filter Toolbar (Matching Figma Slide: Properties | Tenants | Statuses | Search) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
@@ -326,18 +316,6 @@ export default function AdminInvoices() {
         onRecordPayment={(bill) => setDirectPaymentInvoice(bill)}
       />
 
-      {/* Create Invoice Modal (Handles "+ Create Invoice" from slide) */}
-      <CreateBillModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={(msg) => {
-          setIsCreateOpen(false);
-          loadBills();
-          setSuccessMessage(msg || "Invoice created successfully.");
-          setTimeout(() => setSuccessMessage(""), 5000);
-        }}
-        tenants={activeTenants}
-      />
 
       {/* Printable Invoice Statement Modal (matching popup in Figma slide) */}
       <InvoiceModal
