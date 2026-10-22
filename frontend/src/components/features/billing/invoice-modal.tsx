@@ -2,6 +2,7 @@ import { Printer, Wallet, QrCode } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { formatInvoiceNumber } from "@/lib/formatters";
+import { printReceiptElement } from "@/lib/print";
 import { ReceiptCard } from "./receipt-card";
 import type { Bill } from "@/lib/types";
 
@@ -42,14 +43,7 @@ export function InvoiceModal({
   );
 
   const handlePrint = () => {
-    document.body.classList.add("printing-receipt");
-    const cleanup = () => {
-      document.body.classList.remove("printing-receipt");
-      window.removeEventListener("afterprint", cleanup);
-    };
-    window.addEventListener("afterprint", cleanup);
-    window.print();
-    setTimeout(cleanup, 1000);
+    printReceiptElement("printable-receipt");
   };
 
   return (
