@@ -1,4 +1,5 @@
 import { useId, useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -80,7 +81,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
 
   if (!open) return null;
 
-  return (
+  const modalElement = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="fixed inset-0 animate-fade-in bg-slate-950/70 backdrop-blur-sm"
@@ -119,4 +120,6 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "md" 
       </div>
     </div>
   );
-}
+
+  return typeof document !== "undefined" ? createPortal(modalElement, document.body) : modalElement;
+}

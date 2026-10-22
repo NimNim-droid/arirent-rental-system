@@ -41,6 +41,17 @@ export function InvoiceModal({
     invoice.date || invoice.issue_date || invoice.due_date || invoice.created_at
   );
 
+  const handlePrint = () => {
+    document.body.classList.add("printing-receipt");
+    const cleanup = () => {
+      document.body.classList.remove("printing-receipt");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+    setTimeout(cleanup, 1000);
+  };
+
   return (
     <Modal
       open={isOpen}
@@ -65,7 +76,7 @@ export function InvoiceModal({
             )}
 
             {/* Print / Save PDF Receipt */}
-            <Button variant="secondary" size="sm" onClick={() => window.print()}>
+            <Button variant="secondary" size="sm" onClick={handlePrint}>
               <Printer className="h-4 w-4" /> Print Receipt
             </Button>
           </div>

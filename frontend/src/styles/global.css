@@ -359,7 +359,15 @@ select option {
 
 /* ============ Print Stylesheet for Receipts & Invoices ============ */
 @media print {
-  /* 1. Hide web navigation, sidebar, buttons, and app controls */
+  /* 1. When printing a modal/receipt, completely hide the main application (#root) */
+  #root,
+  body.printing-receipt #root,
+  body:has(#printable-receipt) #root,
+  body:has([role="dialog"]) #root {
+    display: none !important;
+  }
+
+  /* 2. Hide web navigation, sidebar, buttons, and app controls */
   nav,
   aside,
   header,
@@ -370,7 +378,7 @@ select option {
     display: none !important;
   }
 
-  /* 2. Force clean white paper background with dark typography */
+  /* 3. Force clean white paper background with dark typography */
   html,
   body {
     background: #ffffff !important;
@@ -381,7 +389,7 @@ select option {
     print-color-adjust: exact !important;
   }
 
-  /* 3. Reset modal overlay and remove backdrop shadow/blur */
+  /* 4. Reset modal overlay and remove backdrop shadow/blur */
   .fixed.inset-0 {
     position: static !important;
     inset: auto !important;
@@ -394,7 +402,7 @@ select option {
     display: none !important;
   }
 
-  /* 4. Reset modal dialog panel to flow naturally on paper */
+  /* 5. Reset modal dialog panel to flow naturally on paper */
   [role="dialog"] {
     position: static !important;
     max-height: none !important;
@@ -402,14 +410,14 @@ select option {
     width: 100% !important;
     border: none !important;
     box-shadow: none !important;
-    background: #ffffff !important;
+    background: transparent !important;
     color: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
   }
 
-  /* 5. Hide modal header with title/close X, and footer with action buttons */
+  /* 6. Hide modal header with title/close X, and footer with action buttons */
   [role="dialog"] > div.border-b,
   [role="dialog"] > div.border-t {
     display: none !important;
@@ -420,17 +428,20 @@ select option {
     padding: 0 !important;
   }
 
-  /* 6. Clean receipt card print styling */
+  /* 7. Clean receipt card print styling - fits on a single sheet of paper */
   .receipt-card {
     display: block !important;
     width: 100% !important;
-    max-width: 600px !important;
-    margin: 0 auto !important;
+    max-width: 520px !important;
+    margin: 1.5rem auto !important;
     padding: 1.5rem !important;
     background: #ffffff !important;
     color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 1px dashed #94a3b8 !important;
     box-shadow: none !important;
     border-radius: 0.75rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
-}
+}
+
