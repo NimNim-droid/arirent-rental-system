@@ -93,6 +93,51 @@ export interface TenantUpdatePayload {
   lease_end?: string | null;
 }
 
+export interface Payment {
+  id: string;
+  bill_id: string;
+  tenant_id: string;
+  amount: number;
+  payment_method: string;
+  transaction_reference: string;
+  status: "pending" | "confirmed" | "failed";
+  receipt_url?: string | null;
+  paid_at?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface ExcessCharge {
+  id: string;
+  tenant_id: string;
+  tenant_name?: string;
+  room?: string;
+  bill_id?: string | null;
+  title: string;
+  description?: string | null;
+  amount: number;
+  charge_date: string;
+  status: "pending" | "billed" | "paid" | "waived";
+  created_at?: string;
+}
+
+export interface DelinquentTenant {
+  tenant_id: number;
+  tenant_name: string;
+  room: string;
+  property_name: string;
+  overdue_count: number;
+  total_overdue: number;
+  bills: Array<{
+    id: number;
+    total_amount: number;
+    paid_amount: number;
+    remaining_balance: number;
+    due_date: string;
+    status: string;
+  }>;
+}
+
 export interface Bill {
   id: string;
   tenant_id: string;
@@ -102,9 +147,11 @@ export interface Bill {
   water: number;
   late_fee: number;
   total_amount: number;
+  paid_amount?: number;
+  remaining_balance?: number;
   date: string;
   due_date: string;
-  status: "unpaid" | "pending_verification" | "paid" | "voided";
+  status: "unpaid" | "partially_paid" | "pending_verification" | "paid" | "overdue" | "voided";
   gcash_ref?: string;
   receipt_url?: string;
   notes?: string;
@@ -113,10 +160,18 @@ export interface Bill {
   reject_reason?: string;
   tenant_name?: string;
   room?: string;
+  property_name?: string;
   tenant?: {
     name: string;
     room: string;
+    property?: {
+      id?: string;
+      name?: string;
+    };
   };
+  payments?: Payment[];
+  excess_charges?: ExcessCharge[];
+  readings?: UtilityReading[];
 }
 
 export interface CreateBillPayload {
@@ -131,6 +186,7 @@ export interface CreateBillPayload {
   notes?: string;
   prev_reading?: number;
   curr_reading?: number;
+  excess_charge_ids?: string[];
 }
 
 export interface BillGenerateResult {
@@ -146,9 +202,13 @@ export interface UtilityReading {
   curr_reading: number;
   usage_kwh: number;
   amount: number;
+  meter_photo_url?: string | null;
+  type?: "electricity" | "water";
   date: string;
   tenant_name?: string;
   room?: string;
+  property_name?: string;
+  status?: "posted" | "pending";
 }
 
 export interface MaintenanceTicket {

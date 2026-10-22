@@ -23,5 +23,7 @@ interface BillRepositoryInterface
 
     public function getOverdueTenantIds(string $today): array;
 
+    public function getDelinquentTenantsSummary(string $today): array;
+
     public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill;
 }

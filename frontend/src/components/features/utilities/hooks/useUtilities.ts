@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { tenantsService } from "@/lib/services/tenants";
 import { utilitiesService } from "@/lib/services/utilities";
 import { settingsService } from "@/lib/services/settings";
+import { propertiesService } from "@/lib/services/properties";
 import { getErrorMessage } from "@/lib/errors";
 import { formatLocalDateString } from "@/lib/formatters";
-import type { Settings, Tenant, UtilityReading } from "@/lib/types";
-
-function todayISO() {
-  return formatLocalDateString();
-}
+import type { Settings, Tenant, UtilityReading, Property } from "@/lib/types";
 
 export function useUtilities() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(true);
+
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
 
   const [readings, setReadings] = useState<UtilityReading[]>([]);
   const [readingsLoading, setReadingsLoading] = useState(true);
@@ -20,20 +20,39 @@ export function useUtilities() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
 
-  const [prevReading, setPrevReading] = useState<number>(0);
-  const [currReading, setCurrReading] = useState<number>(0);
-  const [selectedResident, setSelectedResident] = useState("");
-  const [savingReading, setSavingReading] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
+  // Filter states
+  const [activeTab, setActiveTab] = useState<"electricity" | "water">("electricity");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [tenantFilter, setTenantFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+
+  // Notification & error
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadProperties = useCallback(async () => {
+    setPropertiesLoading(true);
+    try {
+      const res = await propertiesService.getProperties();
+      setProperties(res);
+    } catch {
+      // Non-blocking
+    } finally {
+      setPropertiesLoading(false);
+    }
+  }, []);
 
   const loadTenants = useCallback(async () => {
     setTenantsLoading(true);
     try {
-      const res = await tenantsService.getTenants({ status: "active", per_page: 200 });
+      const res = await tenantsService.getTenants({ status: "active", per_page: 250 });
       setTenants(res.data);
-      setSelectedResident((prev) => prev || res.data[0]?.id || "");
     } catch {
       // Non-blocking
     } finally {
@@ -66,71 +85,95 @@ export function useUtilities() {
   }, []);
 
   useEffect(() => {
+    loadProperties();
     loadTenants();
     loadReadings();
     loadSettings();
-  }, [loadTenants, loadReadings, loadSettings]);
+  }, [loadProperties, loadTenants, loadReadings, loadSettings]);
 
-  // Prefill previous reading from selected tenant's latest reading
-  useEffect(() => {
-    if (!selectedResident) return;
-    const latest = readings
-      .filter((r) => r.tenant_id === selectedResident)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-    setPrevReading(latest ? latest.curr_reading : 0);
-  }, [selectedResident, readings]);
+  const elecRate = settings?.elec_rate ?? 12.5;
+  const waterRate = settings?.water_rate ?? 200.0;
 
-  const elecRate = settings?.elec_rate ?? 0;
-  const usageKwh = Math.max(0, currReading - prevReading);
-  const computedAmount = usageKwh * elecRate;
+  // Filtered readings
+  const filteredReadings = useMemo(() => {
+    return readings.filter((r) => {
+      // Match utility type if present on reading
+      if (r.type && r.type !== activeTab) {
+        return false;
+      }
 
-  const handleSaveReading = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedResident) return;
-    setSavingReading(true);
-    setNotice("");
+      // Filter by property
+      if (propertyFilter !== "all") {
+        const tenant = tenants.find((t) => String(t.id) === String(r.tenant_id));
+        const propId = tenant?.property_id || "";
+        const propName = (tenant?.property?.name || r.property_name || "").toLowerCase();
+        if (propId !== propertyFilter && !propName.includes(propertyFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Filter by tenant
+      if (tenantFilter !== "all" && String(r.tenant_id) !== String(tenantFilter)) {
+        return false;
+      }
+
+      // Search query (tenant name or room)
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const tName = (r.tenant_name || "").toLowerCase();
+        const room = (r.room || "").toLowerCase();
+        const prop = (r.property_name || "").toLowerCase();
+        if (!tName.includes(q) && !room.includes(q) && !prop.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [readings, activeTab, propertyFilter, tenantFilter, searchQuery, tenants]);
+
+  // Helper to get latest reading for a tenant
+  const getLatestReading = useCallback(
+    (tenantId: string) => {
+      if (!tenantId) return 0;
+      const sorted = readings
+        .filter((r) => String(r.tenant_id) === String(tenantId))
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      return sorted[0]?.curr_reading ?? 0;
+    },
+    [readings]
+  );
+
+  const handleDeleteReading = async (id: string) => {
+    setDeletingId(id);
     setError("");
+    setNotice("");
     try {
-      await utilitiesService.createReading({
-        tenant_id: selectedResident,
-        prev_reading: prevReading,
-        curr_reading: currReading,
-        date: todayISO(),
-      });
-      setCurrReading(0);
-      setNotice("Meter reading recorded successfully.");
-      const updated = await utilitiesService.getReadings();
-      setReadings(updated);
+      await utilitiesService.deleteReading(id);
+      setNotice("Utility reading deleted successfully.");
+      await loadReadings();
     } catch (err) {
-      setError(getErrorMessage(err, "Unable to save the meter reading."));
+      setError(getErrorMessage(err, "Failed to delete utility reading."));
     } finally {
-      setSavingReading(false);
+      setDeletingId(null);
     }
   };
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!settings) return;
-    setSavingSettings(true);
-    setNotice("");
-    setError("");
+  const handleUpdateSettings = async (updated: Partial<Settings>) => {
     try {
-      const updated = await settingsService.updateSettings({
-        elec_rate: settings.elec_rate,
-        water_rate: settings.water_rate,
-        gcash_name: settings.gcash_name,
-        gcash_number: settings.gcash_number,
-      });
-      setSettings(updated);
-      setNotice("Configuration saved successfully.");
+      const res = await settingsService.updateSettings(updated);
+      setSettings(res);
+      setNotice("Utility rates updated successfully.");
+      setIsSettingsModalOpen(false);
+      return true;
     } catch (err) {
-      setError(getErrorMessage(err, "Unable to save configuration."));
-    } finally {
-      setSavingSettings(false);
+      setError(getErrorMessage(err, "Failed to update rates."));
+      return false;
     }
   };
 
   const reloadAll = () => {
+    loadProperties();
     loadTenants();
     loadReadings();
     loadSettings();
@@ -139,26 +182,38 @@ export function useUtilities() {
   return {
     tenants,
     tenantsLoading,
-    readings,
+    properties,
+    propertiesLoading,
+    readings: filteredReadings,
+    allReadingsCount: readings.length,
     readingsLoading,
     settings,
     settingsLoading,
-    prevReading,
-    setPrevReading,
-    currReading,
-    setCurrReading,
-    selectedResident,
-    setSelectedResident,
-    savingReading,
-    savingSettings,
-    notice,
-    error,
-    usageKwh,
-    computedAmount,
     elecRate,
-    setSettings,
-    handleSaveReading,
-    handleSaveSettings,
+    waterRate,
+    activeTab,
+    setActiveTab,
+    propertyFilter,
+    setPropertyFilter,
+    tenantFilter,
+    setTenantFilter,
+    searchQuery,
+    setSearchQuery,
+    isAddModalOpen,
+    setIsAddModalOpen,
+    isSettingsModalOpen,
+    setIsSettingsModalOpen,
+    selectedProofUrl,
+    setSelectedProofUrl,
+    notice,
+    setNotice,
+    error,
+    setError,
+    deletingId,
+    getLatestReading,
+    handleDeleteReading,
+    handleUpdateSettings,
+    loadReadings,
     reloadAll,
   };
 }

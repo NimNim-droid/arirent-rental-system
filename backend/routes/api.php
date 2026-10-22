@@ -60,16 +60,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tenants/{id}/vacate', [TenantController::class, 'vacate']);
     Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
 
-    // Billing & GCash Payment Management
+    // Billing & Payment Management
     Route::get('/bills', [BillController::class, 'index']);
+    Route::get('/bills/delinquencies', [BillController::class, 'delinquencies']);
     Route::get('/bills/{id}', [BillController::class, 'show']);
     Route::post('/bills', [BillController::class, 'store']);
     Route::put('/bills/{id}', [BillController::class, 'update']);
     Route::post('/bills/generate', [BillController::class, 'generate']);
     Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
     Route::post('/bills/{id}/payment', [BillController::class, 'pay']);
+    Route::post('/bills/{id}/direct-payment', [BillController::class, 'directPayment']);
     Route::post('/bills/{id}/verify', [BillController::class, 'verify']);
     Route::delete('/bills/{id}', [BillController::class, 'destroy']);
+
+    // Excess Charges (Pillar 1)
+    Route::get('/excess-charges', [\App\Http\Controllers\ExcessChargeController::class, 'index']);
+    Route::post('/excess-charges', [\App\Http\Controllers\ExcessChargeController::class, 'store']);
+    Route::delete('/excess-charges/{id}', [\App\Http\Controllers\ExcessChargeController::class, 'destroy']);
 
     // Utility Meter Readings
     Route::get('/readings', [ReadingController::class, 'index']);

@@ -49,4 +49,12 @@ export const tenantsService = {
     clientCache.invalidate("properties");
     clientCache.invalidate("dashboard");
   },
+
+  async deleteTenant(id: string): Promise<void> {
+    await api.delete(`/tenants/${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("rooms");
+    clientCache.invalidate("properties");
+    clientCache.invalidate("dashboard");
+  },
 };

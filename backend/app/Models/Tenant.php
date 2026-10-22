@@ -78,4 +78,14 @@ class Tenant extends Model
     {
         return $this->hasMany(MaintenanceTicket::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function excessCharges(): HasMany
+    {
+        return $this->hasMany(ExcessCharge::class);
+    }
 }

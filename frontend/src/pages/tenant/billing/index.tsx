@@ -77,83 +77,101 @@ export default function TenantBilling() {
                   <TableHead className="text-right">Rent</TableHead>
                   <TableHead className="text-right">Electricity</TableHead>
                   <TableHead className="text-right">Water</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead className="text-right">Total Due</TableHead>
+                  <TableHead className="text-right">Paid</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bills.map((bill) => (
-                  <TableRow key={bill.id}>
-                    <TableCell className="whitespace-nowrap font-mono font-bold text-fg-soft">
-                      {bill.id}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                      {formatCurrency(bill.rent)}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                      {formatCurrency(bill.electricity)}
-                    </TableCell>
-                    <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                      {formatCurrency(bill.water)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-bold tabular-nums text-fg">
-                      {formatCurrency(bill.total_amount)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-muted">
-                      {bill.due_date}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge
-                          dot
-                          variant={
-                            bill.status === "paid"
-                              ? "success"
-                              : bill.status === "pending_verification"
-                              ? "warning"
-                              : bill.status === "voided"
-                              ? "neutral"
-                              : "danger"
-                          }
-                        >
-                          {bill.status === "pending_verification"
-                            ? "Pending Approval"
-                            : bill.status === "voided"
-                            ? "Voided"
-                            : bill.status}
-                        </Badge>
-                        {bill.status === "unpaid" && bill.reject_reason && (
-                          <p
-                            className="flex items-center gap-1 text-[10px] font-semibold text-danger-fg"
-                            title={bill.reject_reason}
+                {bills.map((bill) => {
+                  const paid = bill.paid_amount ?? 0;
+                  const remaining = bill.remaining_balance ?? Math.max(0, bill.total_amount - paid);
+                  const canPay = (bill.status === "unpaid" || bill.status === "partially_paid") && remaining > 0;
+
+                  return (
+                    <TableRow key={bill.id}>
+                      <TableCell className="whitespace-nowrap font-mono font-bold text-fg-soft">
+                        #{bill.id}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
+                        {formatCurrency(bill.rent)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
+                        {formatCurrency(bill.electricity)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
+                        {formatCurrency(bill.water)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-fg">
+                        {formatCurrency(bill.total_amount)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-success-fg">
+                        {formatCurrency(paid)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-bold tabular-nums text-accent">
+                        {formatCurrency(remaining)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted">
+                        {bill.due_date}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge
+                            dot
+                            variant={
+                              bill.status === "paid"
+                                ? "success"
+                                : bill.status === "partially_paid"
+                                ? "warning"
+                                : bill.status === "pending_verification"
+                                ? "warning"
+                                : bill.status === "voided"
+                                ? "neutral"
+                                : "danger"
+                            }
                           >
-                            <AlertTriangle className="h-3 w-3 shrink-0" />
-                            Rejected
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openStatement(bill)}
-                          className="text-accent hover:text-accent-strong"
-                        >
-                          <Eye className="h-4 w-4" /> View
-                        </Button>
-                        {bill.status === "unpaid" && (
-                          <Button size="sm" onClick={() => openPayment(bill)}>
-                            Pay GCash
+                            {bill.status === "partially_paid"
+                              ? "Partially Paid"
+                              : bill.status === "pending_verification"
+                              ? "Pending Approval"
+                              : bill.status === "voided"
+                              ? "Cancelled"
+                              : bill.status}
+                          </Badge>
+                          {bill.status === "unpaid" && bill.reject_reason && (
+                            <p
+                              className="flex items-center gap-1 text-[10px] font-semibold text-danger-fg"
+                              title={bill.reject_reason}
+                            >
+                              <AlertTriangle className="h-3 w-3 shrink-0" />
+                              Rejected
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openStatement(bill)}
+                            className="text-accent hover:text-accent-strong"
+                          >
+                            <Eye className="h-4 w-4" /> View
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {canPay && (
+                            <Button size="sm" onClick={() => openPayment(bill)}>
+                              Pay GCash
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

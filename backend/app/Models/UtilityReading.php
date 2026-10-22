@@ -17,6 +17,8 @@ class UtilityReading extends Model
         'curr_reading',
         'usage_kwh',
         'amount',
+        'meter_photo_url',
+        'type',
         'date',
     ];
 

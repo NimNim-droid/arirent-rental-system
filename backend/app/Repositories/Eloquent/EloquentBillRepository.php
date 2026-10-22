@@ -10,7 +10,13 @@ class EloquentBillRepository implements BillRepositoryInterface
 {
     public function paginate(int $perPage = 50, array $filters = []): LengthAwarePaginator
     {
-        $query = Bill::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])->latest('date');
+        $query = Bill::with([
+            'tenant:id,name,room,property_id',
+            'tenant.property:id,name',
+            'payments',
+            'excessCharges',
+            'readings',
+        ])->latest('date');
 
         if (! empty($filters['tenant_id'])) {
             $query->where('tenant_id', $filters['tenant_id']);
@@ -28,6 +34,14 @@ class EloquentBillRepository implements BillRepositoryInterface
         $query = Bill::query();
         if (! empty($relations)) {
             $query->with($relations);
+        } else {
+            $query->with([
+                'tenant:id,name,room,property_id',
+                'tenant.property:id,name',
+                'payments',
+                'excessCharges',
+                'readings',
+            ]);
         }
         return $query->find($id);
     }
@@ -67,12 +81,48 @@ class EloquentBillRepository implements BillRepositoryInterface
 
     public function getOverdueTenantIds(string $today): array
     {
-        return Bill::where('status', 'unpaid')
+        return Bill::whereIn('status', ['unpaid', 'partially_paid'])
             ->where('due_date', '<', $today)
             ->pluck('tenant_id')
             ->unique()
             ->flip()
             ->all();
+    }
+
+    public function getDelinquentTenantsSummary(string $today): array
+    {
+        $overdueBills = Bill::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])
+            ->whereIn('status', ['unpaid', 'partially_paid'])
+            ->where('due_date', '<', $today)
+            ->get();
+
+        $grouped = $overdueBills->groupBy('tenant_id');
+        $delinquents = [];
+
+        foreach ($grouped as $tenantId => $bills) {
+            if ($bills->count() >= 2) {
+                $tenant = $bills->first()->tenant;
+                $totalOverdue = $bills->sum('remaining_balance');
+                $delinquents[] = [
+                    'tenant_id' => $tenantId,
+                    'tenant_name' => $tenant?->name ?? 'Unknown',
+                    'room' => $tenant?->room ?? 'N/A',
+                    'property_name' => $tenant?->property?->name ?? 'N/A',
+                    'overdue_count' => $bills->count(),
+                    'total_overdue' => (float) $totalOverdue,
+                    'bills' => $bills->map(fn ($b) => [
+                        'id' => $b->id,
+                        'total_amount' => (float) $b->total_amount,
+                        'paid_amount' => (float) $b->paid_amount,
+                        'remaining_balance' => (float) $b->remaining_balance,
+                        'due_date' => $b->due_date,
+                        'status' => $b->status,
+                    ])->values()->all(),
+                ];
+            }
+        }
+
+        return $delinquents;
     }
 
     public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill

@@ -45,6 +45,8 @@ class ProcessPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'amount' => ['nullable', 'numeric', 'min:1'],
+            'payment_method' => ['nullable', 'string', 'in:gcash,card,cash,bank_transfer'],
             'gcash_ref' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
             'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg,pdf,heic,heif', 'max:10240'],

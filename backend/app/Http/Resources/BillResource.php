@@ -27,6 +27,8 @@ class BillResource extends JsonResource
             'water' => (float) $this->water,
             'late_fee' => (float) $this->late_fee,
             'total_amount' => (float) $this->total_amount,
+            'paid_amount' => (float) ($this->paid_amount ?? 0),
+            'remaining_balance' => (float) ($this->remaining_balance ?? $this->total_amount),
             'date' => $this->date ? Carbon::parse($this->date)->format('Y-m-d') : null,
             'due_date' => $this->due_date ? Carbon::parse($this->due_date)->format('Y-m-d') : null,
             'status' => $this->status,
@@ -40,6 +42,9 @@ class BillResource extends JsonResource
                 'name' => $this->tenant->name,
                 'room' => $this->tenant->room,
             ]),
+            'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            'excess_charges' => ExcessChargeResource::collection($this->whenLoaded('excessCharges')),
+            'readings' => ReadingResource::collection($this->whenLoaded('readings')),
         ];
     }
 }

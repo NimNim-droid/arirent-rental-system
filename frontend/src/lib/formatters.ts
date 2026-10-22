@@ -73,3 +73,18 @@ export function formatFileSize(value?: number | string): string {
     ? `${(value / (1024 * 1024)).toFixed(2)} MB`
     : `${Math.max(1, Math.round(value / 1024))} KB`;
 }
+
+/**
+ * Formats an invoice ID into an official document number (e.g. INV-2026-001).
+ */
+export function formatInvoiceNumber(id: number | string, dateString?: string | null): string {
+  const num = String(id).padStart(3, "0");
+  let year = new Date().getFullYear();
+  if (dateString) {
+    const parsed = new Date(dateString);
+    if (!isNaN(parsed.getTime())) {
+      year = parsed.getFullYear();
+    }
+  }
+  return `INV-${year}-${num}`;
+}

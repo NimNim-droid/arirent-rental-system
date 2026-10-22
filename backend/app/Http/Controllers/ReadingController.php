@@ -77,11 +77,20 @@ class ReadingController extends Controller
     {
         $validated = $request->validated();
 
+        $photoUrl = null;
+        if ($request->hasFile('meter_photo')) {
+            $path = $request->file('meter_photo')->store('meter_proofs', 'public');
+            $photoUrl = '/storage/' . $path;
+        } elseif (! empty($validated['meter_photo_url'])) {
+            $photoUrl = $validated['meter_photo_url'];
+        }
+
         $result = $this->utilityService->recordReading(
             (int) $validated['tenant_id'],
             (float) $validated['prev_reading'],
             (float) $validated['curr_reading'],
-            $validated['date']
+            $validated['date'],
+            $photoUrl
         );
 
         return response()->json([

@@ -78,7 +78,13 @@ class BillController extends Controller
     public function show(int $id): JsonResponse
     {
         $user = request()->user();
-        $bill = $this->billRepo->find($id, ['tenant:id,name,room,property_id', 'tenant.property:id,name']);
+        $bill = $this->billRepo->find($id, [
+            'tenant:id,name,room,property_id',
+            'tenant.property:id,name',
+            'payments',
+            'excessCharges',
+            'readings',
+        ]);
 
         if (! $bill) {
             return response()->json(['message' => 'Bill not found.'], 404);
@@ -96,6 +102,53 @@ class BillController extends Controller
         return response()->json([
             'data' => new BillResource($bill),
         ]);
+    }
+
+    /**
+     * Retrieve 2-month delinquent tenants. Admin only.
+     */
+    public function delinquencies(): JsonResponse
+    {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $delinquents = $this->billService->getDelinquentTenants();
+        return response()->json([
+            'data' => $delinquents,
+            'count' => count($delinquents),
+        ]);
+    }
+
+    /**
+     * Record a direct payment (Cash/Bank) by landlord. Admin only.
+     */
+    public function directPayment(Request $request, int $id): JsonResponse
+    {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $validated = $request->validate([
+            'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'payment_method' => ['nullable', 'string', 'in:cash,bank_transfer,gcash,card'],
+            'transaction_reference' => ['nullable', 'string', 'max:100'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $bill = $this->paymentService->recordDirectPayment($id, $validated);
+
+            return response()->json([
+                'message' => 'Direct payment recorded successfully.',
+                'data' => new BillResource($bill),
+                'bill' => new BillResource($bill),
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     /**

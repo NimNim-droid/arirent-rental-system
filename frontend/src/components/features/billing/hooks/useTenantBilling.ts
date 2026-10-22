@@ -62,12 +62,16 @@ export function useTenantBilling() {
   };
 
   const unpaidBills = useMemo(
-    () => bills.filter((b) => b.status === "unpaid"),
+    () => bills.filter((b) => b.status === "unpaid" || b.status === "partially_paid" || b.status === "overdue"),
     [bills]
   );
 
   const unpaidTotal = useMemo(
-    () => unpaidBills.reduce((sum, b) => sum + b.total_amount, 0),
+    () =>
+      unpaidBills.reduce((sum, b) => {
+        const remaining = b.remaining_balance ?? Math.max(0, b.total_amount - (b.paid_amount || 0));
+        return sum + remaining;
+      }, 0),
     [unpaidBills]
   );
 

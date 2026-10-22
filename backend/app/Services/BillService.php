@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bill;
+use App\Models\ExcessCharge;
 use App\Models\UtilityReading;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
@@ -33,7 +34,20 @@ class BillService
             $elecUsage = (float) ($data['elec_usage'] ?? 0);
             $water = (float) ($data['water'] ?? 0);
             $lateFee = (float) ($data['late_fee'] ?? 0);
-            $total = $rent + $elec + $water + $lateFee;
+
+            // Tally excess charges if specified
+            $excessTotal = 0.00;
+            $excessChargeIds = $data['excess_charge_ids'] ?? [];
+            $excessCharges = collect();
+            if (! empty($excessChargeIds)) {
+                $excessCharges = ExcessCharge::whereIn('id', $excessChargeIds)
+                    ->where('tenant_id', $data['tenant_id'])
+                    ->where('status', 'pending')
+                    ->get();
+                $excessTotal = (float) $excessCharges->sum('amount');
+            }
+
+            $total = $rent + $elec + $water + $lateFee + $excessTotal;
 
             $bill = $this->billRepo->create([
                 'tenant_id' => $data['tenant_id'],
@@ -43,11 +57,20 @@ class BillService
                 'water' => $water,
                 'late_fee' => $lateFee,
                 'total_amount' => $total,
+                'paid_amount' => 0.00,
+                'remaining_balance' => $total,
                 'date' => $data['date'],
                 'due_date' => $data['due_date'],
                 'status' => 'unpaid',
                 'notes' => $data['notes'] ?? null,
             ]);
+
+            if ($excessCharges->isNotEmpty()) {
+                ExcessCharge::whereIn('id', $excessCharges->pluck('id'))->update([
+                    'bill_id' => $bill->id,
+                    'status' => 'billed',
+                ]);
+            }
 
             if ($elecUsage > 0 || $elec > 0) {
                 $prev = (float) ($prevReading ?? 0);
@@ -159,8 +182,14 @@ class BillService
                 $elec = $latestReading ? (float) $latestReading->amount : 0.00;
                 $elecUsage = $latestReading ? (float) $latestReading->usage_kwh : 0.00;
 
+                // Attach pending excess charges for this tenant
+                $pendingCharges = ExcessCharge::where('tenant_id', $tenant->id)
+                    ->where('status', 'pending')
+                    ->get();
+                $excessChargesSum = (float) $pendingCharges->sum('amount');
+
                 $lateFee = isset($overdueTenantIds[$tenant->id]) ? 250.00 : 0.00;
-                $total = $rent + $elec + $water + $lateFee;
+                $total = $rent + $elec + $water + $lateFee + $excessChargesSum;
 
                 $bill = $this->billRepo->create([
                     'tenant_id' => $tenant->id,
@@ -170,11 +199,20 @@ class BillService
                     'water' => $water,
                     'late_fee' => $lateFee,
                     'total_amount' => $total,
+                    'paid_amount' => 0.00,
+                    'remaining_balance' => $total,
                     'date' => $formattedBillingDate,
                     'due_date' => $tenantDueDate->format('Y-m-d'),
                     'status' => 'unpaid',
                     'notes' => $coverageNote,
                 ]);
+
+                if ($pendingCharges->isNotEmpty()) {
+                    ExcessCharge::whereIn('id', $pendingCharges->pluck('id'))->update([
+                        'bill_id' => $bill->id,
+                        'status' => 'billed',
+                    ]);
+                }
 
                 if ($latestReading && ! empty($latestReading->id)) {
                     $this->readingRepo->update($latestReading->id, ['bill_id' => $bill->id]);
@@ -226,8 +264,12 @@ class BillService
             $newElec = isset($data['electricity']) ? (float) $data['electricity'] : (float) $bill->electricity;
             $newWater = isset($data['water']) ? (float) $data['water'] : (float) $bill->water;
             $newLateFee = isset($data['late_fee']) ? (float) $data['late_fee'] : (float) $bill->late_fee;
-            $newTotal = $newRent + $newElec + $newWater + $newLateFee;
+            $excessTotal = (float) $bill->excessCharges()->sum('amount');
+            $newTotal = $newRent + $newElec + $newWater + $newLateFee + $excessTotal;
             $data['total_amount'] = $newTotal;
+
+            $paid = (float) ($bill->paid_amount ?? 0);
+            $data['remaining_balance'] = max(0.00, $newTotal - $paid);
         }
 
         return DB::transaction(function () use ($id, $data, $bill, $oldTotal, $oldStatus, $newStatus, $hasFinancialChanges) {
@@ -286,5 +328,13 @@ class BillService
 
             return $deleted;
         });
+    }
+
+    /**
+     * Retrieve tenants with 2 or more unpaid/partially-paid bills past due date.
+     */
+    public function getDelinquentTenants(): array
+    {
+        return $this->billRepo->getDelinquentTenantsSummary(now()->format('Y-m-d'));
     }
 }

@@ -67,6 +67,12 @@ export function useTenants() {
     });
   };
 
+  const handleDelete = (tenant: Tenant) => {
+    void runAction(tenant.id, () => tenantsService.deleteTenant(tenant.id)).then(() => {
+      setSelectedTenant(null);
+    });
+  };
+
   return {
     tenants,
     pendingApplicants,
@@ -83,5 +89,6 @@ export function useTenants() {
     handleApprove,
     handleReject,
     handleVacate,
+    handleDelete,
   };
 }

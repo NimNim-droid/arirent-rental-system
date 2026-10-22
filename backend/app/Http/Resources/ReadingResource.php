@@ -25,6 +25,8 @@ class ReadingResource extends JsonResource
             'curr_reading' => (float) $this->curr_reading,
             'usage_kwh' => (float) $this->usage_kwh,
             'amount' => (float) $this->amount,
+            'meter_photo_url' => $this->meter_photo_url,
+            'type' => $this->type ?? 'electricity',
             'date' => $this->date ? Carbon::parse($this->date)->format('Y-m-d') : null,
         ];
     }

@@ -21,7 +21,7 @@ class UtilityService
         protected SettingsRepositoryInterface $settingsRepo
     ) {}
 
-    public function recordReading(int $tenantId, float $prev, float $curr, string $date): array
+    public function recordReading(int $tenantId, float $prev, float $curr, string $date, ?string $meterPhotoUrl = null): array
     {
         $usage = max(0, round($curr - $prev, 2));
 
@@ -33,7 +33,7 @@ class UtilityService
         $monthStart = $readingDate->copy()->startOfMonth()->format('Y-m-d');
         $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
 
-        return DB::transaction(function () use ($tenantId, $prev, $curr, $usage, $amount, $date, $monthStart, $monthEnd, $elecRate) {
+        return DB::transaction(function () use ($tenantId, $prev, $curr, $usage, $amount, $date, $monthStart, $monthEnd, $elecRate, $meterPhotoUrl) {
             $unpaidBill = $this->billRepo->findForTenantInMonth($tenantId, $monthStart, $monthEnd, 'unpaid');
 
             $reading = $this->readingRepo->create([
@@ -44,6 +44,7 @@ class UtilityService
                 'usage_kwh' => $usage,
                 'amount' => $amount,
                 'date' => $date,
+                'meter_photo_url' => $meterPhotoUrl,
             ]);
 
             $billUpdated = false;

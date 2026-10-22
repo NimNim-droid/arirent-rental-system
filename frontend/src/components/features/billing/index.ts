@@ -9,4 +9,6 @@ export { BillingStats } from "./billing-stats";
 export { TenantStatementModal } from "./tenant-statement-modal";
 export { CreateBillModal } from "./create-bill-modal";
 export { UpcomingDueBanner } from "./upcoming-due-banner";
+export { DirectPaymentModal } from "./direct-payment-modal";
+export { ExcessChargeModal } from "./excess-charge-modal";
 

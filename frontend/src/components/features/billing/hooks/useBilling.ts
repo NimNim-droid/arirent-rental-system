@@ -75,10 +75,10 @@ export function useBilling() {
     setMessage("");
     try {
       await billingService.updateBill(id, { status: "voided" });
-      setMessage("Bill voided successfully.");
+      setMessage("Bill cancelled successfully.");
       await loadBills();
     } catch (err) {
-      setError(getErrorMessage(err, "Unable to void the bill."));
+      setError(getErrorMessage(err, "Unable to cancel the bill."));
     } finally {
       setBusyId(null);
     }

@@ -12,6 +12,7 @@ import {
   Building,
   PanelLeftClose,
   PanelLeftOpen,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/common/logo";
@@ -51,14 +52,16 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
     { to: "/admin/properties", label: "Properties & Units", icon: Building },
     { to: "/admin/tenants", label: "Tenants", icon: Users },
     { to: "/admin/utilities", label: "Utilities", icon: Zap },
-    { to: "/admin/billing", label: "Billing", icon: Banknote },
+    { to: "/admin/billing", label: "Billing", icon: ReceiptText },
+    { to: "/admin/invoices", label: "Invoice", icon: FileText },
     { to: "/admin/maintenance", label: "Maintenance", icon: Wrench },
     { to: "/admin/documents", label: "Documents", icon: FileText },
   ];
 
   const tenantLinks = [
     { to: "/tenant/dashboard", label: "Overview", icon: LayoutDashboard },
-    { to: "/tenant/billing", label: "My Bills", icon: Banknote },
+    { to: "/tenant/billing", label: "My Invoices", icon: Banknote },
+    { to: "/tenant/excess-charges", label: "Excess Charges", icon: ReceiptText },
     { to: "/tenant/maintenance", label: "Maintenance", icon: Wrench },
     { to: "/tenant/documents", label: "Documents", icon: FileText },
   ];

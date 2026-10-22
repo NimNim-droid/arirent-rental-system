@@ -1,4 +1,5 @@
 export { useUtilities } from "./hooks/useUtilities";
-export { MeterReadingForm } from "./meter-reading-form";
-export { SettingsForm } from "./settings-form";
+export { AddReadingModal } from "./add-reading-modal";
+export { SetRatesModal } from "./set-rates-modal";
 export { ReadingsHistoryTable } from "./readings-history-table";
+export { WaterView } from "./water-view";

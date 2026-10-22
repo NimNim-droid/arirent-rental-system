@@ -66,14 +66,15 @@ export const billingService = {
   },
 
   /**
-   * Submits a tenant payment reference for verification.
+   * Submits a tenant payment reference for verification with optional partial payment amount.
    */
   async submitPayment(
     id: string,
-    payload: { gcash_ref: string; notes?: string; receipt?: File }
+    payload: { gcash_ref: string; amount?: number; notes?: string; receipt?: File }
   ): Promise<string> {
     const body = new FormData();
     body.append("gcash_ref", payload.gcash_ref);
+    if (payload.amount) body.append("amount", String(payload.amount));
     if (payload.notes) body.append("notes", payload.notes);
     if (payload.receipt) body.append("receipt", payload.receipt);
 
@@ -82,5 +83,28 @@ export const billingService = {
     clientCache.invalidate(`bill:${id}`);
     clientCache.invalidate("dashboard");
     return res.data.message;
+  },
+
+  /**
+   * Direct payment recording (Cash, Bank Transfer) by Landlord.
+   */
+  async recordDirectPayment(
+    id: string,
+    payload: { amount?: number; payment_method?: string; transaction_reference?: string; notes?: string }
+  ): Promise<{ message: string; bill: Bill }> {
+    const res = await api.post<{ message: string; bill: Bill }>(`/bills/${id}/direct-payment`, payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
+    return res.data;
+  },
+
+  /**
+   * Retrieve active tenants with 2 or more overdue monthly invoices.
+   */
+  async getDelinquencies(): Promise<{ data: import("@/lib/types").DelinquentTenant[]; count: number }> {
+    const res = await api.get<{ data: import("@/lib/types").DelinquentTenant[]; count: number }>("/bills/delinquencies");
+    return res.data;
   },
 };

@@ -26,6 +26,8 @@ class StoreReadingRequest extends FormRequest
             'prev_reading' => ['required', 'numeric', 'min:0'],
             'curr_reading' => ['required', 'numeric', 'gte:prev_reading'],
             'date' => ['required', 'date'],
+            'meter_photo' => ['nullable', 'file', 'image', 'max:10240'],
+            'meter_photo_url' => ['nullable', 'string'],
         ];
     }
 }

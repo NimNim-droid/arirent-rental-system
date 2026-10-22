@@ -48,3 +48,9 @@ restore-theme.bat
 # Docker
 .docker/
 docker-compose.override.yml
+
+# Databases
+*.sqlite
+*.sqlite-journal
+*.db
+/backend/arirent
