@@ -1,4 +1,4 @@
-import { Eye, Trash2, Wallet } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { SectionHeader } from "@/components/common/section-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -200,18 +200,6 @@ export function InvoiceTable({
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {!isSettled && onRecordPayment && inv.status !== "voided" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onRecordPayment(inv)}
-                                  className="h-8 text-xs font-medium"
-                                  title="Record Cash/Offline Payment"
-                                >
-                                  <Wallet className="h-3.5 w-3.5 mr-1 text-accent" />
-                                  Record Cash
-                                </Button>
-                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
