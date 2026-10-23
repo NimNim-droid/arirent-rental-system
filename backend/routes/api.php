@@ -10,6 +10,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReadingController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TenantController;
@@ -90,8 +91,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/settings', [SettingsController::class, 'update']);
     Route::post('/settings', [SettingsController::class, 'update']);
 
-    // Dashboard Analytics
+    // Dashboard & Reports Analytics
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/reports/financial', [ReportController::class, 'financial']);
     Route::get('/tenant/dashboard', [DashboardController::class, 'tenantDashboard']);
 
     // Maintenance Tickets

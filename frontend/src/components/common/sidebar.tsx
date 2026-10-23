@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ReceiptText,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/common/logo";
@@ -54,6 +55,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
     { to: "/admin/utilities", label: "Utilities", icon: Zap },
     { to: "/admin/billing", label: "Billing", icon: ReceiptText },
     { to: "/admin/invoices", label: "Invoice", icon: FileText },
+    { to: "/admin/reports", label: "Financial Reports", icon: BarChart3 },
     { to: "/admin/maintenance", label: "Maintenance", icon: Wrench },
     { to: "/admin/documents", label: "Documents", icon: FileText },
   ];

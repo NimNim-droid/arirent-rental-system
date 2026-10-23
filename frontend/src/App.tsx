@@ -17,6 +17,7 @@ const AdminTenants = lazy(() => import("@/pages/admin/tenants"));
 const AdminUtilities = lazy(() => import("@/pages/admin/utilities"));
 const AdminBilling = lazy(() => import("@/pages/admin/billing"));
 const AdminInvoices = lazy(() => import("@/pages/admin/invoices"));
+const AdminReports = lazy(() => import("@/pages/admin/reports"));
 const AdminMaintenance = lazy(() => import("@/pages/admin/maintenance"));
 const AdminDocuments = lazy(() => import("@/pages/admin/documents"));
 
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="utilities" element={<AdminUtilities />} />
             <Route path="billing" element={<AdminBilling />} />
             <Route path="invoices" element={<AdminInvoices />} />
+            <Route path="reports" element={<AdminReports />} />
             <Route path="maintenance" element={<AdminMaintenance />} />
             <Route path="documents" element={<AdminDocuments />} />
           </Route>
