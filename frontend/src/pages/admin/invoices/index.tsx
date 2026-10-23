@@ -98,6 +98,27 @@ export default function AdminInvoices() {
     loadDelinquencies();
   }, [loadProperties, loadActiveTenants, loadDelinquencies]);
 
+  // Filter tenants list dynamically based on selected property (cascading filter)
+  const visibleTenants = useMemo(() => {
+    if (!selectedPropertyId) return activeTenants;
+    return activeTenants.filter((t) => String(t.property_id) === String(selectedPropertyId));
+  }, [activeTenants, selectedPropertyId]);
+
+  const handlePropertyChange = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    setPage(1);
+
+    // If currently selected tenant does not live in the selected property, reset tenant filter
+    if (selectedTenantId && propertyId) {
+      const isTenantInProp = activeTenants.some(
+        (t) => String(t.id) === String(selectedTenantId) && String(t.property_id) === String(propertyId)
+      );
+      if (!isTenantInProp) {
+        setSelectedTenantId("");
+      }
+    }
+  };
+
   // Extract distinct billing months from existing invoices
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
@@ -388,22 +409,19 @@ export default function AdminInvoices() {
           <div className="w-[130px] sm:w-auto">
             <Select
               value={selectedPropertyId}
-              onChange={(e) => {
-                setSelectedPropertyId(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => handlePropertyChange(e.target.value)}
               className="text-xs h-9 min-w-[125px]"
             >
               <option value="">All Properties</option>
               {properties.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={String(p.id)}>
                   {p.name}
                 </option>
               ))}
             </Select>
           </div>
 
-          {/* Tenant Filter */}
+          {/* Tenant Filter (Cascading based on selected property) */}
           <div className="w-[130px] sm:w-auto">
             <Select
               value={selectedTenantId}
@@ -411,11 +429,18 @@ export default function AdminInvoices() {
                 setSelectedTenantId(e.target.value);
                 setPage(1);
               }}
+              disabled={visibleTenants.length === 0}
               className="text-xs h-9 min-w-[125px]"
             >
-              <option value="">All Tenants</option>
-              {activeTenants.map((t) => (
-                <option key={t.id} value={t.id}>
+              <option value="">
+                {visibleTenants.length === 0
+                  ? "No Tenants in Property"
+                  : selectedPropertyId
+                  ? `All Residents (${visibleTenants.length})`
+                  : "All Tenants"}
+              </option>
+              {visibleTenants.map((t) => (
+                <option key={t.id} value={String(t.id)}>
                   {t.name} (Rm {t.room})
                 </option>
               ))}
