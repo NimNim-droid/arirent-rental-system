@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, RotateCw, AlertOctagon } from "lucide-react";
+import { Search, RotateCw, AlertOctagon, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,19 @@ export default function AdminInvoices() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
 
-  // Modals state
+  // Modals & Selection state
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState<boolean>(false);
+  const [deletingSingleBill, setDeletingSingleBill] = useState<Bill | null>(null);
+  const [isDeletingSingle, setIsDeletingSingle] = useState<boolean>(false);
+
   const [isReviewQueueOpen, setIsReviewQueueOpen] = useState<boolean>(false);
   const [directPaymentInvoice, setDirectPaymentInvoice] = useState<Bill | null>(null);
   const [voidingBill, setVoidingBill] = useState<Bill | null>(null);
   const [isVoidingBill, setIsVoidingBill] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const [localError, setLocalError] = useState<string>("");
 
   const {
     bills,
@@ -143,6 +150,63 @@ export default function AdminInvoices() {
     loadDelinquencies();
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedInvoiceIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const visibleIds = filteredBills.map((b) => String(b.id));
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedInvoiceIds.includes(id));
+    if (allVisibleSelected) {
+      setSelectedInvoiceIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedInvoiceIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedInvoiceIds.length === 0) return;
+    setIsBulkDeleting(true);
+    setLocalError("");
+    try {
+      const res = await billingService.bulkDeleteBills(selectedInvoiceIds);
+      setSuccessMessage(`Successfully deleted ${res.deleted} invoice(s).`);
+      setSelectedInvoiceIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+      await loadBills();
+      await loadDelinquencies();
+    } catch (err: any) {
+      setLocalError(err?.response?.data?.message || "Failed to delete selected invoices.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!deletingSingleBill) return;
+    setIsDeletingSingle(true);
+    setLocalError("");
+    try {
+      await billingService.deleteBill(String(deletingSingleBill.id));
+      const formattedNum = formatInvoiceNumber(
+        deletingSingleBill.id,
+        deletingSingleBill.created_at || deletingSingleBill.due_date
+      );
+      setSuccessMessage(`Invoice #${formattedNum} permanently deleted.`);
+      setSelectedInvoiceIds((prev) => prev.filter((id) => id !== String(deletingSingleBill.id)));
+      setDeletingSingleBill(null);
+      await loadBills();
+      await loadDelinquencies();
+    } catch (err: any) {
+      setLocalError(err?.response?.data?.message || "Failed to delete invoice.");
+    } finally {
+      setIsDeletingSingle(false);
+    }
+  };
+
   const handleConfirmVoid = async () => {
     if (!voidingBill) return;
     setIsVoidingBill(true);
@@ -167,7 +231,9 @@ export default function AdminInvoices() {
           message={successMessage || message}
         />
       )}
-      {error && <AlertBanner variant="danger" message={error} onRetry={loadBills} />}
+      {(error || localError) && (
+        <AlertBanner variant="danger" message={localError || error} onRetry={loadBills} />
+      )}
 
       {/* 2-Month Delinquency Critical Alert Banner */}
       {delinquents.length > 0 && (
@@ -310,19 +376,62 @@ export default function AdminInvoices() {
         </div>
       </div>
 
-      {/* Official Invoices Table (matching Figma slide layout) */}
+      {/* Official Invoices Table with Checkbox Selection */}
       <InvoiceTable
         bills={filteredBills}
         loading={loading}
         busyId={busyId}
+        selectedIds={selectedInvoiceIds}
+        onToggleSelect={handleToggleSelect}
+        onToggleSelectAll={handleToggleSelectAll}
         onView={(bill) => setSelectedInvoice(bill)}
         onVoid={(id) => {
           const target = bills.find((b) => String(b.id) === String(id));
           if (target) setVoidingBill(target);
         }}
+        onDeleteSingle={(id) => {
+          const target = bills.find((b) => String(b.id) === String(id));
+          if (target) setDeletingSingleBill(target);
+        }}
         onRecordPayment={(bill) => setDirectPaymentInvoice(bill)}
       />
 
+      {/* Floating Bulk Action Bar */}
+      {selectedInvoiceIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 sm:gap-4 bg-card/95 backdrop-blur-md border border-edge shadow-2xl rounded-2xl px-4 sm:px-5 py-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-accent text-xs font-bold font-mono">
+              {selectedInvoiceIds.length}
+            </span>
+            <span className="text-sm font-medium text-fg whitespace-nowrap">
+              {selectedInvoiceIds.length === 1 ? "1 invoice" : `${selectedInvoiceIds.length} invoices`} selected
+            </span>
+          </div>
+
+          <div className="h-4 w-px bg-edge" />
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedInvoiceIds([])}
+              className="h-8 text-xs text-muted hover:text-fg"
+            >
+              Deselect
+            </Button>
+
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setIsConfirmBulkDeleteOpen(true)}
+              className="h-8 text-xs font-semibold gap-1.5 shadow-sm"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete Selected ({selectedInvoiceIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Printable Invoice Statement Modal (matching popup in Figma slide) */}
       <InvoiceModal
@@ -365,6 +474,63 @@ export default function AdminInvoices() {
               <br />
               <span className="text-xs text-muted mt-1 block">
                 This will void the invoice and remove the charge from the tenant's outstanding balance.
+              </span>
+            </span>
+          ) : null
+        }
+      />
+
+      {/* Confirm Bulk Delete Modal */}
+      <ConfirmDialog
+        open={isConfirmBulkDeleteOpen}
+        onClose={() => {
+          if (!isBulkDeleting) setIsConfirmBulkDeleteOpen(false);
+        }}
+        onConfirm={handleConfirmBulkDelete}
+        title={`Delete ${selectedInvoiceIds.length} Selected Invoice${selectedInvoiceIds.length > 1 ? "s" : ""}`}
+        confirmText={`Delete ${selectedInvoiceIds.length} Invoice${selectedInvoiceIds.length > 1 ? "s" : ""}`}
+        cancelText="Keep Invoices"
+        variant="danger"
+        loading={isBulkDeleting}
+        description={
+          <div className="space-y-2">
+            <p>
+              Are you sure you want to permanently delete these{" "}
+              <strong className="text-fg font-semibold">
+                {selectedInvoiceIds.length}
+              </strong>{" "}
+              selected invoice{selectedInvoiceIds.length > 1 ? "s" : ""}?
+            </p>
+            <p className="text-xs text-muted">
+              This action cannot be undone. Any utility readings or pending excess charges attached to these invoices will be freed so they can be billed again.
+            </p>
+          </div>
+        }
+      />
+
+      {/* Confirm Single Delete Modal (for Cancelled Invoices) */}
+      <ConfirmDialog
+        open={Boolean(deletingSingleBill)}
+        onClose={() => {
+          if (!isDeletingSingle) setDeletingSingleBill(null);
+        }}
+        onConfirm={handleConfirmSingleDelete}
+        title="Delete Cancelled Invoice"
+        confirmText="Delete Invoice"
+        cancelText="Cancel"
+        variant="danger"
+        loading={isDeletingSingle}
+        description={
+          deletingSingleBill ? (
+            <span>
+              Are you sure you want to permanently delete Invoice{" "}
+              <strong className="text-fg font-semibold">
+                #{formatInvoiceNumber(deletingSingleBill.id, deletingSingleBill.created_at || deletingSingleBill.due_date)}
+              </strong>{" "}
+              from the ledger?
+              <br />
+              <span className="text-xs text-muted mt-1 block">
+                This will permanently remove the cancelled record. This action cannot be undone.
               </span>
             </span>
           ) : null

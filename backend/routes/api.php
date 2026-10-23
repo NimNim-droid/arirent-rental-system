@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Billing & Payment Management
     Route::get('/bills', [BillController::class, 'index']);
     Route::get('/bills/delinquencies', [BillController::class, 'delinquencies']);
+    Route::post('/bills/bulk-delete', [BillController::class, 'bulkDestroy']);
     Route::get('/bills/{id}', [BillController::class, 'show']);
     Route::post('/bills', [BillController::class, 'store']);
     Route::put('/bills/{id}', [BillController::class, 'update']);

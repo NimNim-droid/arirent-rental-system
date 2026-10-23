@@ -20,8 +20,12 @@ interface InvoiceTableProps {
   bills: Bill[];
   loading: boolean;
   busyId: string | null;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: () => void;
   onView: (bill: Bill) => void;
   onVoid: (id: string) => void;
+  onDeleteSingle?: (id: string) => void;
   onRecordPayment?: (bill: Bill) => void;
 }
 
@@ -29,8 +33,12 @@ export function InvoiceTable({
   bills,
   loading,
   busyId,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
   onView,
   onVoid,
+  onDeleteSingle,
   onRecordPayment,
 }: InvoiceTableProps) {
   const getBadgeVariant = (status: Bill["status"]) => {
@@ -47,6 +55,9 @@ export function InvoiceTable({
         return "danger";
     }
   };
+
+  const allSelected = bills.length > 0 && bills.every((b) => selectedIds.includes(String(b.id)));
+  const someSelected = bills.some((b) => selectedIds.includes(String(b.id)));
 
   return (
     <div className="space-y-4">
@@ -66,6 +77,20 @@ export function InvoiceTable({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {onToggleSelect && (
+                    <TableHead className="w-10 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all invoices"
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someSelected && !allSelected;
+                        }}
+                        onChange={onToggleSelectAll}
+                        className="h-4 w-4 rounded border-edge bg-inset text-accent focus:ring-accent/20 cursor-pointer accent-teal-600 transition-all"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Tenant</TableHead>
                   <TableHead>Property / Unit</TableHead>
@@ -80,6 +105,11 @@ export function InvoiceTable({
                 {loading
                   ? Array.from({ length: 4 }).map((_, i) => (
                       <TableRow key={i}>
+                        {onToggleSelect && (
+                          <TableCell className="w-10 px-3">
+                            <Skeleton className="h-4 w-4 rounded" />
+                          </TableCell>
+                        )}
                         <TableCell>
                           <Skeleton className="h-4 w-20" />
                         </TableCell>
@@ -112,9 +142,24 @@ export function InvoiceTable({
                       const isSettled = inv.status === "paid" || remaining <= 0;
                       const propName = inv.property_name || inv.tenant?.property?.name || "AriRent";
                       const unitNumber = inv.room || inv.tenant?.room || "—";
+                      const isSelected = selectedIds.includes(String(inv.id));
 
                       return (
-                        <TableRow key={inv.id}>
+                        <TableRow
+                          key={inv.id}
+                          className={isSelected ? "bg-accent/5 border-l-2 border-l-accent" : undefined}
+                        >
+                          {onToggleSelect && (
+                            <TableCell className="w-10 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select invoice ${inv.id}`}
+                                checked={isSelected}
+                                onChange={() => onToggleSelect(String(inv.id))}
+                                className="h-4 w-4 rounded border-edge bg-inset text-accent focus:ring-accent/20 cursor-pointer accent-teal-600 transition-all"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="font-mono font-bold text-fg-soft text-xs whitespace-nowrap">
                             {formatInvoiceNumber(inv.id, inv.created_at || inv.due_date)}
                           </TableCell>
@@ -189,6 +234,23 @@ export function InvoiceTable({
                                     <>
                                       <Trash2 className="h-3.5 w-3.5 mr-1" />
                                       Cancel
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                              {inv.status === "voided" && onDeleteSingle && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  loading={busyId === inv.id}
+                                  onClick={() => onDeleteSingle(inv.id)}
+                                  className="h-8 text-xs text-danger-fg hover:text-danger-fg hover:bg-danger-bg"
+                                  title="Permanently Delete Cancelled Invoice"
+                                >
+                                  {busyId !== inv.id && (
+                                    <>
+                                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                      Delete
                                     </>
                                   )}
                                 </Button>

@@ -279,6 +279,10 @@ class BillService
             $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
             if ($tenant) {
                 if ($newStatus === 'voided' && $oldStatus !== 'voided') {
+                    // Release attached utility readings and excess charges so they can be re-billed
+                    UtilityReading::where('bill_id', $id)->update(['bill_id' => null]);
+                    ExcessCharge::where('bill_id', $id)->update(['bill_id' => null, 'status' => 'pending']);
+
                     if (in_array($oldStatus, ['unpaid', 'pending_verification'])) {
                         $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
                     }
@@ -320,6 +324,10 @@ class BillService
                 }
             }
 
+            // Release attached utility readings and excess charges
+            UtilityReading::where('bill_id', $id)->update(['bill_id' => null]);
+            ExcessCharge::where('bill_id', $id)->update(['bill_id' => null, 'status' => 'pending']);
+
             $tenantId = $bill->tenant_id;
             $deleted = $this->billRepo->delete($id);
 
@@ -328,6 +336,21 @@ class BillService
 
             return $deleted;
         });
+    }
+
+    public function bulkDeleteBills(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $id) {
+            try {
+                if ($this->deleteBill((int) $id)) {
+                    $count++;
+                }
+            } catch (ModelNotFoundException) {
+                // Skip if already gone
+            }
+        }
+        return $count;
     }
 
     /**

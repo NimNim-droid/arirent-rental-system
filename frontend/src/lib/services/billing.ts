@@ -65,6 +65,24 @@ export const billingService = {
     return res.data.data;
   },
 
+  async deleteBill(id: string): Promise<void> {
+    await api.delete(`/bills/${id}`);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
+  },
+
+  async bulkDeleteBills(ids: string[]): Promise<{ message: string; deleted: number }> {
+    const res = await api.post<{ message: string; deleted: number }>("/bills/bulk-delete", {
+      ids: ids.map((id) => Number(id)),
+    });
+    clientCache.invalidate("bills");
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
+    return res.data;
+  },
+
   /**
    * Submits a tenant payment reference for verification with optional partial payment amount.
    */

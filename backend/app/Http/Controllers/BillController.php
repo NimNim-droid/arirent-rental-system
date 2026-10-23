@@ -272,4 +272,26 @@ class BillController extends Controller
             return response()->json(['message' => 'Bill not found.'], 404);
         }
     }
+
+    /**
+     * Bulk delete multiple bills. Admin only.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $deletedCount = $this->billService->bulkDeleteBills($validated['ids']);
+
+        return response()->json([
+            'message' => "Successfully deleted {$deletedCount} invoice(s).",
+            'deleted' => $deletedCount,
+        ]);
+    }
 }
