@@ -24,6 +24,9 @@ interface ReadingsHistoryTableProps {
   onDelete: (id: string) => Promise<void>;
   deletingId: string | null;
   onViewProof?: (url: string) => void;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function ReadingsHistoryTable({
@@ -33,8 +36,30 @@ export function ReadingsHistoryTable({
   onDelete,
   deletingId,
   onViewProof,
+  page,
+  pageSize = 10,
+  onPageChange,
 }: ReadingsHistoryTableProps) {
   const [readingToDelete, setReadingToDelete] = useState<UtilityReading | null>(null);
+  const [internalPage, setInternalPage] = useState(1);
+
+  const currentPage = page ?? internalPage;
+  const currentSize = pageSize;
+  const totalCount = readings.length;
+  const totalPages = Math.ceil(totalCount / currentSize) || 1;
+
+  const handlePageChange = (p: number) => {
+    if (onPageChange) {
+      onPageChange(p);
+    } else {
+      setInternalPage(p);
+    }
+  };
+
+  const paginatedReadings = readings.slice(
+    (currentPage - 1) * currentSize,
+    currentPage * currentSize
+  );
 
   const formatDateDisplay = (dateStr: string) => {
     return formatDate(dateStr);
@@ -49,7 +74,7 @@ export function ReadingsHistoryTable({
 
   return (
     <>
-      <Card className="p-0 overflow-hidden border border-border">
+      <Card className="p-0 overflow-hidden shadow-sm border-edge">
         {!loading && readings.length === 0 ? (
           <div className="p-12 text-center">
             <EmptyState
@@ -61,7 +86,7 @@ export function ReadingsHistoryTable({
           <div className="table-scroll-wrap overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-subtle/50">
+                <TableRow>
                   <TableHead className="font-semibold text-xs">Date</TableHead>
                   <TableHead className="font-semibold text-xs">Property</TableHead>
                   <TableHead className="font-semibold text-xs">Unit / Room</TableHead>
@@ -90,12 +115,12 @@ export function ReadingsHistoryTable({
                         <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                       </TableRow>
                     ))
-                  : readings.map((r) => {
+                  : paginatedReadings.map((r) => {
                       const appliedRate = getComputedRate(r);
                       const isDeleting = deletingId === String(r.id);
 
                       return (
-                        <TableRow key={r.id} className="hover:bg-subtle/40 transition-colors">
+                        <TableRow key={r.id} className="hover:bg-card/50 transition-colors">
                           {/* Date */}
                           <TableCell className="text-xs font-medium text-fg whitespace-nowrap">
                             {formatDateDisplay(r.date)}
@@ -118,10 +143,10 @@ export function ReadingsHistoryTable({
 
                           {/* Meter Reading (Prev -> Curr) */}
                           <TableCell className="text-xs text-center whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-subtle text-fg font-mono font-medium text-[11px] border border-border">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-inset text-fg font-mono font-medium text-[11px] border border-edge">
                               <span>{Number(r.prev_reading).toLocaleString()}</span>
                               <ArrowRight className="h-3 w-3 text-muted" />
-                              <span className="font-semibold text-primary">{Number(r.curr_reading).toLocaleString()}</span>
+                              <span className="font-semibold text-accent">{Number(r.curr_reading).toLocaleString()}</span>
                             </span>
                           </TableCell>
 
@@ -136,7 +161,7 @@ export function ReadingsHistoryTable({
                           </TableCell>
 
                           {/* Total */}
-                          <TableCell className="text-xs font-bold text-fg text-right whitespace-nowrap">
+                          <TableCell className="text-xs font-bold text-fg text-right whitespace-nowrap font-mono">
                             {formatCurrency(Number(r.amount))}
                           </TableCell>
 
@@ -155,7 +180,7 @@ export function ReadingsHistoryTable({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0 text-muted hover:text-primary"
+                                  className="h-8 w-8 p-0 text-muted hover:text-accent"
                                   title="View Meter Photo Proof"
                                   onClick={() => onViewProof?.(r.meter_photo_url!)}
                                 >
@@ -183,15 +208,40 @@ export function ReadingsHistoryTable({
           </div>
         )}
 
-        {/* Footer info & records count */}
-        {!loading && readings.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-subtle/30 text-xs text-muted">
-            <span>
-              Showing <strong>{readings.length}</strong> record{readings.length !== 1 ? "s" : ""}
-            </span>
-            <span className="text-[11px]">
-              Rates are locked per reading for historical audit integrity.
-            </span>
+        {/* Table Footer with Pagination Controls */}
+        {!loading && totalCount > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-card/60 text-xs text-muted">
+            <div>
+              Showing <span className="font-semibold text-fg font-mono">{(currentPage - 1) * currentSize + 1}</span> to{" "}
+              <span className="font-semibold text-fg font-mono">{Math.min(currentPage * currentSize, totalCount)}</span> of{" "}
+              <span className="font-semibold text-fg font-mono">{totalCount}</span> records
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Previous
+                </Button>
+                <span className="px-2 font-mono text-xs font-semibold text-fg">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

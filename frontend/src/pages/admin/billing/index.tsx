@@ -61,7 +61,7 @@ export default function AdminBilling() {
   // Filters
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
-  const [selectedDueDate, setSelectedDueDate] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const pageSize = 10;
@@ -170,6 +170,52 @@ export default function AdminBilling() {
     return { current, history, unpaid };
   }, [bills]);
 
+  // Filter tenants list dynamically based on selected property (cascading filter)
+  const visibleTenants = useMemo(() => {
+    if (!selectedPropertyId) return activeTenants;
+    return activeTenants.filter((t) => String(t.property_id) === String(selectedPropertyId));
+  }, [activeTenants, selectedPropertyId]);
+
+  const handlePropertyChange = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    setPage(1);
+
+    // If currently selected tenant does not live in the selected property, reset tenant filter
+    if (selectedTenantId && propertyId) {
+      const isTenantInProp = activeTenants.some(
+        (t) => String(t.id) === String(selectedTenantId) && String(t.property_id) === String(propertyId)
+      );
+      if (!isTenantInProp) {
+        setSelectedTenantId("");
+      }
+    }
+  };
+
+  // Extract distinct billing months from existing bills
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set<string>();
+    bills.forEach((b) => {
+      const rawDate = b.due_date || b.date || b.created_at;
+      if (rawDate) {
+        const ym = String(rawDate).slice(0, 7);
+        if (/^\d{4}-\d{2}$/.test(ym)) {
+          monthsSet.add(ym);
+        }
+      }
+    });
+    return Array.from(monthsSet).sort().reverse();
+  }, [bills]);
+
+  const formatMonthLabel = (ym: string) => {
+    try {
+      const [year, month] = ym.split("-");
+      const date = new Date(Number(year), Number(month) - 1, 1);
+      return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    } catch {
+      return ym;
+    }
+  };
+
   // Filtered bills
   const filteredBills = useMemo(() => {
     return bills.filter((b) => {
@@ -198,9 +244,12 @@ export default function AdminBilling() {
         return false;
       }
 
-      // Due Date filter
-      if (selectedDueDate && b.due_date && !b.due_date.startsWith(selectedDueDate)) {
-        return false;
+      // Billing Month/Period filter
+      if (selectedMonth !== "all") {
+        const rawDate = String(b.due_date || b.date || b.created_at || "");
+        if (!rawDate.startsWith(selectedMonth)) {
+          return false;
+        }
       }
 
       // Search query
@@ -217,7 +266,7 @@ export default function AdminBilling() {
 
       return true;
     });
-  }, [bills, activeTab, selectedPropertyId, selectedTenantId, selectedDueDate, searchQuery, properties]);
+  }, [bills, activeTab, selectedPropertyId, selectedTenantId, selectedMonth, searchQuery, properties]);
 
   // Paginated bills
   const totalPages = Math.max(1, Math.ceil(filteredBills.length / pageSize));
@@ -262,20 +311,29 @@ export default function AdminBilling() {
       {/* Main Billing Table Section */}
       <div className="space-y-4">
         {/* Navigation Tabs (Current Bills | Payment History | Unpaid) */}
-        <div className="border-b border-edge flex items-center gap-6">
+        <div className="flex items-center gap-1.5 p-1 bg-inset/60 border border-edge rounded-2xl w-fit">
           <button
             type="button"
             onClick={() => {
               setActiveTab("current");
               setPage(1);
             }}
-            className={`pb-3 text-sm font-semibold transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === "current"
-                ? "text-accent border-b-2 border-accent"
+                ? "bg-card text-fg shadow-xs border border-edge/80"
                 : "text-muted hover:text-fg"
             }`}
           >
-            Current Bills ({tabCounts.current})
+            <span>Current Bills</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === "current"
+                  ? "bg-accent/10 text-accent font-semibold"
+                  : "bg-inset text-muted"
+              }`}
+            >
+              {tabCounts.current}
+            </span>
           </button>
           <button
             type="button"
@@ -283,13 +341,22 @@ export default function AdminBilling() {
               setActiveTab("history");
               setPage(1);
             }}
-            className={`pb-3 text-sm font-semibold transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === "history"
-                ? "text-accent border-b-2 border-accent"
+                ? "bg-card text-fg shadow-xs border border-edge/80"
                 : "text-muted hover:text-fg"
             }`}
           >
-            Payment History ({tabCounts.history})
+            <span>Payment History</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === "history"
+                  ? "bg-accent/10 text-accent font-semibold"
+                  : "bg-inset text-muted"
+              }`}
+            >
+              {tabCounts.history}
+            </span>
           </button>
           <button
             type="button"
@@ -297,73 +364,30 @@ export default function AdminBilling() {
               setActiveTab("unpaid");
               setPage(1);
             }}
-            className={`pb-3 text-sm font-semibold transition-all relative ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === "unpaid"
-                ? "text-accent border-b-2 border-accent"
+                ? "bg-card text-fg shadow-xs border border-edge/80"
                 : "text-muted hover:text-fg"
             }`}
           >
-            Unpaid ({tabCounts.unpaid})
+            <span>Unpaid</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === "unpaid"
+                  ? "bg-danger/10 text-danger-fg font-semibold"
+                  : "bg-inset text-muted"
+              }`}
+            >
+              {tabCounts.unpaid}
+            </span>
           </button>
         </div>
 
-        {/* Filter Bar (matching mockup) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
-          {/* Property Dropdown */}
-          <div>
-            <Select
-              value={selectedPropertyId}
-              onChange={(e) => {
-                setSelectedPropertyId(e.target.value);
-                setPage(1);
-              }}
-              className="text-xs h-9"
-            >
-              <option value="">All Properties</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          {/* Tenant Dropdown */}
-          <div>
-            <Select
-              value={selectedTenantId}
-              onChange={(e) => {
-                setSelectedTenantId(e.target.value);
-                setPage(1);
-              }}
-              className="text-xs h-9"
-            >
-              <option value="">All Tenants</option>
-              {activeTenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} (Room {t.room})
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          {/* Due Date Filter */}
-          <div className="relative">
-            <Input
-              type="date"
-              value={selectedDueDate}
-              onChange={(e) => {
-                setSelectedDueDate(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Due Date"
-              className="text-xs h-9"
-            />
-          </div>
-
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+        {/* Unified Single-Line Filter Toolbar matching Invoices */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm">
+          {/* Left: Prominent Search Box */}
+          <div className="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
             <Input
               type="text"
               placeholder="Search tenant or unit..."
@@ -372,33 +396,109 @@ export default function AdminBilling() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="pl-8 text-xs h-9"
+              className="pl-8.5 h-9 text-xs w-full"
             />
           </div>
 
-          {/* Reset / Refresh */}
-          <div className="flex items-center gap-2">
+          {/* Right: Inline Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Month Filter */}
+            <div className="w-[140px] sm:w-auto">
+              <Select
+                value={selectedMonth}
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value);
+                  setPage(1);
+                }}
+                className="text-xs h-9 min-w-[130px]"
+              >
+                <option value="all">All Months</option>
+                {availableMonths.map((ym) => (
+                  <option key={ym} value={ym}>
+                    {formatMonthLabel(ym)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Property Filter */}
+            <div className="w-[130px] sm:w-auto">
+              <Select
+                value={selectedPropertyId}
+                onChange={(e) => handlePropertyChange(e.target.value)}
+                className="text-xs h-9 min-w-[125px]"
+              >
+                <option value="">All Properties</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Tenant Filter (Cascading based on selected property) */}
+            <div className="w-[130px] sm:w-auto">
+              <Select
+                value={selectedTenantId}
+                onChange={(e) => {
+                  setSelectedTenantId(e.target.value);
+                  setPage(1);
+                }}
+                disabled={visibleTenants.length === 0}
+                className="text-xs h-9 min-w-[125px]"
+              >
+                <option value="">
+                  {visibleTenants.length === 0
+                    ? "No Tenants in Property"
+                    : selectedPropertyId
+                    ? `All Residents (${visibleTenants.length})`
+                    : "All Tenants"}
+                </option>
+                {visibleTenants.map((t) => (
+                  <option key={t.id} value={String(t.id)}>
+                    {t.name} (Room {t.room})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Reset Filters Button */}
+            {(selectedPropertyId || selectedTenantId || selectedMonth !== "all" || searchQuery.trim()) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedPropertyId("");
+                  setSelectedTenantId("");
+                  setSelectedMonth("all");
+                  setSearchQuery("");
+                  setPage(1);
+                }}
+                className="h-9 px-2.5 text-xs text-muted hover:text-fg gap-1"
+                title="Reset all filters"
+              >
+                <RotateCw className="h-3 w-3" />
+                <span className="hidden sm:inline">Reset</span>
+              </Button>
+            )}
+
+            {/* Refresh Button */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                setSelectedPropertyId("");
-                setSelectedTenantId("");
-                setSelectedDueDate("");
-                setSearchQuery("");
-                setPage(1);
-                refreshAll();
-              }}
-              className="text-xs h-9 w-full flex items-center justify-center gap-1.5"
+              onClick={refreshAll}
+              className="h-9 px-2.5 text-xs text-muted hover:text-fg gap-1.5"
+              title="Refresh data"
             >
               <RotateCw className="h-3.5 w-3.5" />
-              <span>Reset Filters</span>
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>
         </div>
 
         {/* Master Bills Table */}
-        <Card className="p-0 overflow-hidden">
+        <Card className="p-0 overflow-hidden shadow-sm border-edge">
           {loading ? (
             <div className="p-5">
               <SkeletonRows rows={5} />
@@ -568,10 +668,11 @@ export default function AdminBilling() {
 
           {/* Table Footer with Pagination Controls */}
           {filteredBills.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-edge text-xs text-muted">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-card/60 text-xs text-muted">
               <div>
-                Showing {(page - 1) * pageSize + 1} to{" "}
-                {Math.min(page * pageSize, filteredBills.length)} of {filteredBills.length} records
+                Showing <span className="font-semibold text-fg font-mono">{(page - 1) * pageSize + 1}</span> to{" "}
+                <span className="font-semibold text-fg font-mono">{Math.min(page * pageSize, filteredBills.length)}</span> of{" "}
+                <span className="font-semibold text-fg font-mono">{filteredBills.length}</span> records
               </div>
 
               {totalPages > 1 && (
@@ -579,21 +680,21 @@ export default function AdminBilling() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={page === 1}
+                    disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="h-7 px-2 text-xs"
+                    className="h-7 px-2.5 text-xs font-medium"
                   >
                     Previous
                   </Button>
-                  <span className="px-2 font-semibold text-fg">
+                  <span className="px-2 font-mono text-xs font-semibold text-fg">
                     Page {page} of {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={page === totalPages}
+                    disabled={page >= totalPages}
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="h-7 px-2 text-xs"
+                    className="h-7 px-2.5 text-xs font-medium"
                   >
                     Next
                   </Button>

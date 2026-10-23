@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Droplets, Settings, CheckCircle2, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,9 @@ interface WaterViewProps {
   propertyFilter: string;
   tenantFilter: string;
   searchQuery: string;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function WaterView({
@@ -33,7 +37,14 @@ export function WaterView({
   propertyFilter,
   tenantFilter,
   searchQuery,
+  page,
+  pageSize = 10,
+  onPageChange,
 }: WaterViewProps) {
+  const [internalPage, setInternalPage] = useState(1);
+  const currentPage = page ?? internalPage;
+  const currentSize = pageSize;
+
   const filteredTenants = tenants.filter((t) => {
     if (propertyFilter !== "all") {
       const pId = t.property_id || "";
@@ -60,13 +71,29 @@ export function WaterView({
     return true;
   });
 
+  const totalCount = filteredTenants.length;
+  const totalPages = Math.ceil(totalCount / currentSize) || 1;
+
+  const handlePageChange = (p: number) => {
+    if (onPageChange) {
+      onPageChange(p);
+    } else {
+      setInternalPage(p);
+    }
+  };
+
+  const paginatedTenants = filteredTenants.slice(
+    (currentPage - 1) * currentSize,
+    currentPage * currentSize
+  );
+
   return (
     <div className="space-y-6">
       {/* Banner / Stat Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 md:col-span-2 border-primary/20 bg-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <Card className="p-5 md:col-span-2 border-accent/20 bg-accent/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-primary text-white shrink-0 mt-0.5">
+            <div className="p-2.5 rounded-xl bg-accent text-white shrink-0 mt-0.5 shadow-xs">
               <Droplets className="h-6 w-6" />
             </div>
             <div>
@@ -83,7 +110,7 @@ export function WaterView({
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 gap-2 border-primary/30 text-primary hover:bg-primary/10"
+            className="shrink-0 gap-2 border-accent/30 text-accent hover:bg-accent/10"
             onClick={onOpenSetRates}
           >
             <Settings className="h-4 w-4" />
@@ -91,12 +118,12 @@ export function WaterView({
           </Button>
         </Card>
 
-        <Card className="p-5 flex flex-col justify-center">
+        <Card className="p-5 flex flex-col justify-center border-edge shadow-sm">
           <p className="text-xs font-semibold text-fg-soft uppercase tracking-wider">
             Current Rate per Tenant
           </p>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-3xl font-extrabold text-fg">{formatCurrency(waterRate)}</span>
+            <span className="text-3xl font-extrabold text-fg font-mono">{formatCurrency(waterRate)}</span>
             <span className="text-xs text-muted">/ month</span>
           </div>
           <p className="text-[11px] text-muted mt-1">
@@ -106,23 +133,23 @@ export function WaterView({
       </div>
 
       {/* Info Notice */}
-      <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-subtle text-xs text-muted">
-        <Info className="h-4 w-4 text-primary shrink-0" />
+      <div className="flex items-center gap-3 p-3.5 rounded-xl border border-edge bg-inset/50 text-xs text-muted">
+        <Info className="h-4 w-4 text-accent shrink-0" />
         <span>
           If a unit or property transitions to physical water meters in the future, you will be able to switch to cubic meter ($m^3$) sub-meter tracking right here.
         </span>
       </div>
 
       {/* Active Tenants Flat Water Schedule Table */}
-      <Card className="p-0 overflow-hidden border border-border">
-        <div className="p-4 border-b border-border bg-subtle/30 flex items-center justify-between">
+      <Card className="p-0 overflow-hidden shadow-sm border-edge">
+        <div className="p-4 border-b border-edge bg-card/60 flex items-center justify-between">
           <div>
             <h4 className="text-sm font-semibold text-fg">Monthly Water Schedule</h4>
             <p className="text-xs text-muted mt-0.5">
               Active tenants scheduled for flat water billing this period
             </p>
           </div>
-          <Badge variant="default" className="text-xs">
+          <Badge variant="neutral" className="text-xs font-mono">
             {filteredTenants.length} Active Unit{filteredTenants.length !== 1 ? "s" : ""}
           </Badge>
         </div>
@@ -130,7 +157,7 @@ export function WaterView({
         <div className="table-scroll-wrap overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-subtle/50">
+              <TableRow>
                 <TableHead className="font-semibold text-xs">Property</TableHead>
                 <TableHead className="font-semibold text-xs">Unit / Room</TableHead>
                 <TableHead className="font-semibold text-xs">Tenant</TableHead>
@@ -151,8 +178,8 @@ export function WaterView({
                       <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto rounded-full" /></TableCell>
                     </TableRow>
                   ))
-                : filteredTenants.map((t) => (
-                    <TableRow key={t.id} className="hover:bg-subtle/40 transition-colors">
+                : paginatedTenants.map((t) => (
+                    <TableRow key={t.id} className="hover:bg-card/50 transition-colors">
                       <TableCell className="text-xs text-fg-soft font-medium">
                         {t.property?.name || "Standard Rental"}
                       </TableCell>
@@ -179,6 +206,43 @@ export function WaterView({
             </TableBody>
           </Table>
         </div>
+
+        {/* Table Footer with Pagination Controls */}
+        {!loading && totalCount > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-card/60 text-xs text-muted">
+            <div>
+              Showing <span className="font-semibold text-fg font-mono">{(currentPage - 1) * currentSize + 1}</span> to{" "}
+              <span className="font-semibold text-fg font-mono">{Math.min(currentPage * currentSize, totalCount)}</span> of{" "}
+              <span className="font-semibold text-fg font-mono">{totalCount}</span> records
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Previous
+                </Button>
+                <span className="px-2 font-mono text-xs font-semibold text-fg">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );
