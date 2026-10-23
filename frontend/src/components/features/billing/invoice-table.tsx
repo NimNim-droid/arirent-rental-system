@@ -18,6 +18,10 @@ import type { Bill } from "@/lib/types";
 
 interface InvoiceTableProps {
   bills: Bill[];
+  totalBills?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
   loading: boolean;
   busyId: string | null;
   selectedIds?: string[];
@@ -31,6 +35,10 @@ interface InvoiceTableProps {
 
 export function InvoiceTable({
   bills,
+  totalBills,
+  page = 1,
+  pageSize = 10,
+  onPageChange,
   loading,
   busyId,
   selectedIds = [],
@@ -41,6 +49,9 @@ export function InvoiceTable({
   onDeleteSingle,
   onRecordPayment,
 }: InvoiceTableProps) {
+  const totalCount = totalBills ?? bills.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
   const getBadgeVariant = (status: Bill["status"]) => {
     switch (status) {
       case "paid":
@@ -63,14 +74,14 @@ export function InvoiceTable({
     <div className="space-y-4">
       <SectionHeader
         title="All Monthly Invoices"
-        subtitle={loading ? "Loading invoices..." : `${bills.length} invoices recorded`}
+        subtitle={loading ? "Loading invoices..." : `${totalCount} invoice${totalCount !== 1 ? "s" : ""} recorded`}
       />
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-hidden shadow-sm border-edge">
         {!loading && bills.length === 0 ? (
           <EmptyState
             title="No invoices yet"
-            description="Generate monthly bills or create one manually to get started."
+            description="Generate monthly bills or adjust filters to view invoice records."
           />
         ) : (
           <div className="table-scroll-wrap">
@@ -250,6 +261,43 @@ export function InvoiceTable({
                     })}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Table Footer with Pagination Controls */}
+        {!loading && totalCount > 0 && onPageChange && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-card/60 text-xs text-muted">
+            <div>
+              Showing <span className="font-semibold text-fg font-mono">{(page - 1) * pageSize + 1}</span> to{" "}
+              <span className="font-semibold text-fg font-mono">{Math.min(page * pageSize, totalCount)}</span> of{" "}
+              <span className="font-semibold text-fg font-mono">{totalCount}</span> records
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Previous
+                </Button>
+                <span className="px-2 font-mono text-xs font-semibold text-fg">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                  className="h-7 px-2.5 text-xs font-medium"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

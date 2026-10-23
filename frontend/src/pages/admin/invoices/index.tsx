@@ -26,11 +26,16 @@ export default function AdminInvoices() {
   const [activeTenants, setActiveTenants] = useState<Tenant[]>([]);
   const [delinquents, setDelinquents] = useState<DelinquentTenant[]>([]);
 
-  // Filter toolbar (matching Figma slide: All Properties | All Tenants | All Statuses | Search)
+  // Filter toolbar
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
+
+  // Pagination state (10 records per page to keep table clean and contained)
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 10;
 
   // Modals & Selection state
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
@@ -93,6 +98,31 @@ export default function AdminInvoices() {
     loadDelinquencies();
   }, [loadProperties, loadActiveTenants, loadDelinquencies]);
 
+  // Extract distinct billing months from existing invoices
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set<string>();
+    bills.forEach((b) => {
+      const rawDate = b.date || b.created_at || b.due_date;
+      if (rawDate) {
+        const ym = String(rawDate).slice(0, 7);
+        if (/^\d{4}-\d{2}$/.test(ym)) {
+          monthsSet.add(ym);
+        }
+      }
+    });
+    return Array.from(monthsSet).sort().reverse();
+  }, [bills]);
+
+  const formatMonthLabel = (ym: string) => {
+    try {
+      const [year, month] = ym.split("-");
+      const date = new Date(Number(year), Number(month) - 1, 1);
+      return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    } catch {
+      return ym;
+    }
+  };
+
   const filteredBills = useMemo(() => {
     return bills.filter((b) => {
       // 1. Property filter
@@ -109,12 +139,20 @@ export default function AdminInvoices() {
         return false;
       }
 
-      // 3. Status filter
+      // 3. Billing Month/Year filter
+      if (selectedMonth !== "all") {
+        const rawDate = String(b.date || b.created_at || b.due_date || "");
+        if (!rawDate.startsWith(selectedMonth)) {
+          return false;
+        }
+      }
+
+      // 4. Status filter
       if (selectedStatus !== "all" && b.status !== selectedStatus) {
         return false;
       }
 
-      // 4. Search query
+      // 5. Search query
       if (search.trim()) {
         const q = search.toLowerCase();
         const tenantName = (b.tenant_name || b.tenant?.name || "").toLowerCase();
@@ -136,13 +174,21 @@ export default function AdminInvoices() {
 
       return true;
     });
-  }, [bills, selectedPropertyId, selectedTenantId, selectedStatus, search, properties]);
+  }, [bills, selectedPropertyId, selectedTenantId, selectedMonth, selectedStatus, search, properties]);
+
+  // Paginate filtered results (10 rows per page)
+  const paginatedBills = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredBills.slice(start, start + pageSize);
+  }, [filteredBills, page, pageSize]);
 
   const resetFilters = () => {
     setSelectedPropertyId("");
     setSelectedTenantId("");
+    setSelectedMonth("all");
     setSelectedStatus("all");
     setSearch("");
+    setPage(1);
   };
 
   const handlePaymentSuccess = () => {
@@ -157,7 +203,7 @@ export default function AdminInvoices() {
   };
 
   const handleToggleSelectAll = () => {
-    const visibleIds = filteredBills.map((b) => String(b.id));
+    const visibleIds = paginatedBills.map((b) => String(b.id));
     const allVisibleSelected =
       visibleIds.length > 0 && visibleIds.every((id) => selectedInvoiceIds.includes(id));
     if (allVisibleSelected) {
@@ -300,85 +346,122 @@ export default function AdminInvoices() {
         }}
       />
 
-      {/* Filter Toolbar (Matching Figma Slide: Properties | Tenants | Statuses | Search) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
-        {/* All Properties */}
-        <div>
-          <Select
-            value={selectedPropertyId}
-            onChange={(e) => setSelectedPropertyId(e.target.value)}
-            className="text-xs h-9"
-          >
-            <option value="">All Properties</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        {/* All Tenants */}
-        <div>
-          <Select
-            value={selectedTenantId}
-            onChange={(e) => setSelectedTenantId(e.target.value)}
-            className="text-xs h-9"
-          >
-            <option value="">All Tenants</option>
-            {activeTenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} (Room {t.room})
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        {/* All Statuses */}
-        <div>
-          <Select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="text-xs h-9"
-          >
-            <option value="all">All Statuses</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="partially_paid">Partially Paid</option>
-            <option value="paid">Paid</option>
-            <option value="pending_verification">Pending Approval</option>
-            <option value="voided">Cancelled</option>
-          </Select>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+      {/* Unified Single-Line Filter Toolbar */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm">
+        {/* Left: Prominent Search Box */}
+        <div className="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
           <Input
             type="text"
-            placeholder="Search invoice # or tenant..."
+            placeholder="Search invoice # or resident..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8.5 h-9 text-xs"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="pl-8.5 h-9 text-xs w-full"
           />
         </div>
 
-        {/* Reset Filters */}
-        <div className="flex items-center">
+        {/* Right: Inline Filter Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Month / Year Filter */}
+          <div className="w-[140px] sm:w-auto">
+            <Select
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs h-9 min-w-[130px]"
+            >
+              <option value="all">All Months</option>
+              {availableMonths.map((ym) => (
+                <option key={ym} value={ym}>
+                  {formatMonthLabel(ym)}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Property Filter */}
+          <div className="w-[130px] sm:w-auto">
+            <Select
+              value={selectedPropertyId}
+              onChange={(e) => {
+                setSelectedPropertyId(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs h-9 min-w-[125px]"
+            >
+              <option value="">All Properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Tenant Filter */}
+          <div className="w-[130px] sm:w-auto">
+            <Select
+              value={selectedTenantId}
+              onChange={(e) => {
+                setSelectedTenantId(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs h-9 min-w-[125px]"
+            >
+              <option value="">All Tenants</option>
+              {activeTenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} (Rm {t.room})
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="w-[125px] sm:w-auto">
+            <Select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs h-9 min-w-[115px]"
+            >
+              <option value="all">All Statuses</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="paid">Paid</option>
+              <option value="pending_verification">Pending Approval</option>
+              <option value="voided">Cancelled</option>
+            </Select>
+          </div>
+
+          {/* Reset Filters Button */}
           <Button
             variant="ghost"
             size="sm"
             onClick={resetFilters}
-            className="h-9 text-xs text-muted hover:text-fg gap-1.5 w-full sm:w-auto"
+            className="h-9 px-2.5 text-xs text-muted hover:text-fg gap-1"
+            title="Reset all filters"
           >
             <RotateCw className="h-3 w-3" />
-            <span>Reset Filters</span>
+            <span className="hidden sm:inline">Reset</span>
           </Button>
         </div>
       </div>
 
-      {/* Official Invoices Table with Checkbox Selection */}
+      {/* Official Invoices Table with Checkbox Selection and Contained Area Pagination */}
       <InvoiceTable
-        bills={filteredBills}
+        bills={paginatedBills}
+        totalBills={filteredBills.length}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
         loading={loading}
         busyId={busyId}
         selectedIds={selectedInvoiceIds}
