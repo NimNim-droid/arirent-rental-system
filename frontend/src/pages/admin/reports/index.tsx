@@ -7,6 +7,7 @@ import { ReportFilters } from "@/components/features/reports/report-filters";
 import { KpiSummary } from "@/components/features/reports/kpi-summary";
 import { RevenueStreams } from "@/components/features/reports/revenue-streams";
 import { SettlementHealth } from "@/components/features/reports/settlement-health";
+import { ArAging } from "@/components/features/reports/ar-aging";
 import { CollectionTrend } from "@/components/features/reports/collection-trend";
 import { PropertyPerformance } from "@/components/features/reports/property-performance";
 import { reportsService, type FinancialReportData } from "@/lib/services/reports";
@@ -118,6 +119,8 @@ export default function AdminReports() {
         <RevenueStreams streams={data?.revenue_streams} loading={loading} />
         <SettlementHealth counts={data?.status_counts} kpis={data?.kpis} loading={loading} />
       </div>
+
+      <ArAging aging={data?.ar_aging} loading={loading} />
 
       <CollectionTrend trend={data?.monthly_trend ?? []} loading={loading} />
 

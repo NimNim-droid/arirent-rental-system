@@ -64,6 +64,36 @@ export interface MonthlyTrendItem {
   outstanding: number;
 }
 
+export type ArAgingBucketKey = "current" | "1_30" | "31_60" | "61_90" | "over_90";
+
+export interface ArAgingBucket {
+  key: ArAgingBucketKey;
+  label: string;
+  bill_count: number;
+  amount: number;
+}
+
+export interface ArAgingItem {
+  bill_id: number;
+  tenant_id: number;
+  tenant_name: string;
+  room: string | null;
+  property_name: string | null;
+  status: "unpaid" | "partially_paid";
+  due_date: string | null;
+  days_past_due: number;
+  remaining_balance: number;
+  bucket: ArAgingBucketKey;
+}
+
+/** Unpaid balances grouped by days past due, as of today. Not affected by the Month filter. */
+export interface ArAging {
+  as_of: string;
+  total_outstanding: number;
+  buckets: ArAgingBucket[];
+  items: ArAgingItem[];
+}
+
 export interface FinancialReportData {
   period: string;
   property_id: number | null;
@@ -73,6 +103,7 @@ export interface FinancialReportData {
   status_counts: PaymentStatusCounts;
   property_performance: PropertyPerformance[];
   monthly_trend: MonthlyTrendItem[];
+  ar_aging: ArAging;
   available_months: string[];
 }
 

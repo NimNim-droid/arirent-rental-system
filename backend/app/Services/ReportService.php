@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\DB;
 class ReportService
 {
     /**
+     * Accounts-receivable aging buckets, measured in days past the invoice due date.
+     * 'current' means not yet due (including due today).
+     */
+    private const AGING_BUCKETS = [
+        ['key' => 'current', 'label' => 'Current', 'min' => 0, 'max' => 0],
+        ['key' => '1_30', 'label' => '1-30 days', 'min' => 1, 'max' => 30],
+        ['key' => '31_60', 'label' => '31-60 days', 'min' => 31, 'max' => 60],
+        ['key' => '61_90', 'label' => '61-90 days', 'min' => 61, 'max' => 90],
+        ['key' => 'over_90', 'label' => 'Over 90 days', 'min' => 91, 'max' => null],
+    ];
+
+    /**
      * Generate comprehensive financial analytics report.
      *
      * @param string|null $month 'YYYY-MM' or null for all
@@ -230,7 +242,95 @@ class ReportService
             'status_counts' => $statusCounts,
             'property_performance' => $propertyPerformance,
             'monthly_trend' => $monthlyTrend,
+            'ar_aging' => $this->getArAging($propertyId),
             'available_months' => $availableMonths,
         ];
+    }
+
+    /**
+     * Accounts-receivable aging as of today.
+     *
+     * Covers invoices that are unpaid or partially paid and still have a balance.
+     * It is a snapshot of what is owed now, so the Month filter does not apply;
+     * the Property filter does. Voided invoices and invoices whose payment is
+     * awaiting verification are not included.
+     */
+    private function getArAging(?int $propertyId): array
+    {
+        $today = Carbon::today();
+
+        $query = Bill::query()
+            ->whereIn('status', ['unpaid', 'partially_paid'])
+            ->where('remaining_balance', '>', 0)
+            ->with('tenant.property');
+
+        if ($propertyId) {
+            $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
+        }
+
+        $bills = $query->get();
+
+        $buckets = [];
+        foreach (self::AGING_BUCKETS as $def) {
+            $buckets[$def['key']] = [
+                'key' => $def['key'],
+                'label' => $def['label'],
+                'bill_count' => 0,
+                'amount' => 0.0,
+            ];
+        }
+
+        $items = [];
+        foreach ($bills as $bill) {
+            $balance = (float) $bill->remaining_balance;
+            $daysPastDue = $bill->due_date
+                ? max(0, intdiv($today->timestamp - $bill->due_date->copy()->startOfDay()->timestamp, 86400))
+                : 0;
+            $bucketKey = $this->agingBucketKey($daysPastDue);
+
+            $buckets[$bucketKey]['bill_count']++;
+            $buckets[$bucketKey]['amount'] += $balance;
+
+            $items[] = [
+                'bill_id' => $bill->id,
+                'tenant_id' => $bill->tenant_id,
+                'tenant_name' => $bill->tenant?->name ?? 'Unknown',
+                'room' => $bill->tenant?->room,
+                'property_name' => $bill->tenant?->property?->name,
+                'status' => $bill->status,
+                'due_date' => $bill->due_date?->format('Y-m-d'),
+                'days_past_due' => $daysPastDue,
+                'remaining_balance' => $balance,
+                'bucket' => $bucketKey,
+            ];
+        }
+
+        // Most overdue first; larger balance first when equally late
+        usort($items, fn ($a, $b) => [$b['days_past_due'], $b['remaining_balance']]
+            <=> [$a['days_past_due'], $a['remaining_balance']]);
+
+        $buckets = array_map(function ($bucket) {
+            $bucket['amount'] = round($bucket['amount'], 2);
+
+            return $bucket;
+        }, array_values($buckets));
+
+        return [
+            'as_of' => $today->format('Y-m-d'),
+            'total_outstanding' => round(array_sum(array_column($buckets, 'amount')), 2),
+            'buckets' => $buckets,
+            'items' => $items,
+        ];
+    }
+
+    private function agingBucketKey(int $daysPastDue): string
+    {
+        foreach (self::AGING_BUCKETS as $def) {
+            if ($daysPastDue >= $def['min'] && ($def['max'] === null || $daysPastDue <= $def['max'])) {
+                return $def['key'];
+            }
+        }
+
+        return 'current';
     }
 }
