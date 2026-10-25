@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Bill;
+use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\Tenant;
@@ -101,13 +102,36 @@ class ReportService
         ];
 
         // 4. Status Counts
+        // 'overdue' is NOT a stored status in this system. It is derived with the same rule
+        // used by EloquentBillRepository: unpaid/partially_paid AND due_date earlier than today.
+        // Buckets are mutually exclusive so they always add up to total_bills.
+        $today = Carbon::today();
+        $isOverdue = fn (Bill $b): bool => in_array($b->status, ['unpaid', 'partially_paid'], true)
+            && $b->due_date !== null
+            && $b->due_date->lt($today);
+
+        $overdueBills = $bills->filter($isOverdue);
+        $overdueAmount = (float) $overdueBills->sum('remaining_balance');
+
         $statusCounts = [
             'paid' => $bills->where('status', 'paid')->count(),
-            'partially_paid' => $bills->where('status', 'partially_paid')->count(),
-            'unpaid' => $bills->where('status', 'unpaid')->count(),
-            'overdue' => $bills->where('status', 'overdue')->count(),
+            'partially_paid' => $bills->where('status', 'partially_paid')->reject($isOverdue)->count(),
+            'unpaid' => $bills->where('status', 'unpaid')->reject($isOverdue)->count(),
+            'overdue' => $overdueBills->count(),
             'pending_verification' => $bills->where('status', 'pending_verification')->count(),
             'total_bills' => $bills->count(),
+        ];
+
+        // Reconciliation: bill-level paid_amount vs confirmed rows in the payments ledger
+        $confirmedPayments = (float) Payment::query()
+            ->whereIn('bill_id', $bills->pluck('id'))
+            ->where('status', 'confirmed')
+            ->sum('amount');
+        $reconciliation = [
+            'recorded_paid_amount' => $totalCollected,
+            'confirmed_payments' => $confirmedPayments,
+            'difference' => round($totalCollected - $confirmedPayments, 2),
+            'is_reconciled' => abs($totalCollected - $confirmedPayments) < 0.01,
         ];
 
         // 5. Per-Property Financial Performance
@@ -198,7 +222,10 @@ class ReportService
                 'collection_rate' => $collectionRate,
                 'previous_month_collected' => $prevMonthCollected,
                 'growth_rate' => $growthRate,
+                'overdue_amount' => $overdueAmount,
+                'overdue_count' => $overdueBills->count(),
             ],
+            'reconciliation' => $reconciliation,
             'revenue_streams' => $revenueStreams,
             'status_counts' => $statusCounts,
             'property_performance' => $propertyPerformance,

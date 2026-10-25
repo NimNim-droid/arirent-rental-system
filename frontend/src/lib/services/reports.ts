@@ -7,6 +7,17 @@ export interface FinancialKpis {
   collection_rate: number;
   previous_month_collected: number;
   growth_rate: number;
+  /** Remaining balance on unpaid/partial invoices whose due date has passed. */
+  overdue_amount: number;
+  overdue_count: number;
+}
+
+/** Bill-level paid_amount compared with confirmed rows in the payments ledger. */
+export interface PaymentReconciliation {
+  recorded_paid_amount: number;
+  confirmed_payments: number;
+  difference: number;
+  is_reconciled: boolean;
 }
 
 export interface RevenueStreamDetail {
@@ -57,6 +68,7 @@ export interface FinancialReportData {
   period: string;
   property_id: number | null;
   kpis: FinancialKpis;
+  reconciliation: PaymentReconciliation;
   revenue_streams: RevenueStreams;
   status_counts: PaymentStatusCounts;
   property_performance: PropertyPerformance[];

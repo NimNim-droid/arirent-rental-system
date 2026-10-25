@@ -102,6 +102,9 @@ export default function AdminReports() {
   const counts = data?.status_counts;
   const trend = data?.monthly_trend || [];
   const propertyPerf = data?.property_performance || [];
+  // Invoices still owing money: not yet due + partially paid + past due
+  const openInvoices =
+    (counts?.unpaid ?? 0) + (counts?.partially_paid ?? 0) + (counts?.overdue ?? 0);
 
   return (
     <div className="space-y-6">
@@ -125,6 +128,14 @@ export default function AdminReports() {
       />
 
       {error && <AlertBanner variant="danger" message={error} onRetry={loadReport} />}
+
+      {data && !data.reconciliation.is_reconciled && (
+        <AlertBanner
+          variant="warning"
+          message={`${formatCurrency(Math.abs(data.reconciliation.difference))} of collected amount has no confirmed payment record.`}
+          className="print:hidden"
+        />
+      )}
 
       {/* 2. Unified Single-Line Filter Toolbar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm print:hidden">
@@ -261,11 +272,15 @@ export default function AdminReports() {
               <p className="text-2xl sm:text-3xl font-extrabold text-danger-fg font-mono">
                 {formatCurrency(kpis?.total_outstanding ?? 0)}
               </p>
-              <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted">
+              <div className="flex flex-wrap items-center gap-x-1.5 mt-1.5 text-xs text-muted">
                 <span>
-                  {(counts?.unpaid ?? 0) + (counts?.overdue ?? 0)} unpaid/overdue invoice
-                  {(counts?.unpaid ?? 0) + (counts?.overdue ?? 0) !== 1 ? "s" : ""}
+                  {openInvoices} open invoice{openInvoices !== 1 ? "s" : ""}
                 </span>
+                {(kpis?.overdue_count ?? 0) > 0 && (
+                  <span className="font-semibold text-danger-fg">
+                    · {formatCurrency(kpis?.overdue_amount ?? 0)} past due
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -479,7 +494,7 @@ export default function AdminReports() {
                   <AlertOctagon className="h-3 w-3" /> Unpaid
                 </span>
                 <p className="text-xl font-bold font-mono text-fg">{counts?.unpaid ?? 0}</p>
-                <p className="text-[10px] text-muted">Awaiting settlement</p>
+                <p className="text-[10px] text-muted">Not yet due</p>
               </div>
 
               {/* Overdue */}
@@ -488,7 +503,9 @@ export default function AdminReports() {
                   <AlertOctagon className="h-3 w-3" /> Overdue
                 </span>
                 <p className="text-xl font-bold font-mono text-danger-fg">{counts?.overdue ?? 0}</p>
-                <p className="text-[10px] text-muted">Past due date</p>
+                <p className="text-[10px] text-muted">
+                  Past due · {formatCurrency(kpis?.overdue_amount ?? 0)}
+                </p>
               </div>
 
               {/* Pending Approval */}
