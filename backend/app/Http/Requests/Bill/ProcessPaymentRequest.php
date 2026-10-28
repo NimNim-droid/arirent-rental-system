@@ -49,7 +49,7 @@ class ProcessPaymentRequest extends FormRequest
             'payment_method' => ['nullable', 'string', 'in:gcash,card,cash,bank_transfer'],
             'gcash_ref' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg,pdf,heic,heif', 'max:10240'],
+            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,heic,heif', 'max:10240'],
         ];
     }
 
@@ -62,7 +62,7 @@ class ProcessPaymentRequest extends FormRequest
     {
         return [
             'gcash_ref.required' => 'The GCash reference number is required.',
-            'receipt.mimes' => 'The receipt must be an image (JPG, PNG, WebP, SVG) or PDF file.',
+            'receipt.mimes' => 'The receipt must be an image (JPG, PNG, WebP) or PDF file.',
             'receipt.max' => 'The receipt file must not exceed 10MB.',
         ];
     }

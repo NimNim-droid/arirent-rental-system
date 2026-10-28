@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,16 +34,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemoAdmin = () => {
-    setEmail("admin@arirent.com");
-    setPassword("admin");
-  };
-
-  const fillDemoTenant = () => {
-    setEmail("tenant@arirent.com");
-    setPassword("tenant123");
   };
 
   return (
@@ -101,36 +91,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Quick Test Credential Prefill */}
-            <div className="mt-5 pt-5 border-t border-edge">
-              <p className="text-[11px] font-medium text-muted text-center mb-3">
-                Quick test credentials
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={fillDemoAdmin}
-                  className="text-xs"
-                  disabled={loading}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 text-accent" />
-                  Fill Admin
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={fillDemoTenant}
-                  className="text-xs"
-                  disabled={loading}
-                >
-                  <UserCheck className="h-3.5 w-3.5 text-success-fg" />
-                  Fill Tenant
-                </Button>
-              </div>
-            </div>
           </Card>
 
           {/* Footer Link */}

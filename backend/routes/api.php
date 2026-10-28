@@ -25,10 +25,15 @@ Route::get('/health', function () {
 });
 
 // Public Auth routes
-Route::post('/login', [AuthController::class, 'login'])->name('login');
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/auth/register', [AuthController::class, 'register']);
+Route::middleware('throttle:login')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/auth/login', [AuthController::class, 'login']);
+});
+
+Route::middleware('throttle:register')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/auth/register', [AuthController::class, 'register']);
+});
 
 // Public room and property browsing
 Route::get('/properties', [PropertyController::class, 'index']);

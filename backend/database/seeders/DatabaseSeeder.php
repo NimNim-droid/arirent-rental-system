@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Models\UtilityReading;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,7 +23,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Settings
-        Setting::create([
+        Setting::firstOrCreate([], [
             'elec_rate' => 12.50,
             'water_rate' => 500.00,
             'gcash_name' => 'AriRent Property Management',
@@ -29,15 +31,48 @@ class DatabaseSeeder extends Seeder
             'gcash_qr_path' => null,
         ]);
 
-        // 2. Admin User
-        $adminUser = User::create([
-            'name' => 'Property Manager',
-            'email' => 'admin@arirent.com',
-            'password' => Hash::make('admin'),
-            'role' => 'admin',
-        ]);
+        // 2. Bootstrap admin. Never seed a known default password.
+        $adminEmail = (string) env('SEED_ADMIN_EMAIL', 'admin@arirent.com');
+        $adminPassword = env('SEED_ADMIN_PASSWORD');
 
-        // 3. Properties
+        if (! User::where('email', $adminEmail)->exists()) {
+            if (empty($adminPassword)) {
+                if (app()->environment('production')) {
+                    throw new RuntimeException(
+                        'SEED_ADMIN_PASSWORD must be set before seeding a production database.'
+                    );
+                }
+
+                $adminPassword = Str::password(20);
+                $this->command?->warn(
+                    "Generated admin password for {$adminEmail}: {$adminPassword}"
+                );
+            }
+
+            User::create([
+                'name' => 'Property Manager',
+                'email' => $adminEmail,
+                'password' => $adminPassword,
+                'role' => 'admin',
+            ]);
+        }
+
+        // 3. Demo data is opt-in so production seeding cannot create fake tenants.
+        if (! env('SEED_DEMO_DATA', false)) {
+            $this->command?->info('Demo data skipped. Set SEED_DEMO_DATA=true to seed the demo portfolio.');
+            return;
+        }
+
+        $tenantPassword = env('SEED_TENANT_PASSWORD');
+
+        if (empty($tenantPassword)) {
+            $tenantPassword = Str::password(20);
+            $this->command?->warn("Generated demo tenant password: {$tenantPassword}");
+        }
+
+        $tenantPasswordHash = Hash::make($tenantPassword);
+
+        // 4. Properties
         $makati = Property::create([
             'name' => 'AriRent Residences - Makati',
             'city' => 'Makati City',
@@ -113,7 +148,7 @@ class DatabaseSeeder extends Seeder
         $mariaUser = User::create([
             'name' => 'Maria Santos',
             'email' => 'tenant@arirent.com',
-            'password' => Hash::make('tenant123'),
+            'password' => $tenantPasswordHash,
             'role' => 'tenant',
         ]);
 
@@ -125,7 +160,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Maria Santos',
             'email' => 'tenant@arirent.com',
             'phone' => '0917-123-4567',
-            'password' => Hash::make('tenant123'),
+            'password' => $tenantPasswordHash,
             'status' => 'active',
             'balance' => 0.00,
             'water_rate' => 500.00,
@@ -136,7 +171,7 @@ class DatabaseSeeder extends Seeder
         $carlosUser = User::create([
             'name' => 'Carlos Reyes',
             'email' => 'carlos@example.com',
-            'password' => Hash::make('tenant123'),
+            'password' => $tenantPasswordHash,
             'role' => 'tenant',
         ]);
 
@@ -148,7 +183,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Carlos Reyes',
             'email' => 'carlos@example.com',
             'phone' => '0918-987-6543',
-            'password' => Hash::make('tenant123'),
+            'password' => $tenantPasswordHash,
             'status' => 'active',
             'balance' => 5500.00,
             'water_rate' => 500.00,
@@ -159,7 +194,7 @@ class DatabaseSeeder extends Seeder
         $juanUser = User::create([
             'name' => 'Juan Miguel',
             'email' => 'juan.m@example.com',
-            'password' => Hash::make('secret123'),
+            'password' => $tenantPasswordHash,
             'role' => 'tenant',
         ]);
 
@@ -171,7 +206,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Juan Miguel',
             'email' => 'juan.m@example.com',
             'phone' => '0918-333-4444',
-            'password' => Hash::make('secret123'),
+            'password' => $tenantPasswordHash,
             'status' => 'pending_approval',
             'balance' => 0.00,
             'water_rate' => 500.00,
@@ -182,7 +217,7 @@ class DatabaseSeeder extends Seeder
         $angelaUser = User::create([
             'name' => 'Angela De Silva',
             'email' => 'angela@example.com',
-            'password' => Hash::make('secret123'),
+            'password' => $tenantPasswordHash,
             'role' => 'tenant',
         ]);
 
@@ -194,7 +229,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Angela De Silva',
             'email' => 'angela@example.com',
             'phone' => '0920-555-8888',
-            'password' => Hash::make('secret123'),
+            'password' => $tenantPasswordHash,
             'status' => 'pending_approval',
             'balance' => 0.00,
             'water_rate' => 500.00,
