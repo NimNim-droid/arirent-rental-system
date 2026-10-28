@@ -1,25 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import {
-  FileText,
-  Upload,
-  FolderOpen,
-  RefreshCw,
-  AlertTriangle,
-  FileCheck,
-  ShieldCheck,
-  ClipboardList,
-  HardDrive,
-  Plus,
-} from "lucide-react";
+import { FileText, FolderOpen, RefreshCw, AlertTriangle, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { SearchInput } from "@/components/common/search-input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { SkeletonCards } from "@/components/ui/skeleton";
-import { formatFileSize } from "@/lib/formatters";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import { documentsService } from "@/lib/services/documents";
 import { getErrorMessage } from "@/lib/errors";
 import type { DocumentItem } from "@/lib/types";
@@ -28,7 +15,6 @@ import {
   AdminUploadDocModal,
   UnavailableDocModal,
   DeleteDocModal,
-  DEFAULT_DOCUMENTS,
 } from "@/components/features/documents";
 
 const CATEGORIES = [
@@ -57,13 +43,10 @@ export default function AdminDocuments() {
     setError("");
     try {
       const res = await documentsService.getDocuments();
-      if (res && res.length > 0) {
-        setDocs(res);
-      } else {
-        setDocs(DEFAULT_DOCUMENTS);
-      }
-    } catch {
-      setDocs(DEFAULT_DOCUMENTS);
+      setDocs(res ?? []);
+    } catch (err) {
+      setDocs([]);
+      setError(getErrorMessage(err, "Unable to load documents."));
     } finally {
       setLoading(false);
     }
@@ -124,25 +107,8 @@ export default function AdminDocuments() {
     });
   }, [docs, search, selectedCategory]);
 
-  // Document metrics
-  const stats = useMemo(() => {
-    const total = docs.length;
-    const contracts = docs.filter(
-      (d) => d.category === "Contracts & Agreements" || d.name.toLowerCase().includes("lease")
-    ).length;
-    const rules = docs.filter(
-      (d) => d.category === "House Rules & Regulations" || d.name.toLowerCase().includes("rules")
-    ).length;
-    const totalBytes = docs.reduce((acc, d) => {
-      const sz = typeof d.size === "number" ? d.size : parseInt(String(d.size) || "0", 10);
-      return acc + (isNaN(sz) ? 0 : sz);
-    }, 0);
-
-    return { total, contracts, rules, totalBytes };
-  }, [docs]);
-
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Documentation Management"
         subtitle="Author, publish, and manage official contracts, property regulations, and guidelines for all tenants"
@@ -177,51 +143,6 @@ export default function AdminDocuments() {
           {successMsg}
         </div>
       )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent border border-accent-border">
-            <FolderOpen className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Total Documents</p>
-            <h4 className="text-xl font-bold text-fg mt-0.5">{stats.total}</h4>
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
-            <FileCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Lease Contracts</p>
-            <h4 className="text-xl font-bold text-fg mt-0.5">{stats.contracts}</h4>
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Rules & Policies</p>
-            <h4 className="text-xl font-bold text-fg mt-0.5">{stats.rules}</h4>
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            <HardDrive className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Storage Used</p>
-            <h4 className="text-xl font-bold text-fg mt-0.5">
-              {formatFileSize(stats.totalBytes)}
-            </h4>
-          </div>
-        </Card>
-      </div>
 
       {/* Filter and Search Bar */}
       <div className="space-y-4">
@@ -284,37 +205,53 @@ export default function AdminDocuments() {
       {/* Documents List */}
       <div className="space-y-4">
         <SectionHeader
-          icon={<FileText className="h-5 w-5" />}
+          icon={<FileText className="h-4 w-4" />}
           title={`Official Documentation (${filteredDocs.length})`}
           subtitle="All documents listed below are published and accessible to active tenants"
         />
 
         {loading ? (
-          <SkeletonCards cards={3} />
+          <Card className="p-4">
+            <SkeletonRows rows={4} />
+          </Card>
         ) : filteredDocs.length === 0 ? (
-          <Card className="p-12 text-center space-y-3">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-inset text-muted border border-edge">
-              <FolderOpen className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-fg">No documents found</p>
-              <p className="text-xs text-muted mt-1">
-                {search || selectedCategory !== "All"
-                  ? "No documents match your current search or category filter."
-                  : "Get started by uploading official documentation for your tenants."}
-              </p>
-            </div>
-            {(search || selectedCategory !== "All") && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setSelectedCategory("All");
-                }}
-              >
-                Clear Filters
-              </Button>
+          <Card className="p-0 overflow-hidden">
+            {error ? (
+              <EmptyState
+                icon={<AlertTriangle className="h-4 w-4" />}
+                title="Unable to load documents"
+                description={error}
+              />
+            ) : search || selectedCategory !== "All" ? (
+              <EmptyState
+                icon={<FolderOpen className="h-4 w-4" />}
+                title="No documents match"
+                description="No documents match your current search or category filter."
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setSelectedCategory("All");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={<FolderOpen className="h-4 w-4" />}
+                title="No documents yet"
+                description="Publish your first document and it becomes available to all tenants immediately."
+                action={
+                  <Button variant="primary" size="sm" onClick={() => setUploadModalOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Upload document
+                  </Button>
+                }
+              />
             )}
           </Card>
         ) : (

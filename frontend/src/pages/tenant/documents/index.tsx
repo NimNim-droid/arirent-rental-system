@@ -1,18 +1,12 @@
 import { useState, useMemo } from "react";
-import {
-  AlertTriangle,
-  FileText,
-  FolderOpen,
-  RefreshCw,
-  ShieldCheck,
-  Info,
-} from "lucide-react";
+import { AlertTriangle, FolderOpen, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
 import { SearchInput } from "@/components/common/search-input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SkeletonCards } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import {
   useDocuments,
   DocumentCard,
@@ -58,14 +52,14 @@ export default function TenantDocuments() {
   }, [docs, search, selectedCategory]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Property Documentation"
         subtitle="Official lease contract, house regulations, and property guidelines provided by your landlord"
       />
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-danger-border bg-danger-bg px-4 py-2.5 text-xs text-danger-fg">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {error}
@@ -76,21 +70,6 @@ export default function TenantDocuments() {
           </Button>
         </div>
       )}
-
-      {/* Official Landlord Notice Banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-accent-border bg-accent-soft/40 p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-white shadow-sm mt-0.5">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-fg">Verified Landlord Documentation</h4>
-          <p className="text-xs text-muted mt-0.5 leading-relaxed">
-            The documentation below contains all legal agreements, property rules, and guidelines
-            governing your tenancy. All documents are issued by your landlord and available for you
-            to view or download anytime.
-          </p>
-        </div>
-      </div>
 
       {/* Search and Category Filters */}
       <div className="space-y-4">
@@ -153,37 +132,47 @@ export default function TenantDocuments() {
       {/* Document Files List */}
       <div className="space-y-4">
         <SectionHeader
-          icon={<FolderOpen className="h-5 w-5" />}
+          icon={<FolderOpen className="h-4 w-4" />}
           title={`Available Documents (${filteredDocs.length})`}
           subtitle="Click download to save a copy of any document to your device"
         />
 
         {loading ? (
-          <SkeletonCards cards={3} />
+          <Card className="p-4">
+            <SkeletonRows rows={4} />
+          </Card>
         ) : filteredDocs.length === 0 ? (
-          <Card className="p-10 text-center space-y-3">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-inset text-muted border border-edge">
-              <FileText className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-fg">No documents found</p>
-              <p className="text-xs text-muted mt-1">
-                {search || selectedCategory !== "All"
-                  ? "No documents match your current filter."
-                  : "No documents have been published by your landlord yet."}
-              </p>
-            </div>
-            {(search || selectedCategory !== "All") && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setSelectedCategory("All");
-                }}
-              >
-                Clear Filters
-              </Button>
+          <Card className="p-0 overflow-hidden">
+            {error ? (
+              <EmptyState
+                icon={<AlertTriangle className="h-4 w-4" />}
+                title="Unable to load documents"
+                description={error}
+              />
+            ) : search || selectedCategory !== "All" ? (
+              <EmptyState
+                icon={<FolderOpen className="h-4 w-4" />}
+                title="No documents match"
+                description="No documents match your current search or category filter."
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setSelectedCategory("All");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={<FolderOpen className="h-4 w-4" />}
+                title="No documents yet"
+                description="Your landlord hasn't published any documents yet. Check back soon."
+              />
             )}
           </Card>
         ) : (

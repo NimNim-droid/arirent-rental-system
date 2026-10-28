@@ -4,56 +4,9 @@ import { compressImage } from "@/lib/image";
 import { getErrorMessage } from "@/lib/errors";
 import type { DocumentItem } from "@/lib/types";
 
-export const DEFAULT_DOCUMENTS: DocumentItem[] = [
-  {
-    id: "1",
-    name: "AriRent Standard Lease Contract & Agreement.pdf",
-    category: "Contracts & Agreements",
-    type: "application/pdf",
-    size: 2457600,
-    url: "#",
-    uploaded_at: "2026-08-15",
-    uploaded_by: "Property Management",
-    description: "Official residential tenancy agreement outlining lease terms, security deposits, and conditions.",
-  },
-  {
-    id: "2",
-    name: "AriRent House Rules & Safety Regulations.pdf",
-    category: "House Rules & Regulations",
-    type: "application/pdf",
-    size: 1245184,
-    url: "#",
-    uploaded_at: "2026-08-15",
-    uploaded_by: "Property Management",
-    description: "Quiet hours, guest policies, garbage disposal, and emergency safety guidelines for all tenants.",
-  },
-  {
-    id: "3",
-    name: "Unit Move-In Checklist & Inspection Report.pdf",
-    category: "Checklists & Guides",
-    type: "application/pdf",
-    size: 842100,
-    url: "#",
-    uploaded_at: "2026-08-15",
-    uploaded_by: "Property Management",
-    description: "Mandatory initial condition report covering unit fixtures, appliances, and utility meter baselines.",
-  },
-  {
-    id: "4",
-    name: "Billing Schedule & Payment Policy Notice.pdf",
-    category: "Notices & Policies",
-    type: "application/pdf",
-    size: 512000,
-    url: "#",
-    uploaded_at: "2026-08-15",
-    uploaded_by: "Property Management",
-    description: "Detailed payment channels, GCash settlement procedures, due date rules, and penalty policies.",
-  },
-];
-
 export function useDocuments() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [docs, setDocs] = useState<DocumentItem[]>(DEFAULT_DOCUMENTS);
+  const [docs, setDocs] = useState<DocumentItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -66,12 +19,10 @@ export function useDocuments() {
     setLoading(true);
     try {
       const res = await documentsService.getDocuments();
-      if (res && res.length > 0) {
-        setDocs(res);
-      }
-    } catch {
-      // Fallback seamlessly to default documents for demo
-      setDocs(DEFAULT_DOCUMENTS);
+      setDocs(res ?? []);
+    } catch (err) {
+      setDocs([]);
+      setError(getErrorMessage(err, "Unable to load documents."));
     } finally {
       setLoading(false);
     }

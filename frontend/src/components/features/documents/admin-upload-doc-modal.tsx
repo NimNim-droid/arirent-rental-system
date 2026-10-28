@@ -134,7 +134,7 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="flex items-center gap-2 rounded-xl border border-danger-border bg-danger-bg p-3 text-xs font-semibold text-danger-fg">
+          <div className="flex items-center gap-2 rounded-md border border-danger-border bg-danger-bg px-3 py-2.5 text-xs text-danger-fg">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -147,9 +147,9 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-200 ${
+            className={`group relative flex flex-col items-center justify-center rounded-md border border-dashed p-6 text-center cursor-pointer transition-colors ${
               dragActive
-                ? "border-accent bg-accent-soft/40 scale-[1.01]"
+                ? "border-accent bg-accent-soft/40"
                 : "border-edge bg-inset/50 hover:border-accent hover:bg-hover/40"
             }`}
           >
@@ -160,8 +160,8 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.txt"
               onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
             />
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent group-hover:scale-110 transition-transform">
-              <UploadCloud className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-accent-soft text-accent">
+              <UploadCloud className="h-5 w-5" />
             </div>
             <p className="mt-3 text-sm font-semibold text-fg">
               Click to select or drag and drop document
@@ -171,10 +171,10 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
             </p>
           </div>
         ) : (
-          <div className="flex items-center justify-between rounded-xl border border-edge bg-card p-3.5">
+          <div className="flex items-center justify-between rounded-md border border-edge bg-card p-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-                <FileText className="h-5 w-5" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent">
+                <FileText className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-fg">{file.name}</p>
@@ -229,7 +229,7 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
           rows={3}
         />
 
-        <div className="flex items-start gap-2 rounded-xl bg-accent-soft/30 p-3 text-xs text-muted">
+        <div className="flex items-start gap-2 rounded-md border border-accent-border bg-accent-soft p-3 text-xs text-muted">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-accent mt-0.5" />
           <span>
             Once published, this document will be instantly accessible for all tenants to view and
