@@ -864,8 +864,17 @@ lateFee    = ₱250 per unpaid bill older than 30 days
 | Param | Description |
 |-------|-------------|
 | `tenant_id` | Filter by tenant |
-| `status` | pending, in_progress, resolved |
+| `status` | pending, in_progress, resolved, archived — or `active` (= all except archived, what the "All Statuses" dropdown uses) |
 | `property_id` | Filter by property |
+| `search` | Free-text search over tenant name, room, and issue description |
+| `date_from` | Only tickets created on/after this date (Y-m-d) |
+| `date_to` | Only tickets created on/before this date (Y-m-d, must be ≥ date_from) |
+| `per_page` | Page size (default 50, max 250) |
+| `page` | Page number |
+
+**Response `meta.status_counts`:** ticket counts grouped by status —
+`{ "pending": int, "in_progress": int, "resolved": int, "archived": int }` —
+computed with the current filters (except `status`).
 
 ---
 

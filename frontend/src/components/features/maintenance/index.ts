@@ -1,8 +1,11 @@
-export { useAdminMaintenance, MAINTENANCE_FILTERS } from "./hooks/useAdminMaintenance";
+export { useAdminMaintenance, type TicketUpdateInput } from "./hooks/useAdminMaintenance";
 export { useTenantMaintenance, ISSUE_TYPES } from "./hooks/useTenantMaintenance";
-export { TicketFilters } from "./ticket-filters";
-export { TicketCard } from "./ticket-card";
-export { DispatchModal } from "./dispatch-modal";
 export { TicketForm } from "./ticket-form";
 export { TenantTicketList } from "./tenant-ticket-list";
 export { TicketDetailModal } from "./ticket-detail-modal";
+export { MaintenanceStats } from "./maintenance-stats";
+export { TicketToolbar } from "./ticket-toolbar";
+export { TicketTable } from "./ticket-table";
+export { TicketPagination } from "./ticket-pagination";
+export { TicketDetailPanel } from "./ticket-detail-panel";
+export { TicketStatusBadge, TicketPriorityBadge, ticketStatusLabels } from "./ticket-badges";

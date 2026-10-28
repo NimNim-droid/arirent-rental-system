@@ -53,6 +53,38 @@ export function formatLocalDateString(date: Date = new Date()): string {
 
 
 /**
+ * Formats a datetime string (e.g. "2025-04-21 10:24:00") into "Apr 21, 2025, 10:24 AM".
+ * The time is shown as stored on the server (no timezone conversion).
+ */
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/.exec(value);
+  if (!match) return value;
+  const [, year, month, day, hour, minute] = match;
+  const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  return d.toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Formats the time portion of a datetime string (e.g. "2025-04-21 10:24:00") into "10:24 AM".
+ * The time is shown as stored on the server (no timezone conversion).
+ */
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?$/.exec(value);
+  if (!match) return "—";
+  const [, year, month, day, hour, minute] = match;
+  const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  return d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" });
+}
+
+/**
  * Formats kilowatt-hours usage.
  */
 export function formatUsage(kwh: number | null | undefined): string {

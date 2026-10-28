@@ -32,6 +32,7 @@ class MaintenanceResource extends JsonResource
             'resolved_date' => $this->resolved_date ? Carbon::parse($this->resolved_date)->format('Y-m-d H:i:s') : null,
             'date' => $this->created_at ? Carbon::parse($this->created_at)->format('Y-m-d') : null,
             'created_at' => $this->created_at ? Carbon::parse($this->created_at)->format('Y-m-d H:i:s') : null,
+            'updated_at' => $this->updated_at ? Carbon::parse($this->updated_at)->format('Y-m-d H:i:s') : null,
         ];
     }
 }

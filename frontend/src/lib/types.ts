@@ -226,7 +226,9 @@ export interface MaintenanceTicket {
   resolved_date?: string;
   date: string;
   tenant_name?: string;
+  property_name?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface MaintenanceInput {
@@ -290,6 +292,13 @@ export interface DocumentItem {
   description?: string;
 }
 
+export interface TicketStatusCounts {
+  pending: number;
+  in_progress: number;
+  resolved: number;
+  archived: number;
+}
+
 export interface ApiResponse<T> {
   data: T;
   message?: string;
@@ -307,5 +316,6 @@ export interface PaginatedResponse<T> {
     current_page: number;
     per_page: number;
     total: number;
+    status_counts?: TicketStatusCounts;
   };
 }

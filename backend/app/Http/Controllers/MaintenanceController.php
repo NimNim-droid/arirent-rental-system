@@ -22,10 +22,17 @@ class MaintenanceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['tenant_id', 'status', 'property_id']);
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        $filters = $request->only(['tenant_id', 'status', 'property_id', 'search', 'date_from', 'date_to']);
         $perPage = (int) $request->input('per_page', 50);
 
         $paginated = $this->maintenanceService->listTickets($request->user(), $filters, $perPage);
+        $statusCounts = $this->maintenanceService->statusCounts($request->user(), $filters);
 
         return response()->json([
             'data' => MaintenanceResource::collection($paginated->getCollection()),
@@ -39,6 +46,7 @@ class MaintenanceController extends Controller
                 'current_page' => $paginated->currentPage(),
                 'per_page' => $paginated->perPage(),
                 'total' => $paginated->total(),
+                'status_counts' => $statusCounts,
             ],
         ]);
     }

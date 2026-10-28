@@ -173,4 +173,106 @@ class MaintenanceAndSettingsTest extends TestCase
             ->assertJsonPath('data.unit.property_name', 'Makati Suites')
             ->assertJsonPath('data.outstanding_balance', 0);
     }
+
+    public function test_admin_ticket_index_supports_search_date_range_and_status_counts(): void
+    {
+        MaintenanceTicket::create([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'appliances',
+            'description' => 'Air conditioner not cooling',
+            'priority' => 'normal',
+            'status' => 'pending',
+        ]);
+
+        MaintenanceTicket::create([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'plumbing',
+            'description' => 'Leaking faucet in kitchen sink',
+            'priority' => 'urgent',
+            'status' => 'in_progress',
+            'technician_name' => 'Mario',
+        ]);
+
+        MaintenanceTicket::create([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'electrical',
+            'description' => 'Broken light in bedroom',
+            'priority' => 'normal',
+            'status' => 'resolved',
+            'resolved_date' => now(),
+        ]);
+
+        MaintenanceTicket::create([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'general',
+            'description' => 'Old completed request',
+            'priority' => 'normal',
+            'status' => 'archived',
+        ]);
+
+        Sanctum::actingAs($this->admin);
+
+        // Search matches the issue description
+        $this->getJson('/api/maintenance?search=air%20conditioner')
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.description', 'Air conditioner not cooling');
+
+        // Search matches the tenant name (all four belong to Tenant Bob)
+        $this->getJson('/api/maintenance?search=' . urlencode('Tenant Bob'))
+            ->assertStatus(200)
+            ->assertJsonCount(4, 'data');
+
+        // Search with no match returns empty data
+        $this->getJson('/api/maintenance?search=nonexistent-issue')
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+
+        // Date range includes tickets created today
+        $today = now()->toDateString();
+        $this->getJson("/api/maintenance?date_from={$today}&date_to={$today}")
+            ->assertStatus(200)
+            ->assertJsonCount(4, 'data');
+
+        // Date range strictly in the future excludes all tickets
+        $tomorrow = now()->addDay()->toDateString();
+        $this->getJson("/api/maintenance?date_from={$tomorrow}")
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+
+        // Invalid date ranges are rejected with 422
+        $this->getJson("/api/maintenance?date_from={$tomorrow}&date_to={$today}")
+            ->assertStatus(422);
+
+        // Status counts are returned in meta (archived excluded from non-archived total)
+        $this->getJson('/api/maintenance')
+            ->assertStatus(200)
+            ->assertJsonPath('meta.status_counts.pending', 1)
+            ->assertJsonPath('meta.status_counts.in_progress', 1)
+            ->assertJsonPath('meta.status_counts.resolved', 1)
+            ->assertJsonPath('meta.status_counts.archived', 1)
+            ->assertJsonPath('meta.total', 4);
+
+        // Status filter narrows results; 'active' hides archived tickets
+        $this->getJson('/api/maintenance?status=pending')
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.status_counts.resolved', 1);
+
+        $this->getJson('/api/maintenance?status=active')
+            ->assertStatus(200)
+            ->assertJsonCount(3, 'data');
+
+        $this->getJson('/api/maintenance?status=archived')
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
+    }
 }

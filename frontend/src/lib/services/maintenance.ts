@@ -10,6 +10,9 @@ export interface TicketQuery {
   tenant_id?: string;
   status?: string;
   property_id?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
   per_page?: number;
   page?: number;
 }

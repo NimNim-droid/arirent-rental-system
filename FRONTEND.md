@@ -91,10 +91,17 @@ frontend/
 │   │       │   ├── payment-verification-card.tsx
 │   │       │   └── billing-stats.tsx
 │   │       ├── maintenance/
+│   │       │   ├── hooks/
+│   │       │   │   ├── useAdminMaintenance.ts
+│   │       │   │   └── useTenantMaintenance.ts
+│   │       │   ├── maintenance-stats.tsx
 │   │       │   ├── ticket-table.tsx
+│   │       │   ├── ticket-toolbar.tsx
+│   │       │   ├── ticket-pagination.tsx
+│   │       │   ├── ticket-badges.tsx
+│   │       │   ├── ticket-detail-panel.tsx
 │   │       │   ├── ticket-form.tsx
-│   │       │   ├── dispatch-modal.tsx
-│   │       │   └── ticket-filters.tsx
+│   │       │   └── tenant-ticket-list.tsx
 │   │       ├── utilities/
 │   │       │   ├── meter-reading-form.tsx
 │   │       │   ├── water-rates-table.tsx

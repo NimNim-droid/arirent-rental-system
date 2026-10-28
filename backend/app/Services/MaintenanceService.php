@@ -37,6 +37,26 @@ class MaintenanceService
     }
 
     /**
+     * Ticket counts per status scoped by user role and filters.
+     *
+     * @return array<string, int>
+     */
+    public function statusCounts(User $user, array $filters = []): array
+    {
+        if ($user->role === 'tenant') {
+            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
+
+            if (! $tenant) {
+                return ['pending' => 0, 'in_progress' => 0, 'resolved' => 0, 'archived' => 0];
+            }
+
+            $filters = ['tenant_id' => $tenant->id];
+        }
+
+        return $this->maintenanceRepo->countByStatus($filters);
+    }
+
+    /**
      * Submit a new maintenance ticket.
      */
     public function createTicket(User $user, array $data, ?UploadedFile $photoFile = null): MaintenanceTicket
