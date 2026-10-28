@@ -1,6 +1,6 @@
-import { DoorOpen, Search } from "lucide-react";
+import { DoorOpen } from "lucide-react";
 import { SectionHeader } from "@/components/common/section-header";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/common/search-input";
 import { Select } from "@/components/ui/select";
 import type { Property, Room } from "@/lib/types";
 
@@ -34,13 +34,13 @@ export function RoomFilters({
           <SectionHeader
             dot
             dotClassName="text-accent"
-            icon={<DoorOpen className="h-5 w-5" />}
+            icon={<DoorOpen className="h-4 w-4" />}
             title="Rental Units Inventory"
             subtitle={`Viewing ${filteredCount} of ${rooms.length} registered units.`}
           />
         </div>
 
-        {/* Quick status filter pills */}
+        {/* Quick status filters */}
         <div className="flex flex-wrap items-center gap-1.5">
           {(["all", "vacant", "reserved", "occupied"] as const).map((status) => {
             const active = selectedStatusFilter === status;
@@ -54,9 +54,9 @@ export function RoomFilters({
                 key={status}
                 type="button"
                 onClick={() => onStatusFilterChange(status)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition-all cursor-pointer ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium tabular-nums capitalize transition-colors cursor-pointer ${
                   active
-                    ? "bg-accent text-accent-fg shadow-sm"
+                    ? "bg-accent text-white shadow-soft"
                     : "bg-card text-muted border border-edge hover:bg-hover hover:text-fg"
                 }`}
               >
@@ -70,12 +70,11 @@ export function RoomFilters({
       {/* Filter controls row */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="sm:col-span-2">
-          <Input
-            id="searchUnits"
+          <SearchInput
             placeholder="Search by room number or building..."
+            label="Search units"
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            icon={<Search className="h-4 w-4" />}
+            onChange={onSearchChange}
           />
         </div>
 

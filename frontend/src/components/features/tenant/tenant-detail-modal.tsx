@@ -97,14 +97,14 @@ export function TenantDetailModal({
     >
       <div className="space-y-4 text-sm">
         {error && (
-          <div className="rounded-xl border border-danger-border bg-danger-bg px-3 py-2 text-xs font-semibold text-danger-fg">
+          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-xs text-danger-fg">
             {error}
           </div>
         )}
 
         {/* Delete Confirmation Warning */}
         {confirmDelete && (
-          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3.5 space-y-2.5 animate-fade-in text-xs text-danger-fg">
+          <div className="rounded-md border border-danger/30 bg-danger/10 p-3.5 space-y-2.5 animate-fade-in text-xs text-danger-fg">
             <div className="flex items-center gap-2 font-bold text-sm">
               <ShieldAlert className="h-4 w-4 shrink-0" />
               <span>Confirm Permanent Deletion</span>
@@ -138,7 +138,7 @@ export function TenantDetailModal({
           <div className="h-16 w-16 rounded-full bg-accent/15 border-2 border-accent/30 text-accent flex items-center justify-center mb-2 shadow-2xs">
             <User className="h-8 w-8" />
           </div>
-          <h3 className="text-xl font-extrabold text-fg tracking-tight">{tenant.name}</h3>
+          <h3 className="text-lg font-semibold text-fg tracking-tight">{tenant.name}</h3>
           <p className="text-xs text-muted mt-0.5">
             @{tenant.username} • {tenant.property_name || "Resident"}
           </p>

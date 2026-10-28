@@ -20,13 +20,13 @@ export function BillStatementSummary({
   dueDate,
 }: BillStatementSummaryProps) {
   return (
-    <div className="space-y-2 rounded-xl border border-edge bg-inset/60 p-3">
-      <div className="flex items-center justify-between border-b border-edge/60 pb-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
-          Statement Summary
+    <div className="space-y-2 rounded-md border border-edge bg-inset p-3">
+      <div className="flex items-center justify-between border-b border-edge/60 pb-1.5">
+        <span className="text-xs font-medium text-fg-soft">
+          Statement summary
         </span>
-        <span className="text-[10px] font-medium uppercase tracking-wider text-faint">
-          Live Preview
+        <span className="text-[11px] text-faint">
+          Live preview
         </span>
       </div>
 
@@ -53,14 +53,14 @@ export function BillStatementSummary({
         )}
       </div>
 
-      <div className="mt-0.5 flex items-center justify-between border-t border-edge-strong/50 pt-2">
+      <div className="mt-0.5 flex items-center justify-between border-t border-edge pt-2">
         <div>
-          <span className="block text-xs font-bold text-fg">Total Bill Amount</span>
+          <span className="block text-xs font-medium text-fg">Total bill amount</span>
           <span className="text-[10px] text-muted">
             Payable on or before {dueDate || "due date"}
           </span>
         </div>
-        <span className="text-lg sm:text-xl font-extrabold tabular-nums tracking-tight text-accent">
+        <span className="text-base font-semibold tabular-nums tracking-tight text-fg">
           {formatCurrency(totalAmount)}
         </span>
       </div>

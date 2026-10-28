@@ -64,24 +64,24 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
   };
 
   return (
-    <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card/95 backdrop-blur-md px-4 py-3 animate-fade-in">
+    <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card px-4 py-2.5">
       <div className="flex items-center gap-3 min-w-0">
         {!isTenant && onMenuClick && (
           <button
             onClick={onMenuClick}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-edge bg-inset text-fg-soft hover:bg-hover hover:text-fg transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-edge bg-card text-fg-soft hover:bg-hover hover:text-fg transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             aria-label="Open menu"
             title="Open menu"
           >
-            <Menu className="h-4.5 w-4.5" />
+            <Menu className="h-4 w-4" />
           </button>
         )}
         <div className="flex items-center gap-2.5 min-w-0">
           <Logo variant="mark" size="sm" />
           <div className="flex flex-col min-w-0">
-            <span className="font-bold text-sm text-fg truncate leading-tight">{pageTitle}</span>
+            <span className="font-semibold text-[13px] text-fg truncate leading-tight">{pageTitle}</span>
             {isTenant && (
-              <span className="text-[10px] text-muted font-medium tracking-tight">AriRent Tenant</span>
+              <span className="text-[10px] text-muted font-medium">AriRent Tenant</span>
             )}
           </div>
         </div>
@@ -91,7 +91,7 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((o) => !o)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white ring-2 ring-edge cursor-pointer active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             title={name}
             aria-label={`Account menu for ${name}`}
             aria-expanded={profileOpen}
@@ -100,15 +100,15 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
           </button>
 
           {profileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-60 rounded-xl border border-edge bg-card p-3 shadow-pop animate-scale-in z-50">
+            <div className="absolute right-0 top-full mt-2 w-60 rounded-lg border border-edge bg-card p-3 shadow-pop animate-scale-in z-50">
               <div className="flex items-center gap-2.5 pb-3 border-b border-edge">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white shadow-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
                   {initials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-fg">{name || "User"}</p>
+                  <p className="truncate text-xs font-semibold text-fg">{name || "User"}</p>
                   <p className="truncate text-[11px] text-muted">{user?.email || ""}</p>
-                  <span className="inline-block mt-1 text-[9px] uppercase font-bold tracking-wider text-accent bg-accent-soft px-1.5 py-0.5 rounded">
+                  <span className="inline-block mt-1 text-[10px] font-medium text-accent bg-accent-soft px-1.5 py-0.5 rounded">
                     {user?.role || "Tenant"}
                   </span>
                 </div>
@@ -116,7 +116,7 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
               <div className="pt-2">
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-semibold text-danger-fg hover:bg-danger-bg rounded-lg transition-colors cursor-pointer active:scale-95"
+                  className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-medium text-danger-fg hover:bg-danger-bg rounded-md transition-colors cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign out</span>

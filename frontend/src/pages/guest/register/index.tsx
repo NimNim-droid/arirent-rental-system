@@ -82,7 +82,7 @@ export default function RegisterPage() {
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
-          <Card className="w-full max-w-md p-8 text-center space-y-4 animate-fade-in-up">
+          <Card className="w-full max-w-md p-8 text-center space-y-4 animate-fade-in">
             <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success-fg mb-2 ring-1 ring-inset ring-success-border">
               <CheckCircle2 className="h-7 w-7" />
             </div>
@@ -113,7 +113,7 @@ export default function RegisterPage() {
 
       {/* Main content */}
       <div className="flex flex-1 items-start justify-center p-4 py-8 overflow-y-auto">
-        <div className="w-full max-w-lg space-y-6 animate-fade-in-up">
+        <div className="w-full max-w-lg space-y-6 animate-fade-in">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-fg">Tenant Application</h1>
             <p className="text-sm text-muted">

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { CSSProperties } from "react";
 import { NavLink, useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -126,10 +125,9 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
                   to={link.to}
                   onClick={handleNav}
                   title={isCollapsedDesktop ? link.label : undefined}
-                  style={{ animationDelay: `${i * 60}ms` } as CSSProperties}
                   className={({ isActive }) =>
                     cn(
-                      "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold animate-fade-in-up transition-all duration-150 ease-out",
+                      "relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-150 ease-out",
                       isCollapsedDesktop && "lg:justify-center lg:px-0",
                       isActive
                         ? "bg-accent-soft text-accent"
@@ -140,9 +138,9 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
                   {({ isActive }) => (
                     <>
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 hidden h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent lg:block" />
+                        <span className="absolute left-0 top-1/2 hidden h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-accent lg:block" />
                       )}
-                      <Icon className={cn("h-[18px] w-[18px] shrink-0", isCollapsedDesktop && "lg:mx-auto")} />
+                      <Icon className={cn("h-4 w-4 shrink-0", isCollapsedDesktop && "lg:mx-auto")} />
                       <span className={cn("truncate", isCollapsedDesktop && "lg:hidden")}>
                         {link.label}
                       </span>
@@ -161,11 +159,11 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
             "flex items-center gap-2.5 rounded-lg border border-edge bg-inset px-3 py-2",
             collapsed && "lg:hidden"
           )}>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
               {initials}
             </div>
             <div className="min-w-0 flex-1 truncate">
-              <p className="truncate text-sm font-semibold text-fg leading-tight">{user?.name || ""}</p>
+              <p className="truncate text-[13px] font-medium text-fg leading-tight">{user?.name || ""}</p>
               <p className="truncate text-[11px] text-muted">{user?.email || ""}</p>
             </div>
           </div>
@@ -175,7 +173,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
             className={cn("hidden justify-center", collapsed && "lg:flex")}
             title={user?.name || ""}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
               {initials}
             </div>
           </div>
@@ -187,7 +185,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
               onClick={handleLogout}
               title="Log out"
               aria-label="Log out"
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border border-transparent px-2.5 text-xs font-semibold text-muted transition-all duration-150 hover:border-danger-border hover:bg-danger-bg hover:text-danger-fg cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:w-full"
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-2.5 text-xs font-medium text-muted transition-colors duration-150 hover:border-danger-border hover:bg-danger-bg hover:text-danger-fg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:w-full"
             >
               <LogOut className="h-4 w-4" />
               <span className={cn("ml-1.5", collapsed && "lg:hidden")}>Sign out</span>
@@ -198,7 +196,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
           <button
             onClick={toggleCollapse}
             className={cn(
-              "hidden h-8 items-center gap-2 rounded-lg px-2.5 text-xs font-medium text-muted transition-all duration-150 hover:bg-hover hover:text-fg cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex",
+              "hidden h-8 items-center gap-2 rounded-md px-2.5 text-xs font-medium text-muted transition-colors duration-150 hover:bg-hover hover:text-fg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:flex",
               collapsed ? "w-full justify-center" : "w-full justify-start"
             )}
           >

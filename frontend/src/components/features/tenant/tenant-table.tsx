@@ -40,25 +40,13 @@ export function TenantTable({
       <div className="table-scroll-wrap">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-edge/80 bg-inset/40">
-              <TableHead className="py-3 px-4 text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Full Name
-              </TableHead>
-              <TableHead className="py-3 px-4 text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Property
-              </TableHead>
-              <TableHead className="py-3 px-4 text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Room
-              </TableHead>
-              <TableHead className="py-3 px-4 text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Phone
-              </TableHead>
-              <TableHead className="py-3 px-4 text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Status
-              </TableHead>
-              <TableHead className="py-3 px-4 text-right text-xs font-bold text-fg-soft uppercase tracking-wider">
-                Actions
-              </TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Full Name</TableHead>
+              <TableHead>Property</TableHead>
+              <TableHead>Room</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody

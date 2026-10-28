@@ -172,27 +172,27 @@ export function PaymentReviewModal({
     >
       <div className="space-y-4 text-sm">
         {/* ================= Top Submitter Strip ================= */}
-        <div className="rounded-xl border border-edge bg-inset/50 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="rounded-md border border-edge bg-inset p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-extrabold text-fg text-base">{residentName}</h3>
+              <h3 className="font-semibold text-fg text-[15px]">{residentName}</h3>
               <Badge variant="warning" dot>
-                Awaiting Verification
+                Awaiting verification
               </Badge>
             </div>
             <p className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
               <Building2 className="h-3.5 w-3.5 text-accent" />
               <span>{propertyName}</span>
               <span>•</span>
-              <span className="font-semibold text-fg">Unit / Room {roomNumber}</span>
+              <span className="font-medium text-fg">Unit / Room {roomNumber}</span>
             </p>
           </div>
 
           <div className="sm:text-right">
-            <p className="text-[11px] uppercase tracking-wider text-muted font-bold">
-              Amount to Credit
+            <p className="text-[11px] text-muted">
+              Amount to credit
             </p>
-            <p className="text-xl font-black text-fg tabular-nums">
+            <p className="text-lg font-semibold text-fg tabular-nums">
               {formatCurrency(current.total_amount)}
             </p>
           </div>
@@ -201,50 +201,50 @@ export function PaymentReviewModal({
         {/* ================= Two Column Review Panel ================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {/* Left Column: Transaction Details */}
-          <div className="space-y-3.5">
-            <div className="rounded-xl border border-edge bg-card p-4 space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+          <div className="space-y-3">
+            <div className="rounded-md border border-edge bg-card p-3.5 space-y-3">
+              <p className="text-xs font-medium text-muted flex items-center gap-1.5">
                 <CreditCard className="h-3.5 w-3.5 text-accent" />
-                Transaction Submission Data
+                Transaction submission data
               </p>
 
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between items-center py-1 border-b border-edge/60">
-                  <span className="text-muted">Payment Reference No.</span>
-                  <span className="font-mono font-bold text-fg text-xs bg-inset px-2 py-0.5 rounded border border-edge">
+                  <span className="text-muted">Payment reference no.</span>
+                  <span className="font-mono font-medium text-fg text-xs bg-inset px-2 py-0.5 rounded border border-edge">
                     {paymentRef}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center py-1 border-b border-edge/60">
-                  <span className="text-muted">Invoice Reference</span>
-                  <span className="font-mono font-bold text-fg text-xs">
+                  <span className="text-muted">Invoice reference</span>
+                  <span className="font-mono font-medium text-fg text-xs">
                     #INV-{current.id}
                   </span>
                 </div>
 
                 {current.date && (
                   <div className="flex justify-between items-center py-1 border-b border-edge/60">
-                    <span className="text-muted">Statement Due Date</span>
-                    <span className="font-semibold text-fg">
+                    <span className="text-muted">Statement due date</span>
+                    <span className="font-medium text-fg">
                       {formatDate(current.due_date)}
                     </span>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-muted">Reconciliation Status</span>
-                  <span className="font-semibold text-warning-fg">Pending Landlord Confirmation</span>
+                  <span className="text-muted">Reconciliation status</span>
+                  <span className="font-medium text-warning-fg">Pending landlord confirmation</span>
                 </div>
               </div>
             </div>
 
             {/* Rejection Reason Form (Revealed when clicking Reject) */}
             {isRejecting ? (
-              <div className="rounded-xl border border-danger-border bg-danger-bg/30 p-4 space-y-3 animate-fade-in">
-                <div className="flex items-center gap-2 text-danger-fg font-bold text-xs">
+              <div className="rounded-md border border-danger-border bg-danger-bg/30 p-3.5 space-y-2.5 animate-fade-in">
+                <div className="flex items-center gap-2 text-danger-fg font-medium text-xs">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  <span>Specify Rejection Reason</span>
+                  <span>Specify rejection reason</span>
                 </div>
                 <p className="text-xs text-danger-fg/90 leading-relaxed">
                   This explanation will be sent to <strong>{residentName}</strong> so they can correct their reference number or re-upload clearer proof.
@@ -253,7 +253,7 @@ export function PaymentReviewModal({
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="e.g. Reference number not found in account / amount does not match / blurry screenshot"
-                  className="w-full rounded-lg border border-danger-border bg-card p-2.5 text-xs text-fg placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+                  className="w-full rounded-md border border-danger-border bg-card p-2.5 text-[13px] text-fg placeholder:text-faint focus:border-danger-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-fg/15"
                   rows={3}
                   autoFocus
                 />
@@ -262,22 +262,21 @@ export function PaymentReviewModal({
                     size="sm"
                     variant="ghost"
                     onClick={() => setIsRejecting(false)}
-                    className="text-xs"
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
+                    variant="danger"
                     onClick={handleConfirmReject}
                     disabled={isBusy}
-                    className="bg-danger-fg text-white hover:bg-red-700 text-xs font-semibold"
                   >
                     Confirm & Notify Resident
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-edge bg-inset/40 p-3 text-xs text-muted flex items-center gap-2">
+              <div className="rounded-md border border-edge bg-inset p-3 text-xs text-muted flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-accent shrink-0" />
                 <span>
                   Confirming this payment will mark invoice <strong>#INV-{current.id}</strong> as Paid and set the resident&apos;s balance to ₱0.00.
@@ -287,29 +286,29 @@ export function PaymentReviewModal({
           </div>
 
           {/* Right Column: Uploaded Proof of Payment Screenshot */}
-          <div className="rounded-xl border border-edge bg-card p-4 space-y-3">
+          <div className="rounded-md border border-edge bg-card p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">
-                Uploaded Proof of Payment
+              <p className="text-xs font-medium text-muted">
+                Uploaded proof of payment
               </p>
               {current.receipt_url && (
                 <a
                   href={current.receipt_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
                 >
-                  <ExternalLink className="h-3 w-3" /> Full View
+                  <ExternalLink className="h-3 w-3" /> Full view
                 </a>
               )}
             </div>
 
             {current.receipt_url ? (
-              <div className="relative group overflow-hidden rounded-xl border border-edge bg-inset/60 flex items-center justify-center p-2 min-h-[240px] max-h-[340px]">
+              <div className="relative group overflow-hidden rounded-md border border-edge bg-inset flex items-center justify-center p-2 min-h-[240px] max-h-[340px]">
                 <img
                   src={current.receipt_url}
                   alt={`Proof of payment for ${residentName}`}
-                  className="max-h-[320px] w-auto object-contain rounded-lg shadow-xs transition-transform duration-200 group-hover:scale-[1.02]"
+                  className="max-h-[320px] w-auto object-contain rounded"
                   onError={(e) => {
                     const target = e.currentTarget;
                     target.onerror = null;
@@ -319,8 +318,8 @@ export function PaymentReviewModal({
                 />
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-edge bg-inset/50 p-8 text-center text-xs text-muted space-y-1">
-                <p className="font-semibold text-fg">No screenshot attached</p>
+              <div className="rounded-md border border-dashed border-edge bg-inset p-8 text-center text-xs text-muted space-y-1">
+                <p className="font-medium text-fg">No screenshot attached</p>
                 <p className="text-[11px]">
                   Resident submitted reference: <strong>{paymentRef}</strong>
                 </p>

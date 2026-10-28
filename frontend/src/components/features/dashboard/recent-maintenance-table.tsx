@@ -31,7 +31,7 @@ export function RecentMaintenanceTable({
   return (
     <div className="space-y-4">
       <SectionHeader
-        icon={<Wrench className="h-5 w-5" />}
+        icon={<Wrench className="h-4 w-4" />}
         title="Recent Maintenance Requests"
         subtitle="Latest repair tickets across properties requiring dispatch or follow-up"
         action={

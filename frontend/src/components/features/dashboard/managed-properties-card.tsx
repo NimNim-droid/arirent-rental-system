@@ -23,7 +23,7 @@ export function ManagedPropertiesCard({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <Card className="p-6 lg:col-span-2">
         <SectionHeader
-          icon={<Home className="h-5 w-5" />}
+                  icon={<Home className="h-4 w-4" />}
           title="Occupancy by Property"
           subtitle="Unit utilization across registered buildings"
         />
@@ -76,14 +76,14 @@ export function ManagedPropertiesCard({
         <Card className="p-6 flex flex-col justify-between h-full hover:border-edge-strong">
           <div>
             <SectionHeader
-              icon={<Banknote className="h-5 w-5" />}
+              icon={<Banknote className="h-4 w-4" />}
               title="Revenue & Receivables"
               subtitle="Collections breakdown"
             />
-            <div className="mt-5">
-              <div className="text-2xl font-extrabold text-fg tabular-nums">
+            <div className="mt-4">
+              <div className="text-xl font-semibold text-fg tabular-nums">
                 {statsLoading ? (
-                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-6 w-32" />
                 ) : (
                   formatCurrency(stats?.total_revenue ?? 0)
                 )}
@@ -92,13 +92,13 @@ export function ManagedPropertiesCard({
                 Total collected this billing cycle
               </p>
 
-              <div className="mt-5 space-y-2.5 border-t border-edge pt-4">
+              <div className="mt-4 space-y-2 border-t border-edge pt-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted">Receipts to verify</span>
                   {statsLoading ? (
                     <Skeleton className="h-4 w-16" />
                   ) : (
-                    <span className="font-semibold text-warning-fg tabular-nums">
+                    <span className="font-medium text-warning-fg tabular-nums">
                       {stats?.pending_payments ?? 0} receipt(s)
                     </span>
                   )}

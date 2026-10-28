@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   } = useAdminDashboard();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* 1. Header */}
       <PageHeader
         title="Admin Dashboard"

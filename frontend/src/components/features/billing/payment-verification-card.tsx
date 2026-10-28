@@ -21,19 +21,19 @@ export function PaymentVerificationCard({
   onViewReceipt,
 }: PaymentVerificationCardProps) {
   return (
-    <Card className="flex flex-col justify-between border-warning-border bg-warning-bg/20 p-5">
+    <Card className="flex flex-col justify-between border-warning-border bg-warning-bg/20 p-4">
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="font-bold text-fg">
+            <h3 className="font-medium text-[13px] text-fg">
               {payment.tenant_name} (Room {payment.room})
             </h3>
-            <p className="mt-1 text-xl font-extrabold text-fg tabular-nums">
+            <p className="mt-1 text-lg font-semibold text-fg tabular-nums">
               {formatCurrency(payment.total_amount)}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {payment.gcash_ref && (
-                <span className="rounded-lg border border-edge bg-card px-2.5 py-1 font-mono text-xs font-semibold text-fg-soft">
+                <span className="rounded border border-edge bg-card px-2 py-0.5 font-mono text-xs text-fg-soft">
                   GCash Ref: {payment.gcash_ref}
                 </span>
               )}
@@ -41,7 +41,7 @@ export function PaymentVerificationCard({
                 <button
                   type="button"
                   onClick={() => onViewReceipt(payment)}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-accent-border bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent transition-colors hover:bg-accent hover:text-white"
+                  className="inline-flex cursor-pointer items-center gap-1 rounded border border-accent-border bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent transition-colors hover:bg-accent hover:text-white"
                 >
                   <FileImage className="h-3.5 w-3.5" />
                   View Receipt

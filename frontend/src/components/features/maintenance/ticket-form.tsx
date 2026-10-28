@@ -76,12 +76,12 @@ export function TicketForm({
         />
 
         {/* Emergency Hotline Notice */}
-        <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg p-4 text-sm">
-          <div className="shrink-0 rounded-xl bg-warning-bg p-2 text-warning-fg ring-1 ring-inset ring-warning-border">
-            <Phone className="h-5 w-5" />
+        <div className="flex items-start gap-3 rounded-md border border-warning-border bg-warning-bg p-3 text-sm">
+          <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-md bg-warning-bg text-warning-fg ring-1 ring-inset ring-warning-border">
+            <Phone className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-fg">
+            <p className="text-xs font-semibold text-fg">
               Emergency? Call the hotline
             </p>
             <p className="mt-1 text-xs text-fg-soft">

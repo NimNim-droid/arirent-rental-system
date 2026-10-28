@@ -95,7 +95,7 @@ export default function AdminProperties() {
       {/* Success Notification Banner */}
       {successMsg && (
         <div
-          className="flex animate-fade-in-up items-center gap-2.5 rounded-xl border border-success-border bg-success-bg p-4 text-sm font-semibold text-success-fg shadow-sm"
+          className="flex animate-fade-in items-center gap-2.5 rounded-md border border-success-border bg-success-bg p-3 text-[13px] text-success-fg"
           role="status"
         >
           <CheckCircle2 className="h-5 w-5 shrink-0" />

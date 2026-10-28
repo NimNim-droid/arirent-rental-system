@@ -79,10 +79,11 @@ interface KpiCardProps {
   value: number;
   growth: number;
   icon: LucideIcon;
-  iconClassName: string;
+  /** No longer rendered — kept for API compatibility with callers. */
+  iconClassName?: string;
 }
 
-function KpiCard({ title, value, growth, icon: Icon, iconClassName }: KpiCardProps) {
+function KpiCard({ title, value, growth, icon: Icon }: KpiCardProps) {
   const positive = growth > 0;
   const negative = growth < 0;
   const GrowthIcon = negative ? TrendingDown : TrendingUp;
@@ -93,29 +94,26 @@ function KpiCard({ title, value, growth, icon: Icon, iconClassName }: KpiCardPro
       : "text-muted";
 
   return (
-    <Card className="p-5">
-      <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-sm",
-            iconClassName
-          )}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
+    <Card className="p-4 space-y-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-muted">{title}</p>
-          <p className="mt-1 text-xl font-extrabold tracking-tight text-fg tabular-nums">
+          <p className="text-xs font-medium text-muted">{title}</p>
+          <p className="mt-1 text-xl font-semibold tracking-tight text-fg tabular-nums">
             {formatCurrency(value)}
           </p>
-          <p className="mt-2 flex items-center gap-1.5 text-[11px]">
+          <p className="mt-1.5 flex items-center gap-1.5 text-[11px]">
             {(positive || negative) && (
-              <GrowthIcon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
+              <GrowthIcon className={cn("h-3 w-3 shrink-0", tone)} />
             )}
-            <span className={cn("font-bold", tone)}>{formatGrowth(growth)}%</span>
+            <span className={cn("font-medium", tone)}>{formatGrowth(growth)}%</span>
             <span className="text-muted">vs. last year</span>
           </p>
         </div>
+        {Icon && (
+          <span aria-hidden="true" className="text-faint">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
       </div>
     </Card>
   );
@@ -388,7 +386,6 @@ export default function AdminReports() {
   return (
     <div className="space-y-6">
       <PageHeader
-        icon={<BarChart3 className="h-7 w-7 text-blue-600" strokeWidth={2.5} />}
         title="Financial Report"
         subtitle="Track your rental income, charges, and overall financial performance."
         action={
@@ -578,7 +575,7 @@ export default function AdminReports() {
 
             {data.financial_summary.length === 0 ? (
               <EmptyState
-                icon={<BarChart3 className="h-5 w-5" />}
+                icon={<BarChart3 className="h-4 w-4" />}
                 title="No financial activity for this year"
                 description="Generate invoices or record payments to populate this report."
               />

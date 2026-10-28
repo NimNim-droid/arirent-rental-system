@@ -117,42 +117,42 @@ export function GCashPaymentModal({
       {paymentMsg ? (
         <div className="space-y-3 py-6 text-center">
           <CheckCircle className="mx-auto h-12 w-12 text-success-fg" />
-          <h3 className="text-lg font-bold text-fg">Payment Submitted!</h3>
+          <h3 className="text-[13px] font-medium text-fg">Payment submitted</h3>
           <p className="text-xs text-muted">{paymentMsg}</p>
         </div>
       ) : (
         <form id="payment-form" onSubmit={handlePaymentSubmit} className="space-y-4">
           {paymentError && (
-            <div className="flex items-center gap-2 rounded-xl border border-danger-border bg-danger-bg p-3 text-xs font-semibold text-danger-fg">
+            <div className="flex items-center gap-2 rounded-md border border-danger-border bg-danger-bg p-3 text-xs text-danger-fg">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{paymentError}</span>
             </div>
           )}
 
           {/* Balance Breakdown Card */}
-          <div className="rounded-2xl border border-accent-border bg-accent-soft p-4 space-y-2">
+          <div className="rounded-md border border-accent-border bg-accent-soft p-3.5 space-y-2">
             <div className="flex justify-between items-center text-xs text-muted">
-              <span>Total Invoiced</span>
-              <span className="font-semibold tabular-nums text-fg">{formatCurrency(invoice.total_amount)}</span>
+              <span>Total invoiced</span>
+              <span className="font-medium tabular-nums text-fg">{formatCurrency(invoice.total_amount)}</span>
             </div>
             {paid > 0 && (
               <div className="flex justify-between items-center text-xs text-success-fg">
-                <span>Previously Paid</span>
-                <span className="font-semibold tabular-nums">−{formatCurrency(paid)}</span>
+                <span>Previously paid</span>
+                <span className="font-medium tabular-nums">−{formatCurrency(paid)}</span>
               </div>
             )}
             <div className="border-t border-accent/20 pt-2 flex justify-between items-center">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-accent">
-                  Remaining Balance
+                <p className="text-[11px] font-medium text-accent">
+                  Remaining balance
                 </p>
-                <p className="text-2xl font-extrabold text-fg tabular-nums">
+                <p className="text-lg font-semibold text-fg tabular-nums">
                   {formatCurrency(remaining)}
                 </p>
               </div>
               {paid > 0 && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-accent/20 text-accent">
-                  Partially Paid
+                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded border border-accent-border bg-card text-accent">
+                  Partially paid
                 </span>
               )}
             </div>
@@ -187,8 +187,8 @@ export function GCashPaymentModal({
               </div>
             </div>
 
-            <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
-              <span className="select-none pl-3 text-sm font-bold text-muted">₱</span>
+            <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
+              <span className="select-none pl-3 text-sm font-medium text-muted">₱</span>
               <input
                 id="pay-amount"
                 type="number"
@@ -198,7 +198,7 @@ export function GCashPaymentModal({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent py-2 pl-2 pr-3 text-sm font-bold tabular-nums text-fg focus:outline-none"
+                className="w-full bg-transparent py-1.5 pl-2 pr-3 text-[13px] font-medium tabular-nums text-fg focus:outline-none"
                 required
               />
             </div>
@@ -207,12 +207,12 @@ export function GCashPaymentModal({
             </p>
           </div>
 
-          <div className="space-y-1.5 rounded-xl border border-edge bg-inset p-3.5 text-xs">
-            <p className="font-bold text-fg">
-              GCash Account Name: {settings?.gcash_name ?? "—"}
+          <div className="space-y-1.5 rounded-md border border-edge bg-inset p-3 text-[13px]">
+            <p className="font-medium text-fg">
+              GCash account name: {settings?.gcash_name ?? "—"}
             </p>
-            <p className="font-bold text-fg">
-              GCash Number: {settings?.gcash_number ?? "—"}
+            <p className="font-medium text-fg">
+              GCash number: {settings?.gcash_number ?? "—"}
             </p>
             <p className="pt-0.5 text-muted leading-relaxed">
               Please transfer your payment to the official account above, then enter your 13-digit transaction reference number below.
@@ -229,12 +229,12 @@ export function GCashPaymentModal({
           />
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-fg-soft">
-              Upload Receipt Screenshot (Optional)
+            <label className="block text-xs font-medium text-fg-soft">
+              Upload receipt screenshot (optional)
             </label>
             <label
               htmlFor="receipt-upload"
-              className="block cursor-pointer rounded-xl border-2 border-dashed border-edge-strong p-4 text-center transition-all duration-200 hover:border-accent hover:bg-accent-soft/40"
+              className="block cursor-pointer rounded-md border border-dashed border-edge-strong p-4 text-center transition-colors duration-150 hover:border-accent hover:bg-accent-soft/40"
             >
               <input
                 id="receipt-upload"
@@ -264,7 +264,7 @@ export function GCashPaymentModal({
                       e.preventDefault();
                       setReceipt(null);
                     }}
-                    className="text-xs text-danger-fg font-bold hover:underline"
+                    className="text-xs text-danger-fg font-medium hover:underline"
                   >
                     Remove
                   </button>

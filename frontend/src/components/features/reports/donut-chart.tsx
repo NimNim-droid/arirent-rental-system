@@ -73,7 +73,7 @@ export function DonutChart({ segments, centerValue, centerLabel }: DonutChartPro
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <span className="text-lg font-extrabold tracking-tight text-fg tabular-nums sm:text-xl">
+          <span className="text-lg font-semibold tracking-tight text-fg tabular-nums sm:text-xl">
             {centerValue}
           </span>
           <span className="mt-0.5 text-[11px] font-medium text-muted">{centerLabel}</span>

@@ -59,10 +59,10 @@ export function TenantBalanceCard({
             )}
           </div>
           <div className="mt-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+            <p className="text-xs font-medium text-muted">
               Outstanding Balance
             </p>
-            <p className="text-3xl font-extrabold text-fg tabular-nums mt-0.5">
+            <p className="text-2xl font-semibold text-fg tabular-nums mt-0.5">
               {formatCurrency(stats.outstanding_balance ?? 0)}
             </p>
           </div>

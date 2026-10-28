@@ -1,6 +1,6 @@
-import { CalendarDays, RotateCcw, Search } from "lucide-react";
+import { CalendarDays, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/common/search-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { Property } from "@/lib/types";
@@ -45,16 +45,14 @@ export function TicketToolbar({
   onReset,
 }: TicketToolbarProps) {
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Input
-          type="search"
-          icon={<Search className="h-4 w-4" />}
+        <SearchInput
           placeholder="Search by tenant name, room, or issue..."
-          aria-label="Search tickets"
+          label="Search tickets"
           value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="lg:flex-1 lg:min-w-[220px]"
+          onChange={onSearchChange}
+          className="lg:max-w-sm lg:flex-1"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:flex lg:w-auto">
@@ -92,10 +90,10 @@ export function TicketToolbar({
           </Select>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-edge bg-inset px-3 py-1.5 lg:w-auto">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-fg-soft whitespace-nowrap">
-            <CalendarDays className="h-4 w-4 text-muted" />
-            Date Range
+        <div className="flex items-center gap-2 rounded-md border border-edge bg-inset px-2.5 py-1.5 lg:w-auto">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-fg-soft whitespace-nowrap">
+            <CalendarDays className="h-3.5 w-3.5 text-muted" />
+            Date range
           </span>
           <input
             type="date"
@@ -103,7 +101,7 @@ export function TicketToolbar({
             value={dateFrom}
             max={dateTo || undefined}
             onChange={(e) => onDateFromChange(e.target.value)}
-            className="w-full min-w-[110px] rounded-lg bg-transparent px-2 py-1.5 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full min-w-[110px] rounded bg-transparent px-2 py-1 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           <span className="text-faint text-xs">–</span>
           <input
@@ -112,7 +110,7 @@ export function TicketToolbar({
             value={dateTo}
             min={dateFrom || undefined}
             onChange={(e) => onDateToChange(e.target.value)}
-            className="w-full min-w-[110px] rounded-lg bg-transparent px-2 py-1.5 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full min-w-[110px] rounded bg-transparent px-2 py-1 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
 

@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   FileText,
   Upload,
-  Search,
   FolderOpen,
   RefreshCw,
   AlertTriangle,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
+import { SearchInput } from "@/components/common/search-input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,7 +159,7 @@ export default function AdminDocuments() {
       />
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-danger-border bg-danger-bg px-4 py-2.5 text-xs text-danger-fg">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {error}
@@ -172,7 +172,7 @@ export default function AdminDocuments() {
       )}
 
       {successMsg && (
-        <div className="flex animate-fade-in-up items-center gap-2 rounded-xl border border-success-border bg-success-bg px-4 py-3 text-xs font-semibold text-success-fg">
+        <div className="flex animate-fade-in items-center gap-2 rounded-md border border-success-border bg-success-bg px-4 py-2.5 text-xs text-success-fg">
           <FileText className="h-4 w-4 shrink-0" />
           {successMsg}
         </div>
@@ -226,14 +226,12 @@ export default function AdminDocuments() {
       {/* Filter and Search Bar */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-            <input
-              type="text"
+          <div className="flex-1 sm:max-w-xs">
+            <SearchInput
               placeholder="Search documents by name, category, or note..."
+              label="Search documents"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-edge bg-inset pl-10 pr-4 py-2 text-sm text-fg placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+              onChange={setSearch}
             />
           </div>
 
@@ -263,16 +261,16 @@ export default function AdminDocuments() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-accent text-white shadow-sm"
-                    : "bg-card border border-edge text-muted hover:text-fg hover:border-accent/40"
+                    ? "bg-accent text-white shadow-soft"
+                    : "bg-card border border-edge text-muted hover:text-fg hover:bg-hover"
                 }`}
               >
                 <span>{cat}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? "bg-white/20 text-white" : "bg-hover text-muted"
+                  className={`text-[10px] px-1 py-px rounded ${
+                    isSelected ? "bg-white/20 text-white" : "bg-inset text-muted"
                   }`}
                 >
                   {count}

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, RotateCw, AlertOctagon, Trash2 } from "lucide-react";
+import { RotateCw, AlertOctagon, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SearchInput } from "@/components/common/search-input";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -368,19 +368,18 @@ export default function AdminInvoices() {
       />
 
       {/* Unified Single-Line Filter Toolbar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-lg border border-edge">
         {/* Left: Prominent Search Box */}
-        <div className="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
-          <Input
+        <div className="flex-1 min-w-[200px] max-w-full lg:max-w-xs">
+          <SearchInput
             type="text"
             placeholder="Search invoice # or resident..."
+            label="Search invoices"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+            onChange={(value) => {
+              setSearch(value);
               setPage(1);
             }}
-            className="pl-8.5 h-9 text-xs w-full"
           />
         </div>
 

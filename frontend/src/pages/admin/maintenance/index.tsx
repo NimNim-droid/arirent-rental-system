@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wrench, AlertTriangle, RefreshCw, SearchX } from "lucide-react";
+import { AlertTriangle, RefreshCw, SearchX } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,15 +67,10 @@ export default function AdminMaintenance() {
       <PageHeader
         title="Maintenance Requests"
         subtitle="Manage and track all maintenance requests from tenants."
-        icon={
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent">
-            <Wrench className="h-5 w-5" />
-          </div>
-        }
       />
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-danger-border bg-danger-bg px-4 py-2.5 text-xs text-danger-fg">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {error}

@@ -51,7 +51,7 @@ export function AdminAttentionBanner({ stats, loading }: AdminAttentionBannerPro
     return (
       <div className="space-y-3 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
+          <h2 className="text-xs font-medium text-muted">
             Attention Required
           </h2>
           <span className="text-xs font-semibold text-warning-fg">

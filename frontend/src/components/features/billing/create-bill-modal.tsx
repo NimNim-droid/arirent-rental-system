@@ -88,7 +88,7 @@ export function CreateBillModal({
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
               disabled={loading || Boolean(initialTenantId)}
-              className="w-full cursor-pointer appearance-none rounded-xl border border-edge bg-inset px-3 py-2 pr-10 text-xs sm:text-sm font-medium text-fg shadow-2xs transition-all duration-150 hover:border-edge-strong focus:border-accent focus:bg-card focus:outline-none focus:ring-3 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full cursor-pointer appearance-none rounded-md border border-edge bg-card px-3 py-1.5 h-8 pr-8 text-[13px] text-fg transition-colors duration-150 hover:border-edge-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {activeTenants.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -115,8 +115,8 @@ export function CreateBillModal({
             <label className="mb-1 block text-xs font-semibold text-fg-soft">
               Room Rent
             </label>
-            <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
-              <span className="select-none pl-3 text-xs font-bold text-muted">₱</span>
+            <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
+              <span className="select-none pl-3 text-xs font-medium text-muted">₱</span>
               <input
                 type="number"
                 step="0.01"
@@ -134,8 +134,8 @@ export function CreateBillModal({
             <label className="mb-1 block text-xs font-semibold text-fg-soft">
               Water Utility
             </label>
-            <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
-              <span className="select-none pl-3 text-xs font-bold text-muted">₱</span>
+            <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
+              <span className="select-none pl-3 text-xs font-medium text-muted">₱</span>
               <input
                 type="number"
                 step="0.01"
@@ -151,9 +151,9 @@ export function CreateBillModal({
         </div>
 
         {/* 3. Electricity Consumption Section */}
-        <div className="space-y-2.5 rounded-xl border border-edge bg-card/60 p-3">
+        <div className="space-y-2.5 rounded-md border border-edge bg-inset p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-fg-soft">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-fg-soft">
               <Zap className="h-3.5 w-3.5 fill-amber-500/20 text-amber-500" />
               <span>Electricity Consumption</span>
             </div>
@@ -172,7 +172,7 @@ export function CreateBillModal({
               <label className="mb-1 block text-[11px] font-medium text-fg-soft">
                 kWh Consumed
               </label>
-              <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
+              <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
                 <input
                   type="number"
                   step="0.1"
@@ -180,7 +180,7 @@ export function CreateBillModal({
                   placeholder="e.g. 45"
                   value={elecUsage}
                   onChange={(e) => setElecUsage(e.target.value)}
-                  className="w-full bg-transparent py-1.5 pl-3 pr-11 text-xs sm:text-sm font-bold tabular-nums text-fg placeholder:text-faint focus:outline-none"
+                  className="w-full bg-transparent py-1.5 pl-3 pr-11 text-[13px] font-medium tabular-nums text-fg placeholder:text-faint focus:outline-none"
                 />
                 <span className="pointer-events-none absolute right-2.5 text-[11px] font-semibold text-muted">
                   kWh
@@ -192,8 +192,8 @@ export function CreateBillModal({
               <label className="mb-1 block text-[11px] font-medium text-fg-soft">
                 Rate per kWh
               </label>
-              <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
-                <span className="select-none pl-2.5 text-xs font-bold text-muted">₱</span>
+              <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors duration-150 focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
+                <span className="select-none pl-2.5 text-xs font-medium text-muted">₱</span>
                 <input
                   type="number"
                   step="0.01"
@@ -211,7 +211,7 @@ export function CreateBillModal({
 
           <div className="flex items-center justify-between border-t border-edge/60 pt-1 text-xs">
             <span className="text-[11px] text-muted">Calculated Electricity:</span>
-            <div className="flex items-baseline gap-1.5 font-bold tabular-nums text-fg">
+            <div className="flex items-baseline gap-1.5 font-semibold tabular-nums text-fg">
               <span className="text-xs sm:text-sm">{formatCurrency(electricityAmount)}</span>
               {parsedUsage > 0 && (
                 <span className="text-[10px] font-normal text-muted">
@@ -228,7 +228,7 @@ export function CreateBillModal({
             <label className="mb-1 block text-xs font-semibold text-fg-soft">
               Rent Due Date
             </label>
-            <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
+            <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
               <input
                 type="date"
                 value={dueDate}
@@ -243,7 +243,7 @@ export function CreateBillModal({
             <label className="mb-1 block text-xs font-semibold text-fg-soft">
               Invoice Issue Date
             </label>
-            <div className="relative flex items-center rounded-xl border border-edge bg-inset transition-all focus-within:border-accent focus-within:bg-card focus-within:ring-3 focus-within:ring-accent/15">
+            <div className="relative flex items-center rounded-md border border-edge bg-card transition-colors focus-within:border-accent focus-within:bg-card focus-within:ring-2 focus-within:ring-accent/20">
               <input
                 type="date"
                 value={billingDate}
@@ -264,7 +264,7 @@ export function CreateBillModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. Monthly rent (Coverage: Oct 18, 2026 - Nov 17, 2026)"
-            className="w-full rounded-xl border border-edge bg-inset px-3 py-1.5 text-xs text-fg placeholder:text-faint transition-all duration-150 focus:border-accent focus:bg-card focus:outline-none focus:ring-3 focus:ring-accent/15"
+            className="w-full rounded-md border border-edge bg-card px-3 py-1.5 h-8 text-[13px] text-fg placeholder:text-faint transition-colors duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           />
         </div>
 

@@ -4,12 +4,12 @@ import {
   FileText,
   FolderOpen,
   RefreshCw,
-  Search,
   ShieldCheck,
   Info,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
+import { SearchInput } from "@/components/common/search-input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SkeletonCards } from "@/components/ui/skeleton";
@@ -95,14 +95,12 @@ export default function TenantDocuments() {
       {/* Search and Category Filters */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-            <input
-              type="text"
+          <div className="flex-1 sm:max-w-xs">
+            <SearchInput
               placeholder="Search documents by name or keyword..."
+              label="Search documents"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-edge bg-inset pl-10 pr-4 py-2 text-sm text-fg placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+              onChange={setSearch}
             />
           </div>
 
@@ -132,16 +130,16 @@ export default function TenantDocuments() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-accent text-white shadow-sm"
-                    : "bg-card border border-edge text-muted hover:text-fg hover:border-accent/40"
+                    ? "bg-accent text-white shadow-soft"
+                    : "bg-card border border-edge text-muted hover:text-fg hover:bg-hover"
                 }`}
               >
                 <span>{cat}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? "bg-white/20 text-white" : "bg-hover text-muted"
+                  className={`text-[10px] px-1 py-px rounded ${
+                    isSelected ? "bg-white/20 text-white" : "bg-inset text-muted"
                   }`}
                 >
                   {count}

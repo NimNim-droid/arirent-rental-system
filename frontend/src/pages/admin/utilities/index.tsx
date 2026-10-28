@@ -4,14 +4,13 @@ import {
   Droplets,
   Plus,
   Settings as SettingsIcon,
-  Search,
   RotateCw,
   RefreshCw,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { SearchInput } from "@/components/common/search-input";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -130,27 +129,27 @@ export default function AdminUtilities() {
       {error && <AlertBanner variant="danger" message={error} />}
       {notice && <AlertBanner variant="success" message={notice} />}
 
-      {/* Modern Pill Tabs Navigation: Electricity (kWh) | Water (Flat Rate) */}
-      <div className="flex items-center gap-1.5 p-1 bg-inset/60 border border-edge rounded-2xl w-fit">
+      {/* Tab navigation: Electricity (kWh) | Water (Flat Rate) */}
+      <div className="flex items-center gap-1 p-1 bg-inset border border-edge rounded-md w-fit">
         <button
           type="button"
           onClick={() => {
             setActiveTab("electricity");
             setPage(1);
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
             activeTab === "electricity"
-              ? "bg-card text-fg shadow-xs border border-edge/80"
+              ? "bg-card text-fg shadow-soft border border-edge"
               : "text-muted hover:text-fg"
           }`}
         >
           <Zap className="h-3.5 w-3.5 text-amber-500" />
           <span>Electricity</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            className={`px-1 py-0.5 rounded text-[10px] tabular-nums ${
               activeTab === "electricity"
-                ? "bg-accent/10 text-accent font-semibold"
-                : "bg-inset text-muted"
+                ? "bg-accent-soft text-accent"
+                : "bg-card text-muted"
             }`}
           >
             kWh
@@ -163,19 +162,19 @@ export default function AdminUtilities() {
             setActiveTab("water");
             setPage(1);
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
             activeTab === "water"
-              ? "bg-card text-fg shadow-xs border border-edge/80"
+              ? "bg-card text-fg shadow-soft border border-edge"
               : "text-muted hover:text-fg"
           }`}
         >
           <Droplets className="h-3.5 w-3.5 text-cyan-500" />
           <span>Water</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+            className={`px-1 py-0.5 rounded text-[10px] tabular-nums ${
               activeTab === "water"
-                ? "bg-accent/10 text-accent font-semibold"
-                : "bg-inset text-muted"
+                ? "bg-accent-soft text-accent"
+                : "bg-card text-muted"
             }`}
           >
             Flat Rate
@@ -184,19 +183,18 @@ export default function AdminUtilities() {
       </div>
 
       {/* Unified Single-Line Filter Toolbar matching Invoices */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-lg border border-edge">
         {/* Left: Prominent Search Box */}
-        <div className="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
-          <Input
+        <div className="flex-1 min-w-[200px] max-w-full lg:max-w-xs">
+          <SearchInput
             type="text"
             placeholder="Search tenant or unit..."
+            label="Search utilities"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+            onChange={(value) => {
+              setSearchQuery(value);
               setPage(1);
             }}
-            className="pl-8.5 h-9 text-xs w-full"
           />
         </div>
 

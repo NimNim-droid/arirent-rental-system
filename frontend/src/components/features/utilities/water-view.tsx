@@ -118,12 +118,12 @@ export function WaterView({
           </Button>
         </Card>
 
-        <Card className="p-5 flex flex-col justify-center border-edge shadow-sm">
-          <p className="text-xs font-semibold text-fg-soft uppercase tracking-wider">
+        <Card className="p-4 flex flex-col justify-center">
+          <p className="text-xs font-medium text-muted">
             Current Rate per Tenant
           </p>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-3xl font-extrabold text-fg font-mono">{formatCurrency(waterRate)}</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-xl font-semibold text-fg tabular-nums">{formatCurrency(waterRate)}</span>
             <span className="text-xs text-muted">/ month</span>
           </div>
           <p className="text-[11px] text-muted mt-1">

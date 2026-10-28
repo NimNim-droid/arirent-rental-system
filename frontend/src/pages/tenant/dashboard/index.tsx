@@ -17,10 +17,7 @@ export default function TenantDashboard() {
       {/* 1. Resident Welcome & Status Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Resident Portal
-          </p>
-          <h1 className="text-xl font-bold tracking-tight text-fg mt-0.5">
+          <h1 className="text-lg font-semibold tracking-tight text-fg">
             Welcome back,{" "}
             <span className="text-accent">{user?.name?.split(" ")[0]}</span>
           </h1>
@@ -51,7 +48,7 @@ export default function TenantDashboard() {
       </div>
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-3 text-xs font-semibold text-danger-fg">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-danger-border bg-danger-bg px-4 py-2.5 text-xs text-danger-fg">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {error}

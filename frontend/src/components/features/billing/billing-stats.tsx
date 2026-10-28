@@ -9,17 +9,17 @@ export function BillingStats({ unpaidTotal, unpaidCount }: BillingStatsProps) {
   if (unpaidCount === 0) return null;
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-warning-border bg-warning-bg px-5 py-4 animate-fade-in-up">
+    <div className="flex items-center justify-between gap-4 rounded-md border border-warning-border bg-warning-bg px-4 py-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-warning-fg mb-0.5">
-          Outstanding Balance
+        <p className="text-xs font-medium text-warning-fg">
+          Outstanding balance
         </p>
-        <p className="text-xl font-extrabold text-fg tabular-nums">
+        <p className="text-lg font-semibold text-fg tabular-nums">
           {formatCurrency(unpaidTotal)}
         </p>
       </div>
-      <span className="text-xs text-warning-fg font-semibold">
-        {unpaidCount} unpaid invoice(s)
+      <span className="text-xs text-warning-fg">
+        {unpaidCount} unpaid invoice{unpaidCount !== 1 ? "s" : ""}
       </span>
     </div>
   );

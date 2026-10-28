@@ -18,7 +18,7 @@ export function TableHeader({
   return (
     <thead
       className={cn(
-        "border-b border-edge bg-inset text-xs font-semibold text-muted",
+        "border-b border-edge bg-inset text-xs font-medium text-muted",
         className
       )}
       {...props}
@@ -30,7 +30,7 @@ export function TableBody({
   className,
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("divide-y divide-edge text-xs sm:text-sm", className)} {...props} />;
+  return <tbody className={cn("divide-y divide-edge text-[13px]", className)} {...props} />;
 }
 
 export function TableRow({
@@ -40,16 +40,16 @@ export function TableRow({
 }: HTMLAttributes<HTMLTableRowElement> & { index?: number }) {
   return (
     <tr
-      className={cn("transition-colors duration-150 hover:bg-hover/50", className)}
+      className={cn("transition-colors duration-100 hover:bg-hover/60", className)}
       {...props}
     />
   );
 }
 
 export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("whitespace-nowrap px-4 py-3 font-semibold text-xs text-muted", className)} {...props} />;
+  return <th className={cn("whitespace-nowrap px-3 py-2 font-medium text-xs text-muted", className)} {...props} />;
 }
 
 export function TableCell({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-4 py-3 align-middle text-xs sm:text-sm", className)} {...props} />;
+  return <td className={cn("px-3 py-2 align-middle text-[13px]", className)} {...props} />;
 }

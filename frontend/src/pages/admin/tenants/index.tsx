@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, RotateCw, X, UserPlus, Building, Users } from "lucide-react";
+import { RotateCw, X, UserPlus, Building, Users } from "lucide-react";
+import { PageHeader } from "@/components/common/page-header";
+import { SearchInput } from "@/components/common/search-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -100,25 +102,17 @@ export default function AdminTenants() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header matching reference screenshot */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider">
-            Tenant Directory
-          </p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-fg">
-            Tenant Management
-          </h1>
-        </div>
-
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="shadow-xs self-start sm:self-auto"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add New Tenant
-        </Button>
-      </div>
+      {/* Top Header */}
+      <PageHeader
+        title="Tenant Management"
+        subtitle="Tenant directory"
+        action={
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <UserPlus className="h-4 w-4" />
+            Add New Tenant
+          </Button>
+        }
+      />
 
       {error && (
         <AlertBanner
@@ -139,26 +133,16 @@ export default function AdminTenants() {
       {/* Main Table Card */}
       <div className="space-y-3">
         {/* Toolbar: Search input, Property selector, Clear, Refresh */}
-        <div className="rounded-2xl border border-edge bg-card p-3 shadow-2xs space-y-3">
+        <div className="rounded-lg border border-edge bg-card p-3 space-y-3">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Box */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
-              <Input
+            <div className="flex-1 md:max-w-xs md:min-w-56">
+              <SearchInput
                 placeholder="Search tenants..."
+                label="Search tenants"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9.5 text-xs bg-inset"
+                onChange={setSearchTerm}
               />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-fg p-1 cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
             </div>
 
             {/* Property Selector & Refresh */}

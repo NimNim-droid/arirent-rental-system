@@ -84,10 +84,10 @@ export default function TenantExcessCharges() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-warning-fg" /> Pending (Unbilled)
+            <p className="text-xs font-medium text-muted flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-warning-fg" /> Pending (unbilled)
             </p>
-            <p className="text-2xl font-extrabold text-fg tabular-nums">
+            <p className="text-lg font-semibold text-fg tabular-nums">
               {formatCurrency(stats.pendingTotal)}
             </p>
             <p className="text-[11px] text-muted">
@@ -98,10 +98,10 @@ export default function TenantExcessCharges() {
 
         <Card className="p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
+            <p className="text-xs font-medium text-muted flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5 text-accent" /> Invoiced
             </p>
-            <p className="text-2xl font-extrabold text-fg tabular-nums">
+            <p className="text-lg font-semibold text-fg tabular-nums">
               {formatCurrency(stats.billedTotal)}
             </p>
             <p className="text-[11px] text-muted">
@@ -112,10 +112,10 @@ export default function TenantExcessCharges() {
 
         <Card className="p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
+            <p className="text-xs font-medium text-muted flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-success-fg" /> Settled / Paid
             </p>
-            <p className="text-2xl font-extrabold text-success-fg tabular-nums">
+            <p className="text-lg font-semibold text-success-fg tabular-nums">
               {formatCurrency(stats.paidTotal)}
             </p>
             <p className="text-[11px] text-muted">
@@ -126,11 +126,11 @@ export default function TenantExcessCharges() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-inset border border-edge w-fit">
+      <div className="flex items-center gap-1 p-1 rounded-md bg-inset border border-edge w-fit">
         {(
           [
-            { id: "all", label: "All Charges" },
-            { id: "pending", label: "Pending Unbilled" },
+            { id: "all", label: "All charges" },
+            { id: "pending", label: "Pending unbilled" },
             { id: "billed", label: "Invoiced" },
             { id: "paid", label: "Paid" },
           ] as const
@@ -139,9 +139,9 @@ export default function TenantExcessCharges() {
             key={tab.id}
             type="button"
             onClick={() => setFilter(tab.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
               filter === tab.id
-                ? "bg-card text-fg shadow-sm"
+                ? "bg-card text-fg shadow-soft border border-edge"
                 : "text-muted hover:text-fg hover:bg-card/40"
             }`}
           >
@@ -186,7 +186,7 @@ export default function TenantExcessCharges() {
                     <TableCell className="text-xs text-muted max-w-xs truncate">
                       {charge.description || "—"}
                     </TableCell>
-                    <TableCell className="text-right font-bold tabular-nums text-fg whitespace-nowrap">
+                    <TableCell className="text-right font-medium tabular-nums text-fg whitespace-nowrap">
                       {formatCurrency(charge.amount)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap font-mono text-xs text-muted">

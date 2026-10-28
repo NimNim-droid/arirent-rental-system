@@ -14,7 +14,7 @@ export function TenantAvatar({
 
   return (
     <div
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong text-xs font-bold text-white shadow-sm ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-[11px] font-semibold text-white ${
         className ?? ""
       }`}
     >

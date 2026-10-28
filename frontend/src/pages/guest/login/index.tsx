@@ -56,7 +56,7 @@ export default function LoginPage() {
 
       {/* Main content */}
       <div className="flex flex-1 items-center justify-center p-4">
-        <div className="w-full max-w-sm space-y-6 animate-fade-in-up">
+        <div className="w-full max-w-sm space-y-6 animate-fade-in">
           {/* Header */}
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-fg">Sign in</h1>
@@ -103,8 +103,8 @@ export default function LoginPage() {
 
             {/* Quick Test Credential Prefill */}
             <div className="mt-5 pt-5 border-t border-edge">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted text-center mb-3">
-                Quick Test Credentials
+              <p className="text-[11px] font-medium text-muted text-center mb-3">
+                Quick test credentials
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <Button

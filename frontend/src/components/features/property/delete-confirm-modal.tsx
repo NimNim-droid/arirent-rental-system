@@ -56,7 +56,7 @@ export function DeleteConfirmModal({
       <div className="space-y-3 py-2">
         <p className="text-sm text-fg-soft">{description}</p>
         {warningNote && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-bg/40 p-3 text-xs text-warning-fg font-medium">
+          <div className="flex items-start gap-2.5 rounded-md border border-warning-border bg-warning-bg/40 p-3 text-xs text-warning-fg font-medium">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{warningNote}</span>
           </div>

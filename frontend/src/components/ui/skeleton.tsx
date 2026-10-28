@@ -4,10 +4,7 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       aria-hidden="true"
-      className={cn(
-        "animate-shimmer rounded-xl border border-edge/60 bg-[linear-gradient(90deg,var(--inset)_0%,var(--hover)_50%,var(--inset)_100%)] bg-[length:200%_100%]",
-        className
-      )}
+      className={cn("animate-pulse rounded-md bg-hover border border-edge/60", className)}
     />
   );
 }

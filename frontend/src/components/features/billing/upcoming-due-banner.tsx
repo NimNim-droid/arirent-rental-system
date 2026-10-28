@@ -35,15 +35,15 @@ export function UpcomingDueBanner({ tenants, onBillTenant }: UpcomingDueBannerPr
   }
 
   return (
-    <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 space-y-3 animate-fade-in">
+    <div className="rounded-md border border-accent/20 bg-accent-soft p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-accent" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
-            Upcoming Rent Due This Week ({upcomingTenants.length})
+          <Clock className="h-4 w-4 text-accent shrink-0" />
+          <h3 className="text-[13px] font-medium text-accent">
+            Upcoming rent due this week ({upcomingTenants.length})
           </h3>
         </div>
-        <span className="text-[11px] text-muted">
+        <span className="hidden text-[11px] text-muted sm:block">
           Tenants whose monthly rent cycle is due within the next 7 days
         </span>
       </div>
@@ -52,21 +52,21 @@ export function UpcomingDueBanner({ tenants, onBillTenant }: UpcomingDueBannerPr
         {upcomingTenants.map(({ tenant, daysUntil, bDay }) => (
           <div
             key={tenant.id}
-            className="flex items-center justify-between rounded-xl border border-edge bg-card p-3 shadow-2xs hover:border-accent/40 transition-colors"
+            className="flex items-center justify-between rounded-md border border-edge bg-card p-3 hover:border-accent/40 transition-colors"
           >
             <div className="space-y-0.5">
-              <p className="font-bold text-fg text-xs">{tenant.name}</p>
+              <p className="font-medium text-fg text-[13px]">{tenant.name}</p>
               <p className="text-[11px] text-muted">
                 Room {tenant.room} • {tenant.property_name}
               </p>
               <div className="flex items-center gap-1.5 pt-1 text-[11px]">
                 <Calendar className="h-3 w-3 text-accent" />
-                <span className="font-semibold text-accent">
+                <span className="font-medium text-accent">
                   {daysUntil === 0
-                    ? "Due Today!"
+                    ? "Due today"
                     : daysUntil === 1
-                    ? "Due Tomorrow!"
-                    : `Due in ${daysUntil} days (Day ${bDay})`}
+                    ? "Due tomorrow"
+                    : `Due in ${daysUntil} days (day ${bDay})`}
                 </span>
               </div>
             </div>

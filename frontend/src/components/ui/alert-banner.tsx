@@ -60,7 +60,7 @@ export function AlertBanner({
     <div
       role="status"
       className={cn(
-        "flex animate-fade-in-up items-center justify-between gap-3 rounded-xl border px-4 py-3 text-xs font-semibold sm:text-sm",
+        "flex animate-fade-in items-center justify-between gap-3 rounded-md border px-4 py-2.5 text-xs sm:text-[13px]",
         style.container,
         className
       )}

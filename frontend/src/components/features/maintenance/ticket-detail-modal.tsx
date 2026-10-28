@@ -27,7 +27,7 @@ export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted">
+          <span className="text-xs font-medium text-muted">
             {ticket.type}
           </span>
           <Badge

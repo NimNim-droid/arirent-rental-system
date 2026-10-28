@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Zap,
   PlusCircle,
-  Search,
   RotateCw,
   Building2,
   Users,
@@ -13,10 +12,10 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
+import { SearchInput } from "@/components/common/search-input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -311,25 +310,25 @@ export default function AdminBilling() {
       {/* Main Billing Table Section */}
       <div className="space-y-4">
         {/* Navigation Tabs (Current Bills | Payment History | Unpaid) */}
-        <div className="flex items-center gap-1.5 p-1 bg-inset/60 border border-edge rounded-2xl w-fit">
+        <div className="flex items-center gap-1 p-1 bg-inset border border-edge rounded-md w-fit">
           <button
             type="button"
             onClick={() => {
               setActiveTab("current");
               setPage(1);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
               activeTab === "current"
-                ? "bg-card text-fg shadow-xs border border-edge/80"
+                ? "bg-card text-fg shadow-soft border border-edge"
                 : "text-muted hover:text-fg"
             }`}
           >
             <span>Current Bills</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              className={`px-1 py-0.5 rounded text-[10px] tabular-nums ${
                 activeTab === "current"
-                  ? "bg-accent/10 text-accent font-semibold"
-                  : "bg-inset text-muted"
+                  ? "bg-accent-soft text-accent"
+                  : "bg-card text-muted"
               }`}
             >
               {tabCounts.current}
@@ -341,18 +340,18 @@ export default function AdminBilling() {
               setActiveTab("history");
               setPage(1);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
               activeTab === "history"
-                ? "bg-card text-fg shadow-xs border border-edge/80"
+                ? "bg-card text-fg shadow-soft border border-edge"
                 : "text-muted hover:text-fg"
             }`}
           >
             <span>Payment History</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              className={`px-1 py-0.5 rounded text-[10px] tabular-nums ${
                 activeTab === "history"
-                  ? "bg-accent/10 text-accent font-semibold"
-                  : "bg-inset text-muted"
+                  ? "bg-accent-soft text-accent font-semibold"
+                  : "bg-card text-muted"
               }`}
             >
               {tabCounts.history}
@@ -364,18 +363,18 @@ export default function AdminBilling() {
               setActiveTab("unpaid");
               setPage(1);
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[13px] font-medium transition-colors ${
               activeTab === "unpaid"
-                ? "bg-card text-fg shadow-xs border border-edge/80"
+                ? "bg-card text-fg shadow-soft border border-edge"
                 : "text-muted hover:text-fg"
             }`}
           >
             <span>Unpaid</span>
             <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+              className={`px-1 py-0.5 rounded text-[10px] tabular-nums ${
                 activeTab === "unpaid"
-                  ? "bg-danger/10 text-danger-fg font-semibold"
-                  : "bg-inset text-muted"
+                  ? "bg-danger-bg text-danger-fg"
+                  : "bg-card text-muted"
               }`}
             >
               {tabCounts.unpaid}
@@ -384,19 +383,18 @@ export default function AdminBilling() {
         </div>
 
         {/* Unified Single-Line Filter Toolbar matching Invoices */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-2xl border border-edge shadow-sm">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 bg-card p-3 rounded-lg border border-edge">
           {/* Left: Prominent Search Box */}
-          <div className="relative flex-1 min-w-[200px] max-w-full lg:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
-            <Input
+          <div className="flex-1 min-w-[200px] max-w-full lg:max-w-xs">
+            <SearchInput
               type="text"
               placeholder="Search tenant or unit..."
+              label="Search billing"
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
+              onChange={(value) => {
+                setSearchQuery(value);
                 setPage(1);
               }}
-              className="pl-8.5 h-9 text-xs w-full"
             />
           </div>
 
@@ -582,7 +580,7 @@ export default function AdminBilling() {
                         </TableCell>
 
                         {/* Total Amount */}
-                        <TableCell className="text-right tabular-nums whitespace-nowrap font-extrabold text-sm text-fg">
+                        <TableCell className="text-right tabular-nums whitespace-nowrap font-medium text-[13px] text-fg">
                           {formatCurrency(bill.total_amount)}
                         </TableCell>
 

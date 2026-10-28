@@ -18,26 +18,26 @@ export function PropertyStats({ loading, stats }: PropertyStatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatsCard
         title="Total Properties"
         value={stats.totalProps}
-        icon={<Building className="h-5 w-5 text-accent" />}
+        icon={<Building className="h-4 w-4" />}
       />
       <StatsCard
         title="Total Units / Rooms"
         value={stats.totalRooms}
-        icon={<DoorOpen className="h-5 w-5 text-accent" />}
+        icon={<DoorOpen className="h-4 w-4" />}
       />
       <StatsCard
         title="Occupancy Rate"
         value={`${stats.occupancyRate}%`}
-        icon={<Percent className="h-5 w-5 text-success-fg" />}
+        icon={<Percent className="h-4 w-4" />}
       />
       <StatsCard
         title="Vacant Units"
         value={stats.vacantRooms}
-        icon={<CheckCircle2 className="h-5 w-5 text-warning-fg" />}
+        icon={<CheckCircle2 className="h-4 w-4" />}
       />
     </div>
   );

@@ -43,7 +43,7 @@ export function PendingVerifications({
       <SectionHeader
         dot
         dotClassName="text-accent"
-        icon={<ShieldCheck className="h-5 w-5" />}
+        icon={<ShieldCheck className="h-4 w-4" />}
         title={`Pending GCash Payment Verifications (${payments.length})`}
         subtitle="Payment receipts that need to be confirmed"
       />
@@ -56,7 +56,7 @@ export function PendingVerifications({
               <Skeleton className="h-4 w-24" />
             </div>
             <Skeleton className="h-7 w-28" />
-            <Skeleton className="h-8 w-full rounded-xl" />
+            <Skeleton className="h-8 w-full rounded-md" />
           </div>
           <div className="rounded-2xl border border-edge bg-card p-5 space-y-3">
             <div className="flex justify-between">
@@ -64,7 +64,7 @@ export function PendingVerifications({
               <Skeleton className="h-4 w-24" />
             </div>
             <Skeleton className="h-7 w-28" />
-            <Skeleton className="h-8 w-full rounded-xl" />
+            <Skeleton className="h-8 w-full rounded-md" />
           </div>
         </div>
       ) : payments.length === 0 ? (
@@ -104,7 +104,7 @@ export function PendingVerifications({
                 href={receiptPayment.receipt_url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
               >
                 <ExternalLink className="h-4 w-4" /> Open in new tab
               </a>
@@ -118,7 +118,7 @@ export function PendingVerifications({
             <img
               src={receiptPayment.receipt_url}
               alt={`Receipt for ${receiptPayment.tenant_name}`}
-              className="max-h-[65vh] w-auto rounded-xl object-contain shadow-md border border-edge"
+              className="max-h-[65vh] w-auto rounded-md object-contain border border-edge"
               onError={(e) => {
                 const target = e.currentTarget;
                 target.onerror = null;
@@ -165,7 +165,7 @@ export function PendingVerifications({
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="e.g. Reference number not found in GCash merchant account / incorrect amount"
-            className="w-full rounded-xl border border-edge bg-card p-3 text-sm text-fg placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-full rounded-md border border-edge bg-card p-2.5 text-[13px] text-fg placeholder:text-faint focus:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
             rows={3}
           />
         </div>

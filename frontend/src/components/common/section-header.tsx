@@ -29,12 +29,12 @@ export function SectionHeader({
     >
       <div className="flex items-center gap-2">
         {icon && (
-          <span className="shrink-0 text-fg-soft/80">
+          <span className="shrink-0 text-muted">
             {icon}
           </span>
         )}
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-fg">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-fg">
             {dot && (
               <span className={cn("inline-flex h-2 w-2 rounded-full bg-accent", dotClassName)} />
             )}

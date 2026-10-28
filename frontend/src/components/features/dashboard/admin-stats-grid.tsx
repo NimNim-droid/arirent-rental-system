@@ -24,29 +24,26 @@ export function AdminStatsGrid({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
-        Portfolio Overview
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <h2 className="text-xs font-medium text-muted">Portfolio Overview</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatsCard
           title="Monthly Collections"
           value={
             statsLoading ? (
-              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-6 w-28" />
             ) : (
               formatCurrency(stats?.total_revenue ?? 0)
             )
           }
           subtitle="Registered payments this period"
-          icon={<Banknote className="h-5 w-5" />}
-          variant="accent"
+          icon={<Banknote className="h-4 w-4" />}
           onClick={() => navigate("/admin/billing")}
         />
         <StatsCard
           title="Occupancy Rate"
           value={
             statsLoading ? (
-              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-6 w-20" />
             ) : (
               `${occupancyOverall}%`
             )
@@ -58,15 +55,14 @@ export function AdminStatsGrid({
                   stats?.total_rooms ?? 0
                 } units occupied`
           }
-          icon={<Home className="h-5 w-5" />}
-          variant="success"
+          icon={<Home className="h-4 w-4" />}
           onClick={() => navigate("/admin/tenants")}
         />
         <StatsCard
           title="Available Units"
           value={
             statsLoading ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-6 w-16" />
             ) : (
               String(
                 Math.max(
@@ -81,8 +77,7 @@ export function AdminStatsGrid({
               ? "Loading properties..."
               : `${properties.length} managed properties`
           }
-          icon={<Users className="h-5 w-5" />}
-          variant="neutral"
+          icon={<Users className="h-4 w-4" />}
           onClick={() => navigate("/admin/tenants")}
         />
       </div>

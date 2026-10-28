@@ -38,23 +38,21 @@ export function PropertyCard({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent border border-accent-border shadow-sm">
-              <Building className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-edge bg-inset text-faint">
+              <Building className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-bold text-fg leading-tight hover:text-accent">
+              <h4 className="font-medium text-[13px] text-fg leading-tight hover:text-accent">
                 {property.name}
               </h4>
-              <span className="text-xs font-semibold text-accent">
+              <span className="text-xs text-muted">
                 {property.city}
               </span>
             </div>
           </div>
 
           {isSelected && (
-            <Badge variant="neutral" className="text-[10px] uppercase">
-              Selected
-            </Badge>
+            <Badge variant="info">Selected</Badge>
           )}
         </div>
 
@@ -64,16 +62,16 @@ export function PropertyCard({
         </p>
 
         {/* Progress & Breakdown */}
-        <div className="space-y-1.5 pt-2">
-          <div className="flex items-center justify-between text-xs font-medium">
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs">
             <span className="text-muted">Occupancy ({occPct}%)</span>
-            <span className="text-fg font-semibold">
-              {occupied} / {totalUnits} Units
+            <span className="text-fg font-medium tabular-nums">
+              {occupied} / {totalUnits} units
             </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-hover overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-hover overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong transition-all duration-500"
+              className="h-full rounded-full bg-accent transition-all duration-150"
               style={{ width: `${occPct}%` }}
             />
           </div>
