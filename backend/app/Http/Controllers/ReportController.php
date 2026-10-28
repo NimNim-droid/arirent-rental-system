@@ -23,8 +23,9 @@ class ReportController extends Controller
 
         $month = $request->query('month');
         $propertyId = $request->query('property_id') ? (int) $request->query('property_id') : null;
+        $year = $request->query('year') ? (int) $request->query('year') : null;
 
-        $data = $this->reportService->getFinancialReport($month, $propertyId);
+        $data = $this->reportService->getFinancialReport($month, $propertyId, $year);
 
         return response()->json([
             'data' => $data,

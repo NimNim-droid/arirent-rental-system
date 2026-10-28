@@ -94,6 +94,61 @@ export interface ArAging {
   items: ArAgingItem[];
 }
 
+export type RevenuePeriod = "weekly" | "monthly" | "yearly";
+
+export interface FinancialReportSummary {
+  total_revenue: number;
+  total_rent: number;
+  total_utilities: number;
+  total_other: number;
+  growth: {
+    total_revenue: number;
+    total_rent: number;
+    total_utilities: number;
+    total_other: number;
+  };
+}
+
+export interface RevenueOverviewPoint {
+  month: string;
+  rent: number;
+  utilities: number;
+  other: number;
+  total: number;
+}
+
+export interface RevenueSource {
+  key: "rent" | "electricity" | "water" | "other";
+  name: string;
+  value: number;
+}
+
+export interface RevenuePeriodPoint {
+  label: string;
+  value: number;
+}
+
+export interface PaymentStatusItem {
+  key: "paid" | "pending" | "partially_paid" | "overdue";
+  name: string;
+  count: number;
+  amount: number;
+}
+
+export interface FinancialSummaryRow {
+  month: number;
+  period: string;
+  total_revenue: number;
+  total_rent: number;
+  total_utilities: number;
+  total_other: number;
+  paid: number;
+  pending: number;
+  partially_paid: number;
+  overdue: number;
+  outstanding: number;
+}
+
 export interface FinancialReportData {
   period: string;
   property_id: number | null;
@@ -105,11 +160,24 @@ export interface FinancialReportData {
   monthly_trend: MonthlyTrendItem[];
   ar_aging: ArAging;
   available_months: string[];
+  year: number;
+  range_label: string;
+  summary: FinancialReportSummary;
+  revenue_overview: RevenueOverviewPoint[];
+  revenue_by_source: RevenueSource[];
+  revenue_by_period: Record<RevenuePeriod, RevenuePeriodPoint[]>;
+  payment_status: {
+    total: number;
+    items: PaymentStatusItem[];
+  };
+  financial_summary: FinancialSummaryRow[];
+  available_years: number[];
 }
 
 export interface FinancialReportParams {
   month?: string;
   property_id?: string | number;
+  year?: number;
 }
 
 export const reportsService = {
@@ -120,6 +188,9 @@ export const reportsService = {
     }
     if (params?.property_id && params.property_id !== "all") {
       query.append("property_id", String(params.property_id));
+    }
+    if (params?.year) {
+      query.append("year", String(params.year));
     }
 
     const queryString = query.toString();
