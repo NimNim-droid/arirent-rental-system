@@ -22,7 +22,7 @@ export function DonutChart({ segments, centerValue, centerLabel }: DonutChartPro
   let offset = 0;
 
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+    <div className="flex flex-wrap items-center justify-center gap-6">
       <div className="relative h-48 w-48 shrink-0 sm:h-52 sm:w-52">
         <svg
           viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -80,7 +80,7 @@ export function DonutChart({ segments, centerValue, centerLabel }: DonutChartPro
         </div>
       </div>
 
-      <ul className="w-full min-w-0 flex-1 space-y-3">
+      <ul className="min-w-[210px] flex-1 space-y-3">
         {segments.map((segment) => {
           const percentage = total > 0 ? (segment.value / total) * 100 : 0;
 
@@ -90,7 +90,10 @@ export function DonutChart({ segments, centerValue, centerLabel }: DonutChartPro
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: segment.color }}
               />
-              <span className="min-w-0 flex-1 truncate font-semibold text-fg-soft">
+              <span
+                className="min-w-0 flex-1 truncate font-semibold text-fg-soft"
+                title={segment.label}
+              >
                 {segment.label}
               </span>
               <span className="shrink-0 text-muted tabular-nums">{segment.meta}</span>

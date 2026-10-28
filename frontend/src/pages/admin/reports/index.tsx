@@ -139,8 +139,8 @@ function ReportSkeleton() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="p-5 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
+        <Card className="p-5 2xl:col-span-2">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="mt-5 h-64 w-full" />
         </Card>
@@ -479,8 +479,8 @@ export default function AdminReports() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            <Card className="p-5 lg:col-span-2">
+          <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
+            <Card className="p-5 2xl:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-base font-bold tracking-tight text-fg">
                   Revenue Overview
