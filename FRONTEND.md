@@ -44,9 +44,7 @@ The AriRent frontend is a **React 19 single-page application** built with **Vite
 ```
 frontend/
 ├── src/
-│   ├── assets/                          # Static images (SVG logos)
-│   │   ├── arirent-mark.svg
-│   │   ├── arirent-favicon.svg
+│   ├── assets/                          # Static images
 │   │   └── gcash-qr-sample.svg
 │   │
 │   ├── components/
