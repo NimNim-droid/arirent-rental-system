@@ -39,7 +39,7 @@ export function InvoiceModal({
 
   const formattedInvoiceNo = formatInvoiceNumber(
     invoice.id,
-    invoice.date || invoice.issue_date || invoice.due_date || invoice.created_at
+    invoice.date || invoice.due_date
   );
 
   const handlePrint = () => {

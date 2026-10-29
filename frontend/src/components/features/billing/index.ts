@@ -14,4 +14,5 @@ export { ExcessChargeModal } from "./excess-charge-modal";
 export { ReceiptCard } from "./receipt-card";
 export { PendingVerificationsBanner } from "./pending-verifications-banner";
 export { PaymentReviewModal } from "./payment-review-modal";
+export { TenantBillCard } from "./tenant-bill-card";
 

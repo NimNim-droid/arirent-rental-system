@@ -9,3 +9,5 @@ export { TicketTable } from "./ticket-table";
 export { TicketPagination } from "./ticket-pagination";
 export { TicketDetailPanel } from "./ticket-detail-panel";
 export { TicketStatusBadge, TicketPriorityBadge, ticketStatusLabels } from "./ticket-badges";
+export { TenantServiceCard } from "./tenant-service-card";
+export { TenantServiceModal } from "./tenant-service-modal";

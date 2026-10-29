@@ -1,26 +1,26 @@
-import { Eye, AlertTriangle } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { AlertBanner } from "@/components/ui/alert-banner";
+import { useState, useMemo } from "react";
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import { SkeletonRows } from "@/components/ui/skeleton";
+  CreditCard,
+  QrCode,
+  CheckCircle2,
+  AlertTriangle,
+  Receipt,
+  Clock,
+  Sparkles,
+} from "lucide-react";
+import { AlertBanner } from "@/components/ui/alert-banner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatters";
 import {
   useTenantBilling,
-  BillingStats,
+  TenantBillCard,
   GCashPaymentModal,
   TenantStatementModal,
 } from "@/components/features/billing";
+import type { Bill } from "@/lib/types";
+
+type BillFilterTab = "all" | "unpaid" | "paid";
 
 export default function TenantBilling() {
   const {
@@ -40,143 +40,258 @@ export default function TenantBilling() {
     closeStatementModal,
   } = useTenantBilling();
 
+  const [activeTab, setActiveTab] = useState<BillFilterTab>("all");
+
+  const paidBills = useMemo(
+    () => bills.filter((b) => b.status === "paid" || b.status === "voided"),
+    [bills]
+  );
+
+  const displayedUnpaid = useMemo(() => {
+    if (activeTab === "paid") return [];
+    return unpaidBills;
+  }, [activeTab, unpaidBills]);
+
+  const displayedPaid = useMemo(() => {
+    if (activeTab === "unpaid") return [];
+    return paidBills;
+  }, [activeTab, paidBills]);
+
+  // Earliest payable bill for quick settlement
+  const nextPayableBill = useMemo(() => {
+    return (
+      unpaidBills.find(
+        (b) =>
+          b.status === "unpaid" ||
+          b.status === "partially_paid" ||
+          b.status === "overdue"
+      ) ?? null
+    );
+  }, [unpaidBills]);
+
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="My Billing & Invoices"
-        subtitle="View breakdown of room rent, electricity consumption, and pay via GCash"
-      />
+    <div className="mx-auto w-full max-w-md space-y-5 lg:max-w-4xl">
+      {/* Header bar on desktop / large view */}
+      <div className="hidden lg:flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
+            My Bills & Invoices
+          </h1>
+          <p className="text-xs text-muted mt-0.5">
+            View room rent, metered electricity consumption, and settle via GCash
+          </p>
+        </div>
+        {unpaidTotal > 0 && (
+          <div className="text-right">
+            <span className="text-[11px] font-semibold uppercase text-muted tracking-wider">
+              Total Outstanding
+            </span>
+            <p className="text-xl font-black text-accent tabular-nums">
+              {formatCurrency(unpaidTotal)}
+            </p>
+          </div>
+        )}
+      </div>
 
-      {error && <AlertBanner variant="danger" message={error} onRetry={loadBills} />}
+      {error && (
+        <AlertBanner variant="danger" message={error} onRetry={loadBills} />
+      )}
 
-      {/* Outstanding balance banner */}
-      {!loading && (
-        <BillingStats
-          unpaidTotal={unpaidTotal}
-          unpaidCount={unpaidBills.length}
+      {/* Segmented Filter Tabs: Billings (All) | Unpaid | Paid */}
+      <div className="flex border-b border-edge">
+        <button
+          type="button"
+          onClick={() => setActiveTab("all")}
+          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
+            activeTab === "all"
+              ? "text-accent"
+              : "text-muted hover:text-fg"
+          }`}
+        >
+          Billings
+          <span className="ml-1.5 rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+            {bills.length}
+          </span>
+          {activeTab === "all" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("unpaid")}
+          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
+            activeTab === "unpaid"
+              ? "text-accent"
+              : "text-muted hover:text-fg"
+          }`}
+        >
+          Unpaid
+          {unpaidBills.length > 0 && (
+            <span className="ml-1.5 rounded-full bg-warning-bg px-1.5 py-0.5 text-[10px] font-bold text-warning-fg border border-warning-border">
+              {unpaidBills.length}
+            </span>
+          )}
+          {activeTab === "unpaid" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("paid")}
+          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
+            activeTab === "paid"
+              ? "text-accent"
+              : "text-muted hover:text-fg"
+          }`}
+        >
+          Paid History
+          <span className="ml-1.5 rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+            {paidBills.length}
+          </span>
+          {activeTab === "paid" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
+          )}
+        </button>
+      </div>
+
+      {/* Dark Hero Banner matching mockup slide 1 */}
+      {loading ? (
+        <Skeleton className="h-28 w-full rounded-3xl" />
+      ) : (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#121c32] via-[#1a2846] to-[#0f182c] p-5 text-white shadow-card">
+          <div className="relative z-10 flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                <span>Unpaid Bills</span>
+                {unpaidBills.length > 0 && (
+                  <span className="inline-flex h-2 w-2 rounded-full bg-warning-fg animate-pulse" />
+                )}
+              </h2>
+              <p className="text-xs text-white/75 leading-relaxed max-w-xs">
+                {unpaidBills.length > 0
+                  ? "Please pay all billings before the due date to avoid late surcharges."
+                  : "All caught up! You have no outstanding invoices at this moment."}
+              </p>
+            </div>
+
+            <div className="text-right shrink-0">
+              <p className="text-[10px] uppercase font-bold text-white/60 tracking-wider">
+                Total Due
+              </p>
+              <p className="text-xl sm:text-2xl font-black text-white tabular-nums">
+                {formatCurrency(unpaidTotal)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Skeleton */}
+      {loading && (
+        <div className="space-y-3">
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && bills.length === 0 && (
+        <EmptyState
+          title="No invoices yet"
+          description="Your monthly billing statements will appear here once issued by the property admin."
         />
       )}
 
-      {/* Invoices List */}
-      <Card className="overflow-hidden p-0">
-        {loading ? (
-          <div className="p-5">
-            <SkeletonRows rows={4} />
+      {/* Section 1: Unpaid Bills */}
+      {!loading && displayedUnpaid.length > 0 && (
+        <section className="space-y-3" aria-label="Unpaid bills">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+              Pending & Due ({displayedUnpaid.length})
+            </h3>
           </div>
-        ) : bills.length === 0 ? (
-          <EmptyState
-            title="No invoices yet"
-            description="Your monthly invoice will appear here once it is generated."
-          />
-        ) : (
-          <div className="table-scroll-wrap">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice No.</TableHead>
-                  <TableHead className="text-right">Rent</TableHead>
-                  <TableHead className="text-right">Electricity</TableHead>
-                  <TableHead className="text-right">Water</TableHead>
-                  <TableHead className="text-right">Total Due</TableHead>
-                  <TableHead className="text-right">Paid</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bills.map((bill) => {
-                  const paid = bill.paid_amount ?? 0;
-                  const remaining = bill.remaining_balance ?? Math.max(0, bill.total_amount - paid);
-                  const canPay = (bill.status === "unpaid" || bill.status === "partially_paid") && remaining > 0;
 
-                  return (
-                    <TableRow key={bill.id}>
-                      <TableCell className="whitespace-nowrap font-mono font-bold text-fg-soft">
-                        #{bill.id}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                        {formatCurrency(bill.rent)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                        {formatCurrency(bill.electricity)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-semibold tabular-nums text-muted">
-                        {formatCurrency(bill.water)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-fg">
-                        {formatCurrency(bill.total_amount)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-success-fg">
-                        {formatCurrency(paid)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-right font-bold tabular-nums text-accent">
-                        {formatCurrency(remaining)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted">
-                        {bill.due_date}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge
-                            dot
-                            variant={
-                              bill.status === "paid"
-                                ? "success"
-                                : bill.status === "partially_paid"
-                                ? "warning"
-                                : bill.status === "pending_verification"
-                                ? "warning"
-                                : bill.status === "voided"
-                                ? "neutral"
-                                : "danger"
-                            }
-                          >
-                            {bill.status === "partially_paid"
-                              ? "Partially Paid"
-                              : bill.status === "pending_verification"
-                              ? "Pending Approval"
-                              : bill.status === "voided"
-                              ? "Cancelled"
-                              : bill.status}
-                          </Badge>
-                          {bill.status === "unpaid" && bill.reject_reason && (
-                            <p
-                              className="flex items-center gap-1 text-[10px] font-semibold text-danger-fg"
-                              title={bill.reject_reason}
-                            >
-                              <AlertTriangle className="h-3 w-3 shrink-0" />
-                              Rejected
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openStatement(bill)}
-                            className="text-accent hover:text-accent-strong"
-                          >
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
-                          {canPay && (
-                            <Button size="sm" onClick={() => openPayment(bill)}>
-                              Pay GCash
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <div className="space-y-3">
+            {displayedUnpaid.map((bill) => (
+              <TenantBillCard
+                key={bill.id}
+                bill={bill}
+                onView={openStatement}
+                onPay={openPayment}
+              />
+            ))}
           </div>
-        )}
-      </Card>
+        </section>
+      )}
+
+      {/* Intermediate Banner: Instant Settlement via GCash */}
+      {!loading && unpaidTotal > 0 && activeTab !== "paid" && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-edge bg-card p-4 shadow-card">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-white shadow-soft">
+              <QrCode className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-fg">Instant Settlement</p>
+              <p className="text-[11px] text-muted truncate">
+                Pay securely via GCash QR & reference upload
+              </p>
+            </div>
+          </div>
+
+          {nextPayableBill && (
+            <button
+              type="button"
+              onClick={() => openPayment(nextPayableBill)}
+              className="shrink-0 rounded-xl bg-accent-soft px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-white transition-colors cursor-pointer"
+            >
+              Pay Now
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Section 2: Paid Bills */}
+      {!loading && displayedPaid.length > 0 && (
+        <section className="space-y-3 pt-2" aria-label="Paid bills">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+              Paid Bills ({displayedPaid.length})
+            </h3>
+            {activeTab === "all" && paidBills.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("paid")}
+                className="text-xs font-semibold text-accent hover:text-accent-strong"
+              >
+                See all &rarr;
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {(activeTab === "all" ? displayedPaid.slice(0, 5) : displayedPaid).map(
+              (bill) => (
+                <TenantBillCard
+                  key={bill.id}
+                  bill={bill}
+                  onView={openStatement}
+                />
+              )
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Statement & Receipt Modal */}
+      <TenantStatementModal
+        open={showStatementModal}
+        onClose={closeStatementModal}
+        invoice={selectedInvoice}
+        onPayGCash={openPayment}
+      />
 
       {/* GCash Payment Modal */}
       <GCashPaymentModal
@@ -185,14 +300,6 @@ export default function TenantBilling() {
         invoice={selectedInvoice}
         settings={settings}
         onPaymentSuccess={loadBills}
-      />
-
-      {/* Invoice Statement Modal */}
-      <TenantStatementModal
-        open={showStatementModal}
-        onClose={closeStatementModal}
-        invoice={selectedInvoice}
-        onPayGCash={openPayment}
       />
     </div>
   );

@@ -1,17 +1,17 @@
 import { NavLink } from "react-router";
-import { LayoutDashboard, Banknote, Wrench, FileText } from "lucide-react";
+import { Home, ReceiptText, Wrench, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface NavTab {
   to: string;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Home;
 }
 
 const TENANT_TABS: NavTab[] = [
-  { to: "/tenant/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/tenant/billing", label: "My Bills", icon: Banknote },
-  { to: "/tenant/maintenance", label: "Maintenance", icon: Wrench },
+  { to: "/tenant/dashboard", label: "Home", icon: Home },
+  { to: "/tenant/billing", label: "Bills", icon: ReceiptText },
+  { to: "/tenant/maintenance", label: "Services", icon: Wrench },
   { to: "/tenant/documents", label: "Documents", icon: FileText },
 ];
 

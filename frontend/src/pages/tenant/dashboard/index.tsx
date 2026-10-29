@@ -1,74 +1,107 @@
 import { Link } from "react-router";
-import { Wrench, Banknote, AlertTriangle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronRight } from "lucide-react";
+import { AlertBanner } from "@/components/ui/alert-banner";
+import { GCashPaymentModal } from "@/components/features/billing";
 import {
   useTenantDashboard,
-  TenantBalanceCard,
-  TenantUnitCard,
+  TenantStayCard,
+  TenantOpenBillCard,
+  TenantMaintenanceSummary,
 } from "@/components/features/dashboard";
 
+function SectionTitle({
+  title,
+  to,
+  dot = false,
+}: {
+  title: string;
+  to: string;
+  dot?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-fg">
+        {title}
+        {dot && (
+          <span className="relative flex h-2 w-2" aria-label="Needs attention">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger-fg opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-danger-fg" />
+          </span>
+        )}
+      </h2>
+      <Link
+        to={to}
+        className="inline-flex items-center gap-0.5 text-xs font-semibold text-accent hover:text-accent-strong"
+      >
+        Show More <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  );
+}
+
 export default function TenantDashboard() {
-  const { user, stats, unit, elec, hasBalance, loading, error, loadData } =
-    useTenantDashboard();
+  const {
+    user,
+    stats,
+    unit,
+    openBill,
+    maintenanceCounts,
+    latestTicket,
+    settings,
+    paymentBill,
+    openPayment,
+    closePayment,
+    loading,
+    error,
+    loadData,
+  } = useTenantDashboard();
+
+  const firstName = user?.name?.split(" ")[0] || "there";
+  const billNeedsAction =
+    !!openBill && ["unpaid", "partially_paid", "overdue"].includes(openBill.status);
 
   return (
-    <div className="space-y-6">
-      {/* 1. Resident Welcome & Status Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-fg">
-            Welcome back,{" "}
-            <span className="text-accent">{user?.name?.split(" ")[0]}</span>
-          </h1>
-          {unit ? (
-            <p className="mt-1 text-xs text-muted">
-              Room {unit.room} &bull; {unit.property_name}
-            </p>
-          ) : loading ? (
-            <div className="mt-1.5">
-              <Skeleton className="h-3 w-40" />
-            </div>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link to="/tenant/maintenance">
-            <Button size="sm" variant="secondary" className="text-xs">
-              <Wrench className="h-3.5 w-3.5" />
-              Report Issue
-            </Button>
-          </Link>
-          <Link to="/tenant/billing">
-            <Button size="sm" className="text-xs">
-              <Banknote className="h-3.5 w-3.5" />
-              View Invoices
-            </Button>
-          </Link>
-        </div>
+    <div className="mx-auto w-full max-w-md space-y-6 lg:max-w-5xl">
+      {/* Desktop greeting — on mobile the header bar shows it */}
+      <div className="hidden lg:block">
+        <p className="text-sm text-muted">Hello,</p>
+        <h1 className="text-2xl font-bold tracking-tight text-fg">{firstName}!</h1>
+      </div>
+      <h1 className="sr-only lg:hidden">Tenant Home</h1>
+
+      <TenantStayCard unit={unit} loading={loading} />
+
+      {error && <AlertBanner variant="danger" message={error} onRetry={loadData} />}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="space-y-3" aria-label="Open bills">
+          <SectionTitle title="Open Bills" to="/tenant/billing" dot={billNeedsAction} />
+          <TenantOpenBillCard
+            bill={openBill}
+            outstandingBalance={stats?.outstanding_balance ?? 0}
+            loading={loading}
+            onPay={openPayment}
+          />
+        </section>
+
+        <section className="space-y-3" aria-label="Maintenance issues">
+          <SectionTitle title="Maintenance Issues" to="/tenant/maintenance" />
+          <TenantMaintenanceSummary
+            openCount={maintenanceCounts.open}
+            resolvedCount={maintenanceCounts.resolved}
+            latestTicket={latestTicket}
+            loading={loading}
+          />
+        </section>
       </div>
 
-      {error && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-danger-border bg-danger-bg px-4 py-2.5 text-xs text-danger-fg">
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
-          </span>
-          <Button variant="ghost" size="sm" onClick={loadData}>
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {/* 2. Primary Balance Card */}
-      <TenantBalanceCard
-        stats={stats}
-        loading={loading}
-        hasBalance={hasBalance}
+      <GCashPaymentModal
+        open={!!paymentBill}
+        onClose={closePayment}
+        invoice={paymentBill}
+        settings={settings}
+        onPaymentSuccess={loadData}
       />
-
-      {/* 3. Unit & Electricity Consumption Details */}
-      <TenantUnitCard unit={unit} elec={elec} loading={loading} />
     </div>
   );
 }
