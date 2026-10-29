@@ -87,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bills/{id}/payment', [BillController::class, 'pay']);
     Route::post('/bills/{id}/direct-payment', [BillController::class, 'directPayment']);
     Route::post('/bills/{id}/verify', [BillController::class, 'verify']);
+    Route::post('/bills/{id}/void', [BillController::class, 'void']);
     Route::delete('/bills/{id}', [BillController::class, 'destroy']);
 
     // Excess Charges (Pillar 1)

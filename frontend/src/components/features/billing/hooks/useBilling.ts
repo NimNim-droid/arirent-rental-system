@@ -74,7 +74,7 @@ export function useBilling() {
     setError("");
     setMessage("");
     try {
-      await billingService.updateBill(id, { status: "voided" });
+      await billingService.voidBill(id);
       setMessage("Bill cancelled successfully.");
       await loadBills();
     } catch (err) {

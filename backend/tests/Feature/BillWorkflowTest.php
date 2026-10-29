@@ -206,9 +206,7 @@ class BillWorkflowTest extends TestCase
         $this->tenant->update(['balance' => 10500.00]);
 
         Sanctum::actingAs($this->adminUser);
-        $updateResponse = $this->putJson("/api/bills/{$bill->id}", [
-            'status' => 'voided',
-        ]);
+        $updateResponse = $this->postJson("/api/bills/{$bill->id}/void");
 
         $updateResponse->assertStatus(200)
             ->assertJson([
@@ -219,6 +217,58 @@ class BillWorkflowTest extends TestCase
 
         $this->assertEquals('voided', $bill->fresh()->status);
         $this->assertEquals(0.00, (float) $this->tenant->fresh()->balance);
+    }
+
+    public function test_direct_status_edits_are_rejected(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10000.00,
+            'date' => '2026-02-05',
+            'due_date' => '2026-02-10',
+            'status' => 'unpaid',
+        ]);
+        $this->tenant->update(['balance' => 10000.00]);
+
+        Sanctum::actingAs($this->adminUser);
+
+        $this->putJson("/api/bills/{$bill->id}", ['status' => 'paid'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
+
+        $this->putJson("/api/bills/{$bill->id}", ['status' => 'voided'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
+
+        $this->assertEquals('unpaid', $bill->fresh()->status);
+        $this->assertEquals(0.00, (float) $bill->fresh()->paid_amount);
+        $this->assertEquals(10000.00, (float) $bill->fresh()->remaining_balance);
+    }
+
+    public function test_invoice_with_recorded_payment_cannot_be_voided(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10000.00,
+            'paid_amount' => 3000.00,
+            'date' => '2026-02-05',
+            'due_date' => '2026-02-10',
+            'status' => 'partially_paid',
+        ]);
+        $this->tenant->update(['balance' => 7000.00]);
+
+        Sanctum::actingAs($this->adminUser);
+
+        $this->postJson("/api/bills/{$bill->id}/void")
+            ->assertStatus(422)
+            ->assertJson([
+                'message' => 'Invoices with recorded payments cannot be voided. Refund or reverse the payment first.',
+            ]);
+
+        $this->assertEquals('partially_paid', $bill->fresh()->status);
+        $this->assertEquals(7000.00, (float) $this->tenant->fresh()->balance);
     }
 
     public function test_cannot_pay_already_paid_or_voided_bill(): void

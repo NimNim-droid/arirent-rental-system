@@ -120,6 +120,7 @@ class UtilityReadingTest extends TestCase
         $this->assertEquals(750.00, (float) $freshBill->electricity);
         $this->assertEquals(60.00, (float) $freshBill->elec_usage);
         $this->assertEquals(11250.00, (float) $freshBill->total_amount);
+        $this->assertEquals(11250.00, (float) $freshBill->remaining_balance);
 
         // Tenant balance should have increased by the ₱750 electricity diff
         $this->assertEquals(11250.00, (float) $this->tenant->fresh()->balance);
@@ -167,6 +168,7 @@ class UtilityReadingTest extends TestCase
         $this->assertEquals(0.00, (float) $freshBill->electricity);
         $this->assertEquals(0.00, (float) $freshBill->elec_usage);
         $this->assertEquals(10500.00, (float) $freshBill->total_amount);
+        $this->assertEquals(10500.00, (float) $freshBill->remaining_balance);
 
         // Tenant balance reversed by ₱750
         $this->assertEquals(10500.00, (float) $this->tenant->fresh()->balance);

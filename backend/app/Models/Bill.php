@@ -52,16 +52,33 @@ class Bill extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Bill $bill) {
-            $total = (float) ($bill->total_amount ?? 0);
-            $paid = (float) ($bill->paid_amount ?? 0);
-            if ($bill->remaining_balance === null || (float) $bill->remaining_balance === 0.00 && $paid === 0.00 && $total > 0) {
-                $bill->remaining_balance = max(0.00, $total - $paid);
-            }
-            if ($bill->paid_amount === null) {
-                $bill->paid_amount = 0.00;
-            }
+        // Keep the balance invariant true no matter which service writes the
+        // bill: remaining_balance is always max(0, total_amount - paid_amount).
+        static::saving(function (Bill $bill) {
+            $total = round((float) ($bill->total_amount ?? 0), 2);
+            $paid = round(max(0.0, (float) ($bill->paid_amount ?? 0)), 2);
+
+            $bill->paid_amount = $paid;
+            $bill->remaining_balance = max(0.0, round($total - $paid, 2));
         });
+    }
+
+    /**
+     * Rebuild total_amount from the bill components, including attached
+     * excess charges, then let the saving hook restore the balance.
+     */
+    public function recalculateTotal(): self
+    {
+        $this->total_amount = round(
+            (float) $this->rent
+                + (float) $this->electricity
+                + (float) $this->water
+                + (float) $this->late_fee
+                + (float) $this->excessCharges()->sum('amount'),
+            2
+        );
+
+        return $this;
     }
 
     public function tenant(): BelongsTo

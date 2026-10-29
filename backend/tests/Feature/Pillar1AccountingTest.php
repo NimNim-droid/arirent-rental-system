@@ -203,6 +203,59 @@ class Pillar1AccountingTest extends TestCase
         $this->assertEquals('cash', $payment->payment_method);
     }
 
+    public function test_financial_edit_preserves_balance_invariant_on_partially_paid_bill(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'paid_amount' => 3000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'partially_paid',
+        ]);
+
+        $this->tenant->update(['balance' => 5000.00]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->putJson("/api/bills/{$bill->id}", ['rent' => 9000.00])
+            ->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'total_amount' => 9000.00,
+                    'paid_amount' => 3000.00,
+                    'remaining_balance' => 6000.00,
+                ],
+            ]);
+
+        $freshBill = $bill->fresh();
+        $this->assertEquals(9000.00, (float) $freshBill->total_amount);
+        $this->assertEquals(6000.00, (float) $freshBill->remaining_balance);
+        $this->assertEquals(6000.00, (float) $this->tenant->fresh()->balance);
+    }
+
+    public function test_financial_edit_is_rejected_on_a_paid_bill(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'paid_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'paid',
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->putJson("/api/bills/{$bill->id}", ['rent' => 9000.00])
+            ->assertStatus(422)
+            ->assertJson([
+                'message' => 'Cannot modify financial amounts on an invoice that is paid.',
+            ]);
+
+        $this->assertEquals(8000.00, (float) $bill->fresh()->rent);
+    }
+
     public function test_delinquency_endpoint_returns_tenants_with_consecutive_overdue_bills(): void
     {
         // Create 2 overdue unpaid bills in the past

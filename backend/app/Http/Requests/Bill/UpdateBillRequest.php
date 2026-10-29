@@ -28,9 +28,15 @@ class UpdateBillRequest extends FormRequest
             'water' => ['nullable', 'numeric', 'min:0'],
             'late_fee' => ['nullable', 'numeric', 'min:0'],
             'due_date' => ['nullable', 'date'],
-            'status' => ['nullable', 'in:unpaid,pending_verification,paid,voided'],
             'notes' => ['nullable', 'string'],
-            'gcash_ref' => ['nullable', 'string', 'max:100'],
+            'status' => ['prohibited'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'status.prohibited' => 'Invoice status cannot be edited directly. Use the payment or void workflow.',
         ];
     }
 }

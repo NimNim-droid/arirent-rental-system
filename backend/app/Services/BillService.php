@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\ExcessCharge;
+use App\Models\Payment;
 use App\Models\UtilityReading;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
@@ -242,6 +243,12 @@ class BillService
             throw new ModelNotFoundException('Bill not found.');
         }
 
+        // Status is workflow-owned. Ledger status changes must go through
+        // payment verification or voidBill() so paid_amount stays truthful.
+        if (array_key_exists('status', $data)) {
+            throw new InvalidArgumentException('Invoice status cannot be edited directly. Use the payment or void workflow.');
+        }
+
         $financialFields = ['rent', 'electricity', 'elec_usage', 'water', 'late_fee'];
         $hasFinancialChanges = false;
         foreach ($financialFields as $field) {
@@ -251,13 +258,11 @@ class BillService
             }
         }
 
-        if ($bill->status === 'paid' && $hasFinancialChanges) {
-            throw new InvalidArgumentException('Cannot modify financial amounts on an invoice that has already been paid.');
+        if ($hasFinancialChanges && in_array($bill->status, ['paid', 'voided'], true)) {
+            throw new InvalidArgumentException("Cannot modify financial amounts on an invoice that is {$bill->status}.");
         }
 
         $oldTotal = (float) $bill->total_amount;
-        $oldStatus = $bill->status;
-        $newStatus = $data['status'] ?? $oldStatus;
 
         if ($hasFinancialChanges) {
             $newRent = isset($data['rent']) ? (float) $data['rent'] : (float) $bill->rent;
@@ -265,41 +270,64 @@ class BillService
             $newWater = isset($data['water']) ? (float) $data['water'] : (float) $bill->water;
             $newLateFee = isset($data['late_fee']) ? (float) $data['late_fee'] : (float) $bill->late_fee;
             $excessTotal = (float) $bill->excessCharges()->sum('amount');
-            $newTotal = $newRent + $newElec + $newWater + $newLateFee + $excessTotal;
-            $data['total_amount'] = $newTotal;
-
-            $paid = (float) ($bill->paid_amount ?? 0);
-            $data['remaining_balance'] = max(0.00, $newTotal - $paid);
+            $data['total_amount'] = round($newRent + $newElec + $newWater + $newLateFee + $excessTotal, 2);
         }
 
-        return DB::transaction(function () use ($id, $data, $bill, $oldTotal, $oldStatus, $newStatus, $hasFinancialChanges) {
+        return DB::transaction(function () use ($id, $data, $bill, $oldTotal, $hasFinancialChanges) {
             $bill = $this->billRepo->update($id, $data);
 
-            // Reconcile tenant balance accurately with non-negative clamping
+            // Reconcile tenant balance accurately with non-negative clamping.
+            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
+            if ($tenant && $hasFinancialChanges && ! in_array($bill->status, ['paid', 'voided'], true)) {
+                $diff = round((float) $bill->total_amount - $oldTotal, 2);
+                if ($diff > 0) {
+                    $tenant->increment('balance', $diff);
+                } elseif ($diff < 0) {
+                    $tenant->decrement('balance', min((float) $tenant->balance, abs($diff)));
+                }
+            }
+
+            Cache::forget('admin_stats_all');
+            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+
+            return $bill;
+        });
+    }
+
+    /**
+     * Void an invoice that has no recorded money against it. Attached
+     * readings and excess charges are released so they can be re-billed.
+     */
+    public function voidBill(int $id): Bill
+    {
+        $bill = $this->billRepo->find($id);
+        if (! $bill) {
+            throw new ModelNotFoundException('Bill not found.');
+        }
+
+        if ($bill->status === 'voided') {
+            throw new InvalidArgumentException('This invoice has already been voided.');
+        }
+
+        if ($bill->status === 'paid' || (float) $bill->paid_amount > 0) {
+            throw new InvalidArgumentException('Invoices with recorded payments cannot be voided. Refund or reverse the payment first.');
+        }
+
+        return DB::transaction(function () use ($bill) {
+            $oldTotal = (float) $bill->total_amount;
+
+            Payment::where('bill_id', $bill->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'failed']);
+
+            UtilityReading::where('bill_id', $bill->id)->update(['bill_id' => null]);
+            ExcessCharge::where('bill_id', $bill->id)->update(['bill_id' => null, 'status' => 'pending']);
+
+            $bill = $this->billRepo->update($bill->id, ['status' => 'voided']);
+
             $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
             if ($tenant) {
-                if ($newStatus === 'voided' && $oldStatus !== 'voided') {
-                    // Release attached utility readings and excess charges so they can be re-billed
-                    UtilityReading::where('bill_id', $id)->update(['bill_id' => null]);
-                    ExcessCharge::where('bill_id', $id)->update(['bill_id' => null, 'status' => 'pending']);
-
-                    if (in_array($oldStatus, ['unpaid', 'pending_verification'])) {
-                        $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
-                    }
-                } elseif ($oldStatus === 'voided' && $newStatus !== 'voided') {
-                    $tenant->increment('balance', (float) $bill->total_amount);
-                } elseif ($newStatus === 'paid' && $oldStatus === 'unpaid') {
-                    $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
-                } elseif ($newStatus === 'unpaid' && $oldStatus === 'paid') {
-                    $tenant->increment('balance', (float) $bill->total_amount);
-                } elseif (in_array($bill->status, ['unpaid', 'pending_verification']) && $hasFinancialChanges) {
-                    $diff = (float) $bill->total_amount - $oldTotal;
-                    if ($diff > 0) {
-                        $tenant->increment('balance', $diff);
-                    } elseif ($diff < 0) {
-                        $tenant->decrement('balance', min((float) $tenant->balance, abs($diff)));
-                    }
-                }
+                $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
             }
 
             Cache::forget('admin_stats_all');

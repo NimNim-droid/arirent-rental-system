@@ -200,6 +200,30 @@ class BillController extends Controller
     }
 
     /**
+     * Void an invoice that has no recorded payments. Admin only.
+     */
+    public function void(int $id): JsonResponse
+    {
+        if (request()->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        try {
+            $bill = $this->billService->voidBill($id);
+
+            return response()->json([
+                'message' => 'Invoice voided successfully.',
+                'data' => new BillResource($bill),
+                'bill' => new BillResource($bill),
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
      * Tenant submits payment (GCash Reference Number & Receipt).
      */
     public function pay(ProcessPaymentRequest $request, int $id): JsonResponse

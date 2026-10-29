@@ -55,7 +55,7 @@ export const billingService = {
 
   async updateBill(
     id: string,
-    payload: Partial<Pick<Bill, "rent" | "electricity" | "water" | "status">>
+    payload: Partial<Pick<Bill, "rent" | "electricity" | "water">>
   ): Promise<Bill> {
     const res = await api.put<{ data: Bill }>(`/bills/${id}`, payload);
     clientCache.invalidate("bills");
@@ -63,6 +63,14 @@ export const billingService = {
     clientCache.invalidate("tenants");
     clientCache.invalidate("dashboard");
     return res.data.data;
+  },
+
+  async voidBill(id: string): Promise<void> {
+    await api.post(`/bills/${id}/void`);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
   },
 
   async deleteBill(id: string): Promise<void> {

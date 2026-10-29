@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class UtilityService
 {
@@ -50,19 +51,19 @@ class UtilityService
             $billUpdated = false;
 
             if ($unpaidBill) {
-                $prevElec = (float) $unpaidBill->electricity;
-                $elecDiff = $amount - $prevElec;
+                $oldTotal = (float) $unpaidBill->total_amount;
 
-                $unpaidBill->update([
-                    'electricity' => $amount,
-                    'elec_usage' => $usage,
-                    'total_amount' => (float) $unpaidBill->total_amount + $elecDiff,
-                ]);
+                $unpaidBill->electricity = $amount;
+                $unpaidBill->elec_usage = $usage;
+                $unpaidBill->recalculateTotal();
+                $unpaidBill->save();
 
-                if ($elecDiff != 0) {
+                $diff = round((float) $unpaidBill->total_amount - $oldTotal, 2);
+
+                if ($diff != 0) {
                     $tenant = $this->tenantRepo->find($tenantId);
                     if ($tenant) {
-                        $tenant->increment('balance', $elecDiff);
+                        $tenant->increment('balance', $diff);
                     }
                 }
 
@@ -88,27 +89,44 @@ class UtilityService
         }
 
         return DB::transaction(function () use ($id, $reading) {
-            $readingDate = Carbon::parse($reading->date);
-            $monthStart = $readingDate->copy()->startOfMonth()->format('Y-m-d');
-            $monthEnd = $readingDate->copy()->endOfMonth()->format('Y-m-d');
-
-            $bill = $this->billRepo->findForTenantInMonth($reading->tenant_id, $monthStart, $monthEnd, 'unpaid');
+            $bill = $reading->bill_id
+                ? $this->billRepo->find((int) $reading->bill_id)
+                : $this->billRepo->findForTenantInMonth(
+                    $reading->tenant_id,
+                    Carbon::parse($reading->date)->startOfMonth()->format('Y-m-d'),
+                    Carbon::parse($reading->date)->endOfMonth()->format('Y-m-d'),
+                    'unpaid'
+                );
 
             if ($bill) {
+                if (in_array($bill->status, ['paid', 'voided'], true)) {
+                    throw new InvalidArgumentException("Cannot delete a reading attached to a {$bill->status} invoice.");
+                }
+
                 $oldElec = (float) $bill->electricity;
                 $readingAmount = (float) $reading->amount;
 
                 // Only reverse if the bill's electricity matches this reading
                 if (abs($oldElec - $readingAmount) < 0.01) {
+                    $oldTotal = (float) $bill->total_amount;
+
                     $bill->electricity = 0;
                     $bill->elec_usage = 0;
-                    $bill->total_amount = (float) $bill->rent + (float) $bill->water + (float) $bill->late_fee;
+                    $bill->recalculateTotal();
+
+                    if ((float) $bill->paid_amount > (float) $bill->total_amount) {
+                        throw new InvalidArgumentException('Deleting this reading would reduce the invoice below the amount already paid.');
+                    }
+
                     $bill->save();
 
                     // Reverse tenant balance adjustment with floor
-                    $tenant = $this->tenantRepo->find($reading->tenant_id);
-                    if ($tenant) {
-                        $tenant->decrement('balance', min((float) $tenant->balance, $readingAmount));
+                    $diff = round($oldTotal - (float) $bill->total_amount, 2);
+                    if ($diff != 0) {
+                        $tenant = $this->tenantRepo->find($reading->tenant_id);
+                        if ($tenant) {
+                            $tenant->decrement('balance', min((float) $tenant->balance, $diff));
+                        }
                     }
                 }
             }
