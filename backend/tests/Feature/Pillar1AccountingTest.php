@@ -330,6 +330,27 @@ class Pillar1AccountingTest extends TestCase
         $this->assertEquals(8000.00, (float) $bill->fresh()->rent);
     }
 
+    public function test_admin_cannot_overwrite_a_tenant_balance_directly(): void
+    {
+        Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'unpaid',
+        ]);
+
+        $this->tenant->update(['balance' => 8000.00]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->putJson("/api/tenants/{$this->tenant->id}", ['balance' => 0.00])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('balance');
+
+        $this->assertEquals(8000.00, (float) $this->tenant->fresh()->balance);
+    }
+
     public function test_tenant_with_billing_history_cannot_be_deleted(): void
     {
         Bill::create([

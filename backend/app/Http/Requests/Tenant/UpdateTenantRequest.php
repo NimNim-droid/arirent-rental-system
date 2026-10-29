@@ -49,11 +49,20 @@ class UpdateTenantRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255', Rule::unique('tenants', 'email')->ignore((int) $this->route('id'))],
             'phone' => ['nullable', 'string', 'max:20'],
             'water_rate' => ['nullable', 'numeric', 'min:0'],
-            'balance' => ['nullable', 'numeric'],
+            // Balance is derived from the bill ledger. Direct edits silently
+            // desynchronise it from the invoices tenants are shown.
+            'balance' => ['prohibited'],
             'lease_end' => ['nullable', 'date'],
             'move_in_date' => ['nullable', 'date'],
             'advance_paid' => ['nullable', 'numeric', 'min:0'],
             'room' => ['nullable', 'string', 'max:50'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'balance.prohibited' => 'Tenant balance is calculated from invoices and cannot be edited directly.',
         ];
     }
 }

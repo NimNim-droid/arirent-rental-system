@@ -123,12 +123,22 @@ class DashboardService
                 ->select('rent')
                 ->first();
 
-            // Latest unpaid bill for due date
+            // Earliest invoice that is still owed. Partially paid and
+            // under-review invoices are active too, not just 'unpaid'.
             $latestBill = Bill::where('tenant_id', $tenant->id)
-                ->where('status', 'unpaid')
+                ->whereIn('status', ['unpaid', 'partially_paid', 'pending_verification'])
                 ->orderBy('due_date', 'asc')
                 ->select(['id', 'due_date'])
                 ->first();
+
+            // If the room record is missing, fall back to the rent actually
+            // charged on the tenant's latest invoice instead of inventing one.
+            $billedRent = $room
+                ? (float) $room->rent
+                : (float) Bill::where('tenant_id', $tenant->id)
+                    ->where('status', '!=', 'voided')
+                    ->latest('date')
+                    ->value('rent');
 
             // Latest utility reading
             $latestReading = UtilityReading::where('tenant_id', $tenant->id)
@@ -160,7 +170,7 @@ class DashboardService
                 'due_date' => $latestBill?->due_date ? Carbon::parse($latestBill->due_date)->format('Y-m-d') : null,
                 'unit' => [
                     'room' => $tenant->room,
-                    'rent' => $room ? (float) $room->rent : 5000.00,
+                    'rent' => $billedRent,
                     'water_rate' => (float) $tenant->water_rate,
                     'lease_end' => $tenant->lease_end ? Carbon::parse($tenant->lease_end)->format('Y-m-d') : null,
                     'property_name' => $tenant->property?->name ?? 'AriRent Property',
