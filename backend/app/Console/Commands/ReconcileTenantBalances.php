@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Bill;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class ReconcileTenantBalances extends Command
 {
@@ -50,6 +51,8 @@ class ReconcileTenantBalances extends Command
 
             if ($this->option('fix')) {
                 $tenant->update(['balance' => $ledgerBalance]);
+                Cache::forget("tenant_dashboard_{$tenant->id}");
+                Cache::forget('admin_stats_all');
             }
         }
 

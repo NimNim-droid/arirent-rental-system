@@ -8,6 +8,7 @@ use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class BalanceReconciliationTest extends TestCase
@@ -92,11 +93,14 @@ class BalanceReconciliationTest extends TestCase
 
     public function test_fix_applies_the_ledger_balance_and_ignores_voided_bills(): void
     {
+        Cache::put("tenant_dashboard_{$this->tenant->id}", ['outstanding_balance' => 11000.00], 60);
+
         $this->artisan('arirent:reconcile-balances', ['--fix' => true])
             ->assertSuccessful();
 
         // 8000 + 2500 from non-voided bills; the voided 500 is excluded.
         $this->assertEquals(10500.00, (float) $this->tenant->fresh()->balance);
+        $this->assertNull(Cache::get("tenant_dashboard_{$this->tenant->id}"));
     }
 
     public function test_a_clean_ledger_is_reported_and_left_untouched(): void
