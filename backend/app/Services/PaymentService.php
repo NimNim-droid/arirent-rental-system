@@ -6,11 +6,11 @@ use App\Models\Bill;
 use App\Models\Payment;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PrivateFile;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 class PaymentService
@@ -59,12 +59,8 @@ class PaymentService
         $receiptUrl = $bill->receipt_url;
 
         if ($receipt) {
-            if ($bill->receipt_url && str_starts_with($bill->receipt_url, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $bill->receipt_url);
-                Storage::disk('public')->delete($oldPath);
-            }
-            $path = $receipt->store('receipts', 'public');
-            $receiptUrl = '/storage/' . $path;
+            PrivateFile::delete($bill->receipt_url);
+            $receiptUrl = PrivateFile::store($receipt, 'receipts');
         }
 
         return DB::transaction(function () use ($billId, $bill, $data, $amount, $receiptUrl) {

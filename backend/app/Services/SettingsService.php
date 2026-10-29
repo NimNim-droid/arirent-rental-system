@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\Setting;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
+use App\Support\PrivateFile;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 class SettingsService
 {
@@ -29,13 +29,8 @@ class SettingsService
         $current = $this->settingsRepo->getGlobal();
 
         if ($qrFile) {
-            if ($current->gcash_qr_path && str_starts_with($current->gcash_qr_path, '/storage/')) {
-                $oldPath = str_replace('/storage/', '', $current->gcash_qr_path);
-                Storage::disk('public')->delete($oldPath);
-            }
-
-            $path = $qrFile->store('settings', 'public');
-            $data['gcash_qr_path'] = '/storage/' . $path;
+            PrivateFile::delete($current->gcash_qr_path);
+            $data['gcash_qr_path'] = PrivateFile::store($qrFile, 'settings');
         }
 
         return $this->settingsRepo->update($data);

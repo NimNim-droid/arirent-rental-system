@@ -7,6 +7,7 @@ use App\Http\Resources\ReadingResource;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Services\UtilityService;
+use App\Support\PrivateFile;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,8 +80,7 @@ class ReadingController extends Controller
 
         $photoUrl = null;
         if ($request->hasFile('meter_photo')) {
-            $path = $request->file('meter_photo')->store('meter_proofs', 'public');
-            $photoUrl = '/storage/' . $path;
+            $photoUrl = PrivateFile::store($request->file('meter_photo'), 'meter_proofs');
         } elseif (! empty($validated['meter_photo_url'])) {
             $photoUrl = $validated['meter_photo_url'];
         }

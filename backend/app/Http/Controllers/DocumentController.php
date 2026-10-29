@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PrivateFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -90,6 +91,18 @@ class DocumentController extends Controller
     }
 
     /**
+     * Replace the stored path with a short-lived signed URL for the API response.
+     */
+    private function presentDocument(array $doc): array
+    {
+        if (! empty($doc['storage_path'])) {
+            $doc['url'] = PrivateFile::url($doc['storage_path']);
+        }
+
+        return $doc;
+    }
+
+    /**
      * List all shared documents (viewable by both Admin and Tenant).
      */
     public function index(Request $request): JsonResponse
@@ -116,7 +129,7 @@ class DocumentController extends Controller
         }
 
         return response()->json([
-            'data' => array_values($docs),
+            'data' => array_map(fn (array $doc) => $this->presentDocument($doc), array_values($docs)),
         ]);
     }
 
@@ -139,8 +152,7 @@ class DocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('documents', 'public');
-        $fileUrl = '/storage/' . $path;
+        $path = PrivateFile::store($file, 'documents');
 
         $docName = !empty($validated['name']) ? trim($validated['name']) : $file->getClientOriginalName();
         // Ensure extension is retained if user didn't specify one
@@ -154,7 +166,7 @@ class DocumentController extends Controller
             'category' => $validated['category'] ?? 'Contracts & Agreements',
             'type' => $file->getMimeType() ?: 'application/pdf',
             'size' => $file->getSize(),
-            'url' => $fileUrl,
+            'url' => null,
             'storage_path' => $path,
             'uploaded_at' => now()->format('Y-m-d'),
             'uploaded_by' => $request->user()->name ?? 'Landlord Admin',
@@ -167,7 +179,7 @@ class DocumentController extends Controller
 
         return response()->json([
             'message' => 'Document published successfully.',
-            'data' => $newDoc,
+            'data' => $this->presentDocument($newDoc),
         ], 201);
     }
 
@@ -198,9 +210,9 @@ class DocumentController extends Controller
             return response()->json(['message' => 'Document not found.'], 404);
         }
 
-        // Remove actual file if it was uploaded to storage
-        if (!empty($targetDoc['storage_path']) && Storage::disk('public')->exists($targetDoc['storage_path'])) {
-            Storage::disk('public')->delete($targetDoc['storage_path']);
+        // Remove actual file from private storage (legacy public files are handled too).
+        if (!empty($targetDoc['storage_path'])) {
+            PrivateFile::delete($targetDoc['storage_path']);
         }
 
         array_splice($docs, $targetIndex, 1);

@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -125,6 +126,113 @@ class SecurityHardeningTest extends TestCase
     {
         $this->assertNotNull(config('sanctum.expiration'));
         $this->assertGreaterThan(0, (int) config('sanctum.expiration'));
+    }
+
+    public function test_receipt_uploads_are_private_and_require_a_signed_url(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 12000.00,
+            'electricity' => 600.00,
+            'water' => 500.00,
+            'total_amount' => 13100.00,
+            'date' => now()->format('Y-m-d'),
+            'due_date' => now()->addDays(5)->format('Y-m-d'),
+            'status' => 'unpaid',
+        ]);
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->post(
+            "/api/bills/{$bill->id}/pay",
+            [
+                'gcash_ref' => 'REF-123456',
+                'receipt' => UploadedFile::fake()->create('receipt.jpg', 10, 'image/jpeg'),
+            ],
+            ['Accept' => 'application/json']
+        );
+
+        $response->assertOk();
+
+        $url = $response->json('data.receipt_url');
+
+        $this->assertIsString($url);
+        $this->assertStringContainsString('/api/files/receipts/', $url);
+        $this->assertStringNotContainsString('/storage/', $url);
+        $this->assertCount(1, Storage::disk('local')->allFiles('receipts'));
+        $this->assertCount(0, Storage::disk('public')->allFiles('receipts'));
+
+        $path = parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        $this->get($path.'?'.$query)->assertOk();
+        $this->get($path)->assertStatus(403);
+    }
+
+    public function test_documents_are_served_through_signed_urls(): void
+    {
+        Storage::fake('local');
+
+        Storage::disk('local')->put('documents/house-rules.pdf', 'pdf content');
+        Storage::disk('local')->put('documents.json', json_encode([
+            [
+                'id' => '1',
+                'name' => 'House Rules.pdf',
+                'category' => 'House Rules & Regulations',
+                'type' => 'application/pdf',
+                'size' => 11,
+                'url' => '/storage/documents/house-rules.pdf',
+                'storage_path' => 'documents/house-rules.pdf',
+                'uploaded_at' => now()->format('Y-m-d'),
+                'uploaded_by' => 'Property Management',
+                'description' => null,
+            ],
+        ], JSON_PRETTY_PRINT));
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->getJson('/api/documents')->assertOk();
+        $url = $response->json('data.0.url');
+
+        $this->assertIsString($url);
+        $this->assertStringContainsString('/api/files/documents/house-rules.pdf', $url);
+
+        $path = parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        $this->get($path.'?'.$query)->assertOk();
+    }
+
+    public function test_legacy_public_files_can_be_migrated_to_private_storage(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        Storage::disk('public')->put('receipts/legacy.jpg', 'legacy receipt');
+
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 12000.00,
+            'electricity' => 600.00,
+            'water' => 500.00,
+            'total_amount' => 13100.00,
+            'date' => now()->format('Y-m-d'),
+            'due_date' => now()->addDays(5)->format('Y-m-d'),
+            'status' => 'unpaid',
+            'receipt_url' => '/storage/receipts/legacy.jpg',
+        ]);
+
+        $this->artisan('arirent:private-files')->assertSuccessful();
+
+        Storage::disk('local')->assertExists('receipts/legacy.jpg');
+        Storage::disk('public')->assertMissing('receipts/legacy.jpg');
+        $this->assertDatabaseHas('bills', [
+            'id' => $bill->id,
+            'receipt_url' => 'receipts/legacy.jpg',
+        ]);
     }
 
     public function test_admin_password_rotation_revokes_existing_tokens(): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PrivateFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,7 +21,7 @@ class SettingsResource extends JsonResource
             'water_rate' => (float) $this->water_rate,
             'gcash_name' => $this->gcash_name,
             'gcash_number' => $this->gcash_number,
-            'gcash_qr_path' => $this->gcash_qr_path,
+            'gcash_qr_path' => PrivateFile::url($this->gcash_qr_path),
         ];
     }
 }

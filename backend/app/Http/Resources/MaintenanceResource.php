@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PrivateFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -24,7 +25,7 @@ class MaintenanceResource extends JsonResource
             'room' => $this->room,
             'type' => $this->type,
             'description' => $this->description,
-            'photo_url' => $this->photo_url,
+            'photo_url' => PrivateFile::url($this->photo_url),
             'priority' => $this->priority,
             'status' => $this->status,
             'technician_name' => $this->technician_name,

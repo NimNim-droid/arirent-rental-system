@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\FileController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReadingController;
@@ -39,6 +40,12 @@ Route::middleware('throttle:register')->group(function () {
 Route::get('/properties', [PropertyController::class, 'index']);
 Route::get('/properties/{id}', [PropertyController::class, 'show']);
 Route::get('/rooms', [RoomController::class, 'index']);
+
+// Signed, short-lived URLs for private uploads.
+Route::get('/files/{path}', [FileController::class, 'show'])
+    ->where('path', '.*')
+    ->middleware('signed')
+    ->name('files.show');
 
 // Protected routes (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PrivateFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -33,7 +34,7 @@ class BillResource extends JsonResource
             'due_date' => $this->due_date ? Carbon::parse($this->due_date)->format('Y-m-d') : null,
             'status' => $this->status,
             'gcash_ref' => $this->gcash_ref,
-            'receipt_url' => $this->receipt_url,
+            'receipt_url' => PrivateFile::url($this->receipt_url),
             'notes' => $this->notes,
             'payment_date' => $this->payment_date ? Carbon::parse($this->payment_date)->format('Y-m-d H:i:s') : null,
             'approved_date' => $this->approved_date ? Carbon::parse($this->approved_date)->format('Y-m-d H:i:s') : null,
