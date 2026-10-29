@@ -235,6 +235,60 @@ class SecurityHardeningTest extends TestCase
         ]);
     }
 
+    public function test_user_can_change_password_and_other_sessions_are_revoked(): void
+    {
+        $this->tenantUser->createToken('old-session');
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->postJson('/api/change-password', [
+            'current_password' => 'secret',
+            'password' => 'NewStrongPassword123!',
+            'password_confirmation' => 'NewStrongPassword123!',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['message', 'token']);
+
+        $this->assertTrue(Hash::check('NewStrongPassword123!', $this->tenantUser->fresh()->password));
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $this->tenantUser->id,
+            'name' => 'old-session',
+        ]);
+    }
+
+    public function test_password_change_rejects_an_incorrect_current_password(): void
+    {
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->postJson('/api/change-password', [
+            'current_password' => 'wrong-password',
+            'password' => 'NewStrongPassword123!',
+            'password_confirmation' => 'NewStrongPassword123!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'Current password is incorrect.']);
+
+        $this->assertTrue(Hash::check('secret', $this->tenantUser->fresh()->password));
+    }
+
+    public function test_registration_rejects_a_short_password(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'Weak Password',
+            'email' => 'weak@example.com',
+            'phone' => '09170000000',
+            'password' => 'short1',
+            'password_confirmation' => 'short1',
+            'property_id' => $this->property->id,
+            'room_number' => '101',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('password');
+    }
+
     public function test_admin_password_rotation_revokes_existing_tokens(): void
     {
         $admin = User::create([

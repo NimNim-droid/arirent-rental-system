@@ -63,13 +63,40 @@ class AuthService
     }
 
     /**
+     * Change the authenticated user's password and revoke other sessions.
+     */
+    public function changePassword(User $user, string $currentPassword, string $newPassword): string
+    {
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw new HttpException(422, 'Current password is incorrect.');
+        }
+
+        return DB::transaction(function () use ($user, $newPassword) {
+            $user->password = $newPassword;
+            $user->save();
+
+            // Keep the legacy tenant password column in sync; it is not used
+            // for authentication but can be used by older admin tooling.
+            $user->tenant()->update(['password' => $user->password]);
+
+            $user->tokens()->delete();
+
+            return $user->createToken('auth-token')->plainTextToken;
+        });
+    }
+
+    /**
      * Register a new tenant applicant and reserve the chosen room.
      */
     public function register(array $data): Tenant
     {
         $room = $this->roomRepo->findByPropertyAndNumber((int) $data['property_id'], $data['room_number']);
 
-        if ($room && in_array($room->status, ['occupied', 'reserved'])) {
+        if (! $room) {
+            throw new HttpException(422, "Room {$data['room_number']} does not exist in the selected property.");
+        }
+
+        if (in_array($room->status, ['occupied', 'reserved'])) {
             throw new HttpException(409, 'Selected room is already reserved or occupied.');
         }
 

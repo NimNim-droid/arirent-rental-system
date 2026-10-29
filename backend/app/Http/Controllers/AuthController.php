@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Services\AuthService;
@@ -71,6 +72,29 @@ class AuthController extends Controller
         return response()->json([
             'data' => $profile,
         ]);
+    }
+
+    /**
+     * Change the authenticated user's password and issue a fresh token.
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        try {
+            $token = $this->authService->changePassword(
+                $request->user(),
+                (string) $request->current_password,
+                (string) $request->password
+            );
+
+            return response()->json([
+                'message' => 'Password changed successfully. Other sessions were signed out.',
+                'token' => $token,
+            ]);
+        } catch (HttpException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode());
+        }
     }
 
     /**

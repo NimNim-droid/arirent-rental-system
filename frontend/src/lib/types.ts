@@ -17,6 +17,17 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+  token: string;
+}
+
 export interface RegisterPayload {
   name: string;
   email: string;
@@ -68,6 +79,7 @@ export interface Tenant {
   property_id: string;
   property_name?: string;
   property_address?: string;
+  property?: Property;
   room: string;
   status: "pending_approval" | "active" | "inactive";
   balance: number;
@@ -155,6 +167,7 @@ export interface Bill {
   gcash_ref?: string;
   receipt_url?: string;
   notes?: string;
+  created_at?: string;
   payment_date?: string;
   approved_date?: string;
   reject_reason?: string;

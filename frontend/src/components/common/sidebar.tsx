@@ -13,10 +13,12 @@ import {
   PanelLeftOpen,
   ReceiptText,
   BarChart3,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { ChangePasswordModal } from "@/components/common/change-password-modal";
 import { useAuth } from "@/lib/auth-context";
 
 interface SidebarProps {
@@ -33,6 +35,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "true"
   );
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -182,6 +185,15 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
           <div className={cn("flex items-center gap-2", collapsed && "lg:flex-col lg:gap-1.5")}>
             <ThemeToggle compact className="flex-1 lg:w-full" />
             <button
+              onClick={() => setPasswordOpen(true)}
+              title="Change password"
+              aria-label="Change password"
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-2.5 text-xs font-medium text-muted transition-colors duration-150 hover:bg-hover hover:text-fg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:w-full"
+            >
+              <KeyRound className="h-4 w-4" />
+              <span className={cn("ml-1.5", collapsed && "lg:hidden")}>Password</span>
+            </button>
+            <button
               onClick={handleLogout}
               title="Log out"
               aria-label="Log out"
@@ -211,6 +223,11 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      <ChangePasswordModal
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+      />
     </>
   );
 }

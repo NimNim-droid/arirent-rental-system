@@ -6,7 +6,13 @@ import {
   type ReactNode,
 } from "react";
 import { authService } from "@/lib/services/auth";
-import type { LoginPayload, RegisterPayload, RegisterResponse, User } from "@/lib/types";
+import type {
+  ChangePasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+  RegisterResponse,
+  User,
+} from "@/lib/types";
 
 const TOKEN_KEY = "arirent_token";
 const USER_KEY = "arirent_current_user";
@@ -17,6 +23,7 @@ interface AuthContextValue {
   initializing: boolean;
   login: (payload: LoginPayload) => Promise<User>;
   register: (payload: RegisterPayload) => Promise<RegisterResponse>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<string>;
   logout: () => Promise<void>;
 }
 
@@ -86,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = (payload: RegisterPayload) => authService.register(payload);
 
+  const changePassword = async (payload: ChangePasswordPayload): Promise<string> => {
+    const res = await authService.changePassword(payload);
+    localStorage.setItem(TOKEN_KEY, res.token);
+    setToken(res.token);
+    return res.message;
+  };
+
   const logout = async () => {
     await authService.logout();
     localStorage.removeItem(TOKEN_KEY);
@@ -95,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, initializing, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, initializing, login, register, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

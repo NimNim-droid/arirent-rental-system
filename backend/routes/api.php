@@ -54,6 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
     Route::get('/user', [AuthController::class, 'me']);
 
     // Properties & Rooms Management

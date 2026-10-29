@@ -1,6 +1,8 @@
 import api from "@/lib/axios";
 import type {
   AuthResponse,
+  ChangePasswordPayload,
+  ChangePasswordResponse,
   LoginPayload,
   RegisterPayload,
   RegisterResponse,
@@ -15,6 +17,11 @@ export const authService = {
 
   async register(payload: RegisterPayload): Promise<RegisterResponse> {
     const res = await api.post<RegisterResponse>("/register", payload);
+    return res.data;
+  },
+
+  async changePassword(payload: ChangePasswordPayload): Promise<ChangePasswordResponse> {
+    const res = await api.post<ChangePasswordResponse>("/change-password", payload);
     return res.data;
   },
 
