@@ -203,6 +203,80 @@ class Pillar1AccountingTest extends TestCase
         $this->assertEquals('cash', $payment->payment_method);
     }
 
+    public function test_approving_without_a_pending_payment_is_rejected(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'pending_verification',
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->postJson("/api/bills/{$bill->id}/verify", ['approved' => true])
+            ->assertStatus(422)
+            ->assertJson(['message' => 'No pending payment was found for this invoice.']);
+
+        $this->assertEquals(0.00, (float) $bill->fresh()->paid_amount);
+        $this->assertEquals('pending_verification', $bill->fresh()->status);
+    }
+
+    public function test_a_payment_reference_cannot_be_reused(): void
+    {
+        $firstBill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'unpaid',
+        ]);
+
+        $secondBill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-04-01',
+            'due_date' => '2026-04-05',
+            'status' => 'unpaid',
+        ]);
+
+        Sanctum::actingAs($this->tenantUser);
+        $this->postJson("/api/bills/{$firstBill->id}/pay", [
+            'gcash_ref' => 'GCASH-DUPLICATE',
+        ])->assertStatus(200);
+
+        $this->postJson("/api/bills/{$secondBill->id}/pay", [
+            'gcash_ref' => 'GCASH-DUPLICATE',
+        ])->assertStatus(422)
+            ->assertJson(['message' => 'That payment reference has already been used.']);
+
+        $this->assertEquals('unpaid', $secondBill->fresh()->status);
+    }
+
+    public function test_direct_payment_is_blocked_while_a_payment_is_under_review(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'pending_verification',
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->postJson("/api/bills/{$bill->id}/direct-payment", [
+            'amount' => 4000.00,
+            'payment_method' => 'cash',
+        ])->assertStatus(422)
+            ->assertJson(['message' => 'A payment is already awaiting verification for this invoice.']);
+
+        $this->assertEquals(0.00, (float) $bill->fresh()->paid_amount);
+    }
+
     public function test_financial_edit_preserves_balance_invariant_on_partially_paid_bill(): void
     {
         $bill = Bill::create([
@@ -254,6 +328,54 @@ class Pillar1AccountingTest extends TestCase
             ]);
 
         $this->assertEquals(8000.00, (float) $bill->fresh()->rent);
+    }
+
+    public function test_tenant_with_billing_history_cannot_be_deleted(): void
+    {
+        Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'date' => '2026-03-01',
+            'due_date' => '2026-03-05',
+            'status' => 'unpaid',
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->deleteJson("/api/tenants/{$this->tenant->id}")
+            ->assertStatus(422)
+            ->assertJson([
+                'message' => 'This tenant has billing or service history and cannot be deleted. Vacate the tenant instead.',
+            ]);
+
+        $this->assertDatabaseHas('tenants', ['id' => $this->tenant->id]);
+    }
+
+    public function test_tenant_without_history_can_still_be_deleted(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'tenant',
+            'email' => 'newapplicant@example.com',
+        ]);
+
+        $tenant = Tenant::create([
+            'user_id' => $user->id,
+            'property_id' => $this->property->id,
+            'room' => '102',
+            'username' => 'newapplicant',
+            'password' => \Illuminate\Support\Facades\Hash::make('secret'),
+            'name' => 'New Applicant',
+            'email' => 'newapplicant@example.com',
+            'phone' => '09170000001',
+            'status' => 'pending_approval',
+            'balance' => 0.00,
+            'move_in_date' => null,
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->deleteJson("/api/tenants/{$tenant->id}")->assertStatus(200);
+
+        $this->assertDatabaseMissing('tenants', ['id' => $tenant->id]);
     }
 
     public function test_delinquency_endpoint_returns_tenants_with_consecutive_overdue_bills(): void

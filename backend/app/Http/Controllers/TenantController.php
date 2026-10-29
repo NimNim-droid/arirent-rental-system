@@ -192,6 +192,8 @@ class TenantController extends Controller
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Tenant not found.'], 404);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 }

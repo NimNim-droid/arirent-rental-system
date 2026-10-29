@@ -294,6 +294,8 @@ class BillController extends Controller
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 

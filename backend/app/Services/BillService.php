@@ -11,6 +11,7 @@ use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PrivateFile;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -344,8 +345,12 @@ class BillService
             throw new ModelNotFoundException('Bill not found.');
         }
 
+        if ((float) $bill->paid_amount > 0 || $bill->payments()->exists()) {
+            throw new InvalidArgumentException('Invoices with recorded payments cannot be deleted. Void the invoice instead.');
+        }
+
         return DB::transaction(function () use ($id, $bill) {
-            if (in_array($bill->status, ['unpaid', 'pending_verification'])) {
+            if (in_array($bill->status, ['unpaid', 'pending_verification'], true)) {
                 $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
                 if ($tenant) {
                     $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
@@ -357,7 +362,12 @@ class BillService
             ExcessCharge::where('bill_id', $id)->update(['bill_id' => null, 'status' => 'pending']);
 
             $tenantId = $bill->tenant_id;
+            $receiptUrl = $bill->receipt_url;
             $deleted = $this->billRepo->delete($id);
+
+            if ($deleted) {
+                PrivateFile::delete($receiptUrl);
+            }
 
             Cache::forget('admin_stats_all');
             Cache::forget("tenant_dashboard_{$tenantId}");
@@ -376,6 +386,8 @@ class BillService
                 }
             } catch (ModelNotFoundException) {
                 // Skip if already gone
+            } catch (InvalidArgumentException) {
+                // Skip invoices that must be preserved for the payment ledger
             }
         }
         return $count;

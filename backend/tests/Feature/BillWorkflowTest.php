@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Bill;
+use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\Setting;
@@ -101,6 +102,22 @@ class BillWorkflowTest extends TestCase
         ]);
 
         // Verify tenant balance increased by the invoice amount
+        $this->assertEquals(10500.00, (float) $this->tenant->fresh()->balance);
+    }
+
+    public function test_generating_bills_twice_in_the_same_month_does_not_duplicate(): void
+    {
+        Sanctum::actingAs($this->adminUser);
+
+        $this->postJson('/api/bills/generate', ['date' => '2026-02-05'])
+            ->assertStatus(200)
+            ->assertJson(['generated' => 1, 'skipped' => 0]);
+
+        $this->postJson('/api/bills/generate', ['date' => '2026-02-20'])
+            ->assertStatus(200)
+            ->assertJson(['generated' => 0, 'skipped' => 1]);
+
+        $this->assertSame(1, Bill::where('tenant_id', $this->tenant->id)->count());
         $this->assertEquals(10500.00, (float) $this->tenant->fresh()->balance);
     }
 
@@ -269,6 +286,40 @@ class BillWorkflowTest extends TestCase
 
         $this->assertEquals('partially_paid', $bill->fresh()->status);
         $this->assertEquals(7000.00, (float) $this->tenant->fresh()->balance);
+    }
+
+    public function test_invoice_with_payment_history_cannot_be_deleted(): void
+    {
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10000.00,
+            'paid_amount' => 3000.00,
+            'date' => '2026-02-05',
+            'due_date' => '2026-02-10',
+            'status' => 'partially_paid',
+        ]);
+
+        Payment::create([
+            'bill_id' => $bill->id,
+            'tenant_id' => $this->tenant->id,
+            'amount' => 3000.00,
+            'payment_method' => 'cash',
+            'transaction_reference' => 'CASH-DELETE-GUARD',
+            'status' => 'confirmed',
+            'paid_at' => now(),
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+
+        $this->deleteJson("/api/bills/{$bill->id}")
+            ->assertStatus(422)
+            ->assertJson([
+                'message' => 'Invoices with recorded payments cannot be deleted. Void the invoice instead.',
+            ]);
+
+        $this->assertDatabaseHas('bills', ['id' => $bill->id]);
+        $this->assertDatabaseHas('payments', ['bill_id' => $bill->id]);
     }
 
     public function test_cannot_pay_already_paid_or_voided_bill(): void

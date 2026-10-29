@@ -46,6 +46,11 @@ class EloquentBillRepository implements BillRepositoryInterface
         return $query->find($id);
     }
 
+    public function findForUpdate(int $id): ?Bill
+    {
+        return Bill::query()->lockForUpdate()->find($id);
+    }
+
     public function create(array $attributes): Bill
     {
         return Bill::create($attributes);

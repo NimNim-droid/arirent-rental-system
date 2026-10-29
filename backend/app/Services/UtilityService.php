@@ -37,6 +37,14 @@ class UtilityService
         return DB::transaction(function () use ($tenantId, $prev, $curr, $usage, $amount, $date, $monthStart, $monthEnd, $elecRate, $meterPhotoUrl) {
             $unpaidBill = $this->billRepo->findForTenantInMonth($tenantId, $monthStart, $monthEnd, 'unpaid');
 
+            if ($unpaidBill) {
+                $unpaidBill = $this->billRepo->findForUpdate((int) $unpaidBill->id);
+
+                if ($unpaidBill && UtilityReading::where('bill_id', $unpaidBill->id)->exists()) {
+                    throw new InvalidArgumentException('This invoice already has a meter reading. Delete the existing reading before recording another.');
+                }
+            }
+
             $reading = $this->readingRepo->create([
                 'tenant_id' => $tenantId,
                 'bill_id' => $unpaidBill ? $unpaidBill->id : null,

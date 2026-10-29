@@ -11,6 +11,11 @@ interface BillRepositoryInterface
 
     public function find(int $id, array $relations = []): ?Bill;
 
+    /**
+     * Find a bill inside a transaction with a row lock.
+     */
+    public function findForUpdate(int $id): ?Bill;
+
     public function create(array $attributes): Bill;
 
     public function update(int $id, array $attributes): Bill;

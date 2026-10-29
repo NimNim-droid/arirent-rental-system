@@ -85,13 +85,21 @@ class ReadingController extends Controller
             $photoUrl = $validated['meter_photo_url'];
         }
 
-        $result = $this->utilityService->recordReading(
-            (int) $validated['tenant_id'],
-            (float) $validated['prev_reading'],
-            (float) $validated['curr_reading'],
-            $validated['date'],
-            $photoUrl
-        );
+        try {
+            $result = $this->utilityService->recordReading(
+                (int) $validated['tenant_id'],
+                (float) $validated['prev_reading'],
+                (float) $validated['curr_reading'],
+                $validated['date'],
+                $photoUrl
+            );
+        } catch (\InvalidArgumentException $e) {
+            if ($photoUrl) {
+                PrivateFile::delete($photoUrl);
+            }
+
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => 'Utility reading recorded successfully.' . ($result['bill_updated'] ? ' Associated monthly bill updated.' : ''),

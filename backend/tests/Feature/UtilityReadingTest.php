@@ -126,6 +126,43 @@ class UtilityReadingTest extends TestCase
         $this->assertEquals(11250.00, (float) $this->tenant->fresh()->balance);
     }
 
+    public function test_second_reading_for_the_same_invoice_is_rejected(): void
+    {
+        Sanctum::actingAs($this->adminUser);
+
+        $today = now()->format('Y-m-d');
+
+        $bill = Bill::create([
+            'tenant_id' => $this->tenant->id,
+            'rent' => 10000.00,
+            'total_amount' => 10500.00,
+            'date' => $today,
+            'due_date' => now()->addDays(5)->format('Y-m-d'),
+            'status' => 'unpaid',
+        ]);
+        $this->tenant->update(['balance' => 10500.00]);
+
+        $this->postJson('/api/readings', [
+            'tenant_id' => $this->tenant->id,
+            'prev_reading' => 100.00,
+            'curr_reading' => 160.00,
+            'date' => $today,
+        ])->assertStatus(201);
+
+        $this->postJson('/api/readings', [
+            'tenant_id' => $this->tenant->id,
+            'prev_reading' => 160.00,
+            'curr_reading' => 180.00,
+            'date' => $today,
+        ])->assertStatus(422)
+            ->assertJson([
+                'message' => 'This invoice already has a meter reading. Delete the existing reading before recording another.',
+            ]);
+
+        $this->assertSame(1, UtilityReading::where('bill_id', $bill->id)->count());
+        $this->assertEquals(750.00, (float) $bill->fresh()->electricity);
+    }
+
     public function test_delete_reading_reverses_bill_and_tenant_balance_adjustment(): void
     {
         Sanctum::actingAs($this->adminUser);

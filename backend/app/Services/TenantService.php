@@ -197,6 +197,14 @@ class TenantService
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Tenant not found.');
         }
 
+        if ($tenant->bills()->exists()
+            || $tenant->payments()->exists()
+            || $tenant->excessCharges()->exists()
+            || $tenant->utilityReadings()->exists()
+            || $tenant->maintenanceTickets()->exists()) {
+            throw new \InvalidArgumentException('This tenant has billing or service history and cannot be deleted. Vacate the tenant instead.');
+        }
+
         return DB::transaction(function () use ($tenant) {
             $room = $this->roomRepo->findByPropertyAndNumber($tenant->property_id, $tenant->room);
             if ($room && in_array($room->status, ['reserved', 'occupied'])) {
