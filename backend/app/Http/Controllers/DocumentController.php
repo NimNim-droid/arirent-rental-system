@@ -12,74 +12,32 @@ class DocumentController extends Controller
     private string $storageFile = 'documents.json';
 
     /**
-     * Default seed documents available out-of-the-box.
-     */
-    private function defaultDocuments(): array
-    {
-        return [
-            [
-                'id' => '1',
-                'name' => 'AriRent Standard Lease Contract & Agreement.pdf',
-                'category' => 'Contracts & Agreements',
-                'type' => 'application/pdf',
-                'size' => 2457600,
-                'url' => '#',
-                'uploaded_at' => now()->subMonths(1)->format('Y-m-d'),
-                'uploaded_by' => 'Property Management',
-                'description' => 'Official residential tenancy agreement outlining lease terms, security deposits, and conditions.',
-            ],
-            [
-                'id' => '2',
-                'name' => 'AriRent House Rules & Safety Regulations.pdf',
-                'category' => 'House Rules & Regulations',
-                'type' => 'application/pdf',
-                'size' => 1245184,
-                'url' => '#',
-                'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
-                'uploaded_by' => 'Property Management',
-                'description' => 'Quiet hours, guest policies, garbage disposal, and emergency safety guidelines for all tenants.',
-            ],
-            [
-                'id' => '3',
-                'name' => 'Unit Move-In Checklist & Inspection Report.pdf',
-                'category' => 'Checklists & Guides',
-                'type' => 'application/pdf',
-                'size' => 842100,
-                'url' => '#',
-                'uploaded_at' => now()->subMonths(2)->format('Y-m-d'),
-                'uploaded_by' => 'Property Management',
-                'description' => 'Mandatory initial condition report covering unit fixtures, appliances, and utility meter baselines.',
-            ],
-            [
-                'id' => '4',
-                'name' => 'Billing Schedule & Payment Policy Notice.pdf',
-                'category' => 'Notices & Policies',
-                'type' => 'application/pdf',
-                'size' => 512000,
-                'url' => '#',
-                'uploaded_at' => now()->subMonths(1)->format('Y-m-d'),
-                'uploaded_by' => 'Property Management',
-                'description' => 'Detailed payment channels, GCash settlement procedures, due date rules, and penalty policies.',
-            ],
-        ];
-    }
-
-    /**
-     * Read documents from local storage file or fallback to defaults.
+     * Read documents from local storage. Old seeded placeholders (url '#')
+     * are dropped so a fresh install starts with an empty library.
      */
     private function getStoredDocuments(): array
     {
-        if (Storage::disk('local')->exists($this->storageFile)) {
-            $content = Storage::disk('local')->get($this->storageFile);
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
+        if (! Storage::disk('local')->exists($this->storageFile)) {
+            return [];
         }
 
-        $defaults = $this->defaultDocuments();
-        Storage::disk('local')->put($this->storageFile, json_encode($defaults, JSON_PRETTY_PRINT));
-        return $defaults;
+        $content = Storage::disk('local')->get($this->storageFile);
+        $decoded = json_decode($content, true);
+
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $documents = array_values(array_filter($decoded, function ($doc) {
+            return is_array($doc)
+                && (! empty($doc['storage_path']) || (($doc['url'] ?? null) !== '#'));
+        }));
+
+        if (count($documents) !== count($decoded)) {
+            $this->saveDocuments($documents);
+        }
+
+        return $documents;
     }
 
     /**

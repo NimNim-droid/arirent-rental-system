@@ -206,6 +206,60 @@ class SecurityHardeningTest extends TestCase
         $this->get($path.'?'.$query)->assertOk();
     }
 
+    public function test_a_fresh_install_does_not_show_placeholder_documents(): void
+    {
+        Storage::fake('local');
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $this->getJson('/api/documents')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->assertFalse(Storage::disk('local')->exists('documents.json'));
+    }
+
+    public function test_seeded_placeholder_documents_are_removed_from_the_library(): void
+    {
+        Storage::fake('local');
+
+        Storage::disk('local')->put('documents/real.pdf', 'pdf content');
+        Storage::disk('local')->put('documents.json', json_encode([
+            [
+                'id' => '1',
+                'name' => 'Placeholder Lease.pdf',
+                'category' => 'Contracts & Agreements',
+                'type' => 'application/pdf',
+                'size' => 1,
+                'url' => '#',
+                'uploaded_at' => now()->format('Y-m-d'),
+                'uploaded_by' => 'Property Management',
+                'description' => 'Fake seed document.',
+            ],
+            [
+                'id' => '2',
+                'name' => 'Real Lease.pdf',
+                'category' => 'Contracts & Agreements',
+                'type' => 'application/pdf',
+                'size' => 11,
+                'url' => null,
+                'storage_path' => 'documents/real.pdf',
+                'uploaded_at' => now()->format('Y-m-d'),
+                'uploaded_by' => 'Property Management',
+                'description' => null,
+            ],
+        ], JSON_PRETTY_PRINT));
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $response = $this->getJson('/api/documents')->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame('Real Lease.pdf', $response->json('data.0.name'));
+
+        $stored = json_decode(Storage::disk('local')->get('documents.json'), true);
+        $this->assertCount(1, $stored);
+        $this->assertSame('Real Lease.pdf', $stored[0]['name']);
+    }
+
     public function test_legacy_public_files_can_be_migrated_to_private_storage(): void
     {
         Storage::fake('local');
