@@ -7,6 +7,7 @@ import AdminLayout from "@/pages/admin/layout";
 import TenantLayout from "@/pages/tenant/layout";
 
 // Lazy-loaded guest pages
+const Homepage = lazy(() => import("@/pages/guest/home"));
 const LoginPage = lazy(() => import("@/pages/guest/login"));
 const RegisterPage = lazy(() => import("@/pages/guest/register"));
 
@@ -31,6 +32,7 @@ export default function App() {
       <Suspense fallback={<PageShellSkeleton />}>
         <Routes>
           {/* Public Routes */}
+          <Route path="/home" element={<Homepage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -56,10 +58,9 @@ export default function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
   );
 }
-

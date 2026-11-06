@@ -14,14 +14,19 @@ import { getErrorMessage } from "@/lib/errors";
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [submitted, setSubmitted] = useState<{ name: string; room: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{
+    name: string;
+    room: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([
     { id: "1", name: "AriRent Residences - Makati" },
     { id: "2", name: "AriRent Heights - Quezon City" },
   ]);
-  const [rooms, setRooms] = useState<{ id: string; room_number: string; rent: number }[]>([
+  const [rooms, setRooms] = useState<
+    { id: string; room_number: string; rent: number }[]
+  >([
     { id: "2", room_number: "102", rent: 12000 },
     { id: "3", room_number: "105", rent: 8500 },
     { id: "5", room_number: "201", rent: 6500 },
@@ -37,20 +42,26 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    propertiesService.getProperties().then((res) => {
-      if (res && res.length > 0) {
-        setProperties(res);
-      }
-    }).catch(() => {});
+    propertiesService
+      .getProperties()
+      .then((res) => {
+        if (res && res.length > 0) {
+          setProperties(res);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
-    propertiesService.getRooms({ property_id: formData.property_id, status: "vacant" }).then((res) => {
-      if (res && res.length > 0) {
-        setRooms(res);
-        setFormData((prev) => ({ ...prev, room_number: res[0].room_number }));
-      }
-    }).catch(() => {});
+    propertiesService
+      .getRooms({ property_id: formData.property_id, status: "vacant" })
+      .then((res) => {
+        if (res && res.length > 0) {
+          setRooms(res);
+          setFormData((prev) => ({ ...prev, room_number: res[0].room_number }));
+        }
+      })
+      .catch(() => {});
   }, [formData.property_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,7 +79,12 @@ export default function RegisterPage() {
       const res = await register(formData);
       setSubmitted({ name: res.tenant.name, room: res.tenant.room });
     } catch (err) {
-      setError(getErrorMessage(err, "Unable to submit your application. Please try again."));
+      setError(
+        getErrorMessage(
+          err,
+          "Unable to submit your application. Please try again."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -77,8 +93,10 @@ export default function RegisterPage() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-app flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
-          <Logo variant="full" size="md" />
+        <div className="flex  px-6 py-4 border-b border-edge">
+          <Link to="/home">
+            <Logo variant="full" size="md" />
+          </Link>
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
@@ -86,11 +104,15 @@ export default function RegisterPage() {
             <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success-fg mb-2 ring-1 ring-inset ring-success-border">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <h2 className="text-xl font-bold text-fg">Application Submitted!</h2>
+            <h2 className="text-xl font-bold text-fg">
+              Application Submitted!
+            </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Thank you, <strong className="text-fg">{submitted.name}</strong>. Your rental
-              application for Room <strong className="text-fg">{submitted.room}</strong> has been
-              received. The property manager will review and approve your account shortly.
+              Thank you, <strong className="text-fg">{submitted.name}</strong>.
+              Your rental application for Room{" "}
+              <strong className="text-fg">{submitted.room}</strong> has been
+              received. The property manager will review and approve your
+              account shortly.
             </p>
             <div className="pt-2">
               <Button onClick={() => navigate("/login")} className="w-full">
@@ -107,7 +129,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-app flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
-        <Logo variant="full" size="md" />
+        <Link to="/home">
+          <Logo variant="full" size="md" />
+        </Link>
         <ThemeToggle />
       </div>
 
@@ -115,7 +139,9 @@ export default function RegisterPage() {
       <div className="flex flex-1 items-start justify-center p-4 py-8 overflow-y-auto">
         <div className="w-full max-w-lg space-y-6 animate-fade-in-up">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-fg">Tenant Application</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-fg">
+              Tenant Application
+            </h1>
             <p className="text-sm text-muted">
               Apply to reserve a room at an AriRent property
             </p>
@@ -134,7 +160,9 @@ export default function RegisterPage() {
                 label="Full Name"
                 placeholder="e.g. Juan Dela Cruz"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
               />
 
@@ -145,7 +173,9 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="juan@example.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   required
                 />
 
@@ -154,7 +184,9 @@ export default function RegisterPage() {
                   label="Mobile Phone"
                   placeholder="0917-123-4567"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -164,7 +196,9 @@ export default function RegisterPage() {
                   id="property"
                   label="Property Building"
                   value={formData.property_id}
-                  onChange={(e) => setFormData({ ...formData, property_id: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, property_id: e.target.value })
+                  }
                 >
                   {properties.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -177,11 +211,14 @@ export default function RegisterPage() {
                   id="room"
                   label="Select Available Room"
                   value={formData.room_number}
-                  onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, room_number: e.target.value })
+                  }
                 >
                   {rooms.map((r) => (
                     <option key={r.id} value={r.room_number}>
-                      Room {r.room_number} (₱{Number(r.rent).toLocaleString()}/mo)
+                      Room {r.room_number} (₱{Number(r.rent).toLocaleString()}
+                      /mo)
                     </option>
                   ))}
                 </Select>
@@ -194,7 +231,9 @@ export default function RegisterPage() {
                   type="password"
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   required
                 />
 
@@ -205,7 +244,10 @@ export default function RegisterPage() {
                   placeholder="••••••••"
                   value={formData.password_confirmation}
                   onChange={(e) =>
-                    setFormData({ ...formData, password_confirmation: e.target.value })
+                    setFormData({
+                      ...formData,
+                      password_confirmation: e.target.value,
+                    })
                   }
                   required
                 />
@@ -219,7 +261,10 @@ export default function RegisterPage() {
 
           <p className="text-center text-xs text-muted">
             Already have an account?{" "}
-            <Link to="/login" className="inline-flex items-center gap-1 font-semibold text-accent hover:text-accent-strong">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1 font-semibold text-accent hover:text-accent-strong"
+            >
               <ArrowLeft className="h-3 w-3" />
               Back to sign in
             </Link>

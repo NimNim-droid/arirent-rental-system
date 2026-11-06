@@ -50,7 +50,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-app flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
-        <Logo variant="full" size="md" />
+        <Link to="/home">
+          <Logo variant="full" size="md" />
+        </Link>
         <ThemeToggle />
       </div>
 
@@ -59,7 +61,9 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-6 animate-fade-in-up">
           {/* Header */}
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-fg">Sign in</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-fg">
+              Sign in
+            </h1>
             <p className="text-sm text-muted">
               Access your rental management portal
             </p>
@@ -97,7 +101,11 @@ export default function LoginPage() {
               />
 
               <Button type="submit" className="w-full mt-1" loading={loading}>
-                {!loading && <>Sign In <ArrowRight className="h-4 w-4" /></>}
+                {!loading && (
+                  <>
+                    Sign In <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </form>
 
@@ -136,7 +144,10 @@ export default function LoginPage() {
           {/* Footer Link */}
           <p className="text-center text-xs text-muted">
             New tenant?{" "}
-            <Link to="/register" className="font-semibold text-accent hover:text-accent-strong underline-offset-2 hover:underline">
+            <Link
+              to="/register"
+              className="font-semibold text-accent hover:text-accent-strong underline-offset-2 hover:underline"
+            >
               Submit an application
             </Link>
           </p>

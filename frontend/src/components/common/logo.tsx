@@ -132,7 +132,12 @@ export function Logo({
 
       {variant !== "mark" && (
         <div className={cn("min-w-0 leading-tight", textClassName)}>
-          <div className={cn("font-extrabold tracking-tight text-fg flex items-baseline gap-0.5", textSizes[size])}>
+          <div
+            className={cn(
+              "font-extrabold tracking-tight text-fg flex items-baseline gap-0.5",
+              textSizes[size]
+            )}
+          >
             <span>Ari</span>
             <span className="text-[#C9A24B] dark:text-[#fbbf24]">Rent</span>
           </div>
