@@ -231,8 +231,10 @@ export default function AdminTenants() {
           onEditTenant={setEditingTenant}
           onDeleteTenant={(t) => setDeletingTenant(t)}
           onApproveTenant={async (t) => {
-            await handleApprove(t);
-            setSuccessMessage(`Tenant reservation for ${t.name} approved.`);
+            const ok = await handleApprove(t);
+            if (ok) {
+              setSuccessMessage(`Tenant reservation for ${t.name} approved.`);
+            }
           }}
         />
 

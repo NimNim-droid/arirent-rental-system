@@ -275,4 +275,73 @@ class MaintenanceAndSettingsTest extends TestCase
             ->assertStatus(200)
             ->assertJsonCount(1, 'data');
     }
+
+    public function test_tenant_cannot_exceed_daily_ticket_limit(): void
+    {
+        Sanctum::actingAs($this->tenantUser);
+
+        // First 3 tickets today are allowed
+        for ($i = 1; $i <= 3; $i++) {
+            $this->postJson('/api/maintenance', [
+                'type' => 'plumbing',
+                "description" => "Daily ticket {$i}",
+                'priority' => 'normal',
+            ])->assertStatus(201);
+        }
+
+        $this->assertCount(3, MaintenanceTicket::where('tenant_id', $this->tenant->id)->get());
+
+        // The 4th ticket on the same day must be rejected and not saved
+        $response = $this->postJson('/api/maintenance', [
+            'type' => 'electrical',
+            'description' => 'Fourth ticket today',
+            'priority' => 'urgent',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString(
+            'Daily maintenance ticket limit reached',
+            $response->json('message')
+        );
+        $this->assertCount(3, MaintenanceTicket::where('tenant_id', $this->tenant->id)->get());
+    }
+
+    public function test_daily_ticket_limit_resets_each_day(): void
+    {
+        // A ticket created yesterday should not count toward today's limit
+        MaintenanceTicket::query()->insert([
+            'tenant_id' => $this->tenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'plumbing',
+            'description' => 'Yesterday ticket',
+            'priority' => 'normal',
+            'status' => 'pending',
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ]);
+
+        Sanctum::actingAs($this->tenantUser);
+
+        // The tenant can still submit 3 tickets today
+        for ($i = 1; $i <= 3; $i++) {
+            $this->postJson('/api/maintenance', [
+                'type' => 'plumbing',
+                "description" => "Today ticket {$i}",
+                'priority' => 'normal',
+            ])->assertStatus(201);
+        }
+
+        $this->assertCount(4, MaintenanceTicket::where('tenant_id', $this->tenant->id)->get());
+
+        // The 4th ticket today is still blocked
+        $response = $this->postJson('/api/maintenance', [
+            'type' => 'electrical',
+            'description' => 'Fourth ticket today',
+            'priority' => 'urgent',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertCount(4, MaintenanceTicket::where('tenant_id', $this->tenant->id)->get());
+    }
 }

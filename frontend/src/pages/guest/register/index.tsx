@@ -17,21 +17,15 @@ export default function RegisterPage() {
   const [submitted, setSubmitted] = useState<{ name: string; room: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [properties, setProperties] = useState<{ id: string; name: string }[]>([
-    { id: "1", name: "AriRent Residences - Makati" },
-    { id: "2", name: "AriRent Heights - Quezon City" },
-  ]);
-  const [rooms, setRooms] = useState<{ id: string; room_number: string; rent: number }[]>([
-    { id: "2", room_number: "102", rent: 12000 },
-    { id: "3", room_number: "105", rent: 8500 },
-    { id: "5", room_number: "201", rent: 6500 },
-  ]);
+  const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
+  const [rooms, setRooms] = useState<{ id: string; room_number: string; rent: number }[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    property_id: "1",
-    room_number: "102",
+    property_id: "",
+    room_number: "",
     password: "",
     password_confirmation: "",
   });
@@ -40,23 +34,42 @@ export default function RegisterPage() {
     propertiesService.getProperties().then((res) => {
       if (res && res.length > 0) {
         setProperties(res);
+        setFormData((prev) => ({
+          ...prev,
+          property_id: prev.property_id || String(res[0].id),
+        }));
       }
     }).catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (!formData.property_id) return;
+    setLoadingRooms(true);
     propertiesService.getRooms({ property_id: formData.property_id, status: "vacant" }).then((res) => {
-      if (res && res.length > 0) {
-        setRooms(res);
-        setFormData((prev) => ({ ...prev, room_number: res[0].room_number }));
-      }
-    }).catch(() => {});
+      const vacantRooms = res || [];
+      setRooms(vacantRooms);
+      setFormData((prev) => ({
+        ...prev,
+        room_number: vacantRooms.length > 0 ? vacantRooms[0].room_number : "",
+      }));
+    }).catch(() => {
+      setRooms([]);
+      setFormData((prev) => ({ ...prev, room_number: "" }));
+    }).finally(() => {
+      setLoadingRooms(false);
+    });
   }, [formData.property_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!formData.room_number || rooms.length === 0) {
+      setError("There are no available vacant rooms in the selected building. Please choose another property.");
+      setLoading(false);
+      return;
+    }
 
     if (formData.password !== formData.password_confirmation) {
       setError("Passwords do not match. Please re-enter.");
@@ -173,18 +186,33 @@ export default function RegisterPage() {
                   ))}
                 </Select>
 
-                <Select
-                  id="room"
-                  label="Select Available Room"
-                  value={formData.room_number}
-                  onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                >
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.room_number}>
-                      Room {r.room_number} (₱{Number(r.rent).toLocaleString()}/mo)
-                    </option>
-                  ))}
-                </Select>
+                <div className="space-y-1">
+                  <label htmlFor="room" className="text-xs font-semibold text-fg">
+                    Select Available Room
+                  </label>
+                  {loadingRooms ? (
+                    <div className="h-10 flex items-center px-3 rounded-lg border border-edge bg-inset text-xs text-muted">
+                      Checking available units...
+                    </div>
+                  ) : rooms.length > 0 ? (
+                    <Select
+                      id="room"
+                      value={formData.room_number}
+                      onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                      required
+                    >
+                      {rooms.map((r) => (
+                        <option key={r.id} value={r.room_number}>
+                          Room {r.room_number} (₱{Number(r.rent).toLocaleString()}/mo)
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <div className="rounded-xl border border-danger-border bg-danger-bg p-2.5 text-xs font-semibold text-danger-fg">
+                      No vacant rooms available in this property.
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -211,8 +239,13 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full mt-1" loading={loading}>
-                {loading ? "Submitting…" : "Submit Application"}
+              <Button
+                type="submit"
+                className="w-full mt-1"
+                loading={loading}
+                disabled={loading || loadingRooms || rooms.length === 0}
+              >
+                {loading ? "Submitting…" : rooms.length === 0 ? "No Rooms Available to Apply" : "Submit Application"}
               </Button>
             </form>
           </Card>

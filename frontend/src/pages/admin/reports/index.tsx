@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   BarChart3,
@@ -11,8 +10,6 @@ import {
   Printer,
   Receipt,
   RefreshCw,
-  TrendingDown,
-  TrendingUp,
   Zap,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -21,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
-import { Skeleton, SkeletonRows } from "@/components/ui/skeleton";
 import {
   Table,
   TableHeader,
@@ -30,12 +26,16 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { DonutChart } from "@/components/features/reports/donut-chart";
-import { RevenueBarChart } from "@/components/features/reports/revenue-bar-chart";
 import {
+  DonutChart,
+  RevenueBarChart,
   RevenueLineChart,
   type RevenueLineSeries,
-} from "@/components/features/reports/revenue-line-chart";
+  KpiCard,
+  ReportSkeleton,
+  ArAging,
+  PropertyPerformance,
+} from "@/components/features/reports";
 import {
   reportsService,
   type FinancialReportData,
@@ -70,109 +70,11 @@ const PERIOD_OPTIONS: { key: RevenuePeriod; label: string }[] = [
   { key: "yearly", label: "Yearly" },
 ];
 
-function formatGrowth(value: number): string {
-  return Math.abs(value).toFixed(1).replace(/\.0$/, "");
-}
-
-interface KpiCardProps {
-  title: string;
-  value: number;
-  growth: number;
-  icon: LucideIcon;
-  /** No longer rendered — kept for API compatibility with callers. */
-  iconClassName?: string;
-}
-
-function KpiCard({ title, value, growth, icon: Icon }: KpiCardProps) {
-  const positive = growth > 0;
-  const negative = growth < 0;
-  const GrowthIcon = negative ? TrendingDown : TrendingUp;
-  const tone = positive
-    ? "text-success-fg"
-    : negative
-      ? "text-danger-fg"
-      : "text-muted";
-
-  return (
-    <Card className="p-4 space-y-2">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted">{title}</p>
-          <p className="mt-1 text-xl font-semibold tracking-tight text-fg tabular-nums">
-            {formatCurrency(value)}
-          </p>
-          <p className="mt-1.5 flex items-center gap-1.5 text-[11px]">
-            {(positive || negative) && (
-              <GrowthIcon className={cn("h-3 w-3 shrink-0", tone)} />
-            )}
-            <span className={cn("font-medium", tone)}>{formatGrowth(growth)}%</span>
-            <span className="text-muted">vs. last year</span>
-          </p>
-        </div>
-        {Icon && (
-          <span aria-hidden="true" className="text-faint">
-            <Icon className="h-4 w-4" />
-          </span>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-function ReportSkeleton() {
-  return (
-    <div className="space-y-6" aria-busy="true" aria-label="Loading financial report">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} className="p-5">
-            <div className="flex items-start gap-4">
-              <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-              <div className="w-full space-y-2">
-                <Skeleton className="h-3.5 w-28" />
-                <Skeleton className="h-6 w-36" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
-        <Card className="p-5 2xl:col-span-2">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="mt-5 h-64 w-full" />
-        </Card>
-        <Card className="p-5">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="mt-5 h-64 w-full rounded-full" />
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card className="p-5">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="mt-5 h-64 w-full" />
-        </Card>
-        <Card className="p-5">
-          <Skeleton className="h-5 w-44" />
-          <Skeleton className="mt-5 h-64 w-full rounded-full" />
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <Skeleton className="h-5 w-40" />
-        <SkeletonRows rows={6} className="mt-5" />
-      </Card>
-    </div>
-  );
-}
-
 function csvValue(value: string | number) {
   if (typeof value === "number") {
     return value.toFixed(2);
   }
-
-  return `"${value.replace(/"/g, '""')}"`;
+  return `"${String(value).replace(/"/g, '""')}"`;
 }
 
 export default function AdminReports() {
@@ -470,12 +372,14 @@ export default function AdminReports() {
             />
           )}
 
+          {/* Top KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map((kpi) => (
               <KpiCard key={kpi.title} {...kpi} />
             ))}
           </div>
 
+          {/* Revenue Overview & Source Breakdowns */}
           <div className="grid grid-cols-1 gap-5 2xl:grid-cols-3">
             <Card className="p-5 2xl:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -519,6 +423,7 @@ export default function AdminReports() {
             </Card>
           </div>
 
+          {/* Revenue by Period & Payment Status */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -563,6 +468,17 @@ export default function AdminReports() {
             </Card>
           </div>
 
+          {/* Accounts Receivable Aging Analysis */}
+          {data.ar_aging && (
+            <ArAging aging={data.ar_aging} loading={loading} />
+          )}
+
+          {/* Building & Property Financial Performance */}
+          {data.property_performance && data.property_performance.length > 0 && (
+            <PropertyPerformance rows={data.property_performance} loading={loading} />
+          )}
+
+          {/* Full Financial Summary Table */}
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge px-4 py-4 sm:px-5">
               <h2 className="text-base font-bold tracking-tight text-fg">

@@ -81,6 +81,21 @@ class MaintenanceService
             }
         }
 
+        // Enforce the 3-ticket daily limit per tenant so a tenant cannot flood
+        // the system with maintenance tickets in a single day.
+        $dailyLimit = 3;
+        $ticketsToday = MaintenanceTicket::where('tenant_id', $activeTenant->id)
+            ->whereDate('created_at', now())
+            ->count();
+
+        if ($ticketsToday >= $dailyLimit) {
+            throw new InvalidArgumentException(
+                "Daily maintenance ticket limit reached ({$dailyLimit} per day). "
+                . "You have submitted {$ticketsToday} ticket(s) today. "
+                . 'Please try again tomorrow.'
+            );
+        }
+
         $photoUrl = $data['photo_url'] ?? null;
         if ($photoFile) {
             $path = $photoFile->store('maintenance', 'public');

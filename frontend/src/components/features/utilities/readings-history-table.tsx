@@ -255,16 +255,16 @@ export function ReadingsHistoryTable({
             ? `Are you sure you want to delete the meter reading for ${readingToDelete.tenant_name || "this resident"} (${readingToDelete.room || ""}) on ${formatDateDisplay(readingToDelete.date)}?`
             : ""
         }
-        confirmLabel="Delete Reading"
-        confirmVariant="danger"
-        isLoading={deletingId === readingToDelete?.id}
+        confirmText="Delete Reading"
+        variant="danger"
+        loading={deletingId === readingToDelete?.id}
         onConfirm={async () => {
           if (readingToDelete) {
             await onDelete(readingToDelete.id);
             setReadingToDelete(null);
           }
         }}
-        onCancel={() => setReadingToDelete(null)}
+        onClose={() => setReadingToDelete(null)}
       />
     </>
   );

@@ -42,14 +42,16 @@ export function useTenants() {
   const pendingApplicants = tenants.filter((t) => t.status === "pending_approval");
   const residents = tenants.filter((t) => t.status !== "pending_approval");
 
-  const runAction = async (id: string, fn: () => Promise<void>) => {
+  const runAction = async (id: string, fn: () => Promise<void>): Promise<boolean> => {
     setBusyId(id);
     setError("");
     try {
       await fn();
       await loadTenants(searchTerm || undefined);
+      return true;
     } catch (err) {
       setError(getErrorMessage(err, "Unable to update the tenant."));
+      return false;
     } finally {
       setBusyId(null);
     }

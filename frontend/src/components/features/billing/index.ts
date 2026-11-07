@@ -15,4 +15,6 @@ export { ReceiptCard } from "./receipt-card";
 export { PendingVerificationsBanner } from "./pending-verifications-banner";
 export { PaymentReviewModal } from "./payment-review-modal";
 export { TenantBillCard } from "./tenant-bill-card";
-
+export { BillingBillsTable } from "./billing-bills-table";
+export { BillingFilterBar } from "./billing-filter-bar";
+export { PendingChargesTable } from "./pending-charges-table";
