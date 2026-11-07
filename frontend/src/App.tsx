@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
-import { PageShellSkeleton } from "@/components/ui/skeleton";
+import { PageLoading } from "@/components/common/page-loading";
+import { useAuth } from "@/lib/auth-context";
 
 // Layouts (loaded statically so shell renders without chunk delay)
 import AdminLayout from "@/pages/admin/layout";
@@ -29,9 +30,15 @@ const TenantMaintenance = lazy(() => import("@/pages/tenant/maintenance"));
 const TenantDocuments = lazy(() => import("@/pages/tenant/documents"));
 
 export default function App() {
+  const { initializing } = useAuth();
+
+  if (initializing) {
+    return <PageLoading />;
+  }
+
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageShellSkeleton />}>
+      <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -68,4 +75,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

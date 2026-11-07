@@ -16,6 +16,7 @@ import type {
 
 const TOKEN_KEY = "arirent_token";
 const USER_KEY = "arirent_current_user";
+const MIN_SPLASH_MS = 450;
 
 interface AuthContextValue {
   user: User | null;
@@ -41,25 +42,25 @@ function readStoredUser(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<User | null>(readStoredUser);
-  const [initializing, setInitializing] = useState(() => {
-    const cachedUser = readStoredUser();
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    // Only block if a token exists but user profile isn't yet cached in localStorage
-    return !!storedToken && !cachedUser;
-  });
+  const [initializing, setInitializing] = useState(true);
 
   // Validate the stored session on first load by asking the backend for the current user.
   useEffect(() => {
     let active = true;
+    const minDelay = new Promise((resolve) => setTimeout(resolve, MIN_SPLASH_MS));
 
     async function bootstrap() {
       const storedToken = localStorage.getItem(TOKEN_KEY);
       if (!storedToken) {
+        await minDelay;
         if (active) setInitializing(false);
         return;
       }
       try {
-        const freshUser = await authService.getCurrentUser();
+        const [freshUser] = await Promise.all([
+          authService.getCurrentUser(),
+          minDelay,
+        ]);
         if (!active) return;
         setUser(freshUser);
         localStorage.setItem(USER_KEY, JSON.stringify(freshUser));

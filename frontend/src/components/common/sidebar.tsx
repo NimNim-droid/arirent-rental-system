@@ -1,24 +1,28 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { NavLink, useNavigate } from "react-router";
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Users,
-  Zap,
-  Banknote,
+  Gauge,
+  CreditCard,
   Wrench,
-  FileText,
+  FolderClosed,
   LogOut,
-  Building,
+  Building2,
   PanelLeftClose,
   PanelLeftOpen,
   ReceiptText,
   BarChart3,
   KeyRound,
+  Wallet,
+  ChevronsUpDown,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { ChangePasswordModal } from "@/components/common/change-password-modal";
+import { useTheme } from "@/components/ui/theme";
 import { useAuth } from "@/lib/auth-context";
 
 interface SidebarProps {
@@ -27,17 +31,111 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+}
+
+interface NavGroup {
+  section?: string;
+  items: NavItem[];
+}
+
 const COLLAPSE_KEY = "arirent_sidebar_collapsed";
+
+const ADMIN_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { to: "/admin/dashboard", label: "Dashboard", icon: LayoutGrid },
+    ],
+  },
+  {
+    section: "Portfolio",
+    items: [
+      { to: "/admin/properties", label: "Properties & Units", icon: Building2 },
+      { to: "/admin/tenants", label: "Tenants", icon: Users },
+    ],
+  },
+  {
+    section: "Finance",
+    items: [
+      { to: "/admin/utilities", label: "Utilities", icon: Gauge },
+      { to: "/admin/billing", label: "Billing", icon: CreditCard },
+      { to: "/admin/invoices", label: "Invoices", icon: ReceiptText },
+      { to: "/admin/reports", label: "Financial Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    section: "Operations",
+    items: [
+      { to: "/admin/maintenance", label: "Maintenance", icon: Wrench },
+      { to: "/admin/documents", label: "Documents", icon: FolderClosed },
+    ],
+  },
+];
+
+const TENANT_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { to: "/tenant/dashboard", label: "Overview", icon: LayoutGrid },
+    ],
+  },
+  {
+    section: "Billing & Payments",
+    items: [
+      { to: "/tenant/billing", label: "My Invoices", icon: ReceiptText },
+      { to: "/tenant/excess-charges", label: "Excess Charges", icon: Wallet },
+    ],
+  },
+  {
+    section: "Requests & Files",
+    items: [
+      { to: "/tenant/maintenance", label: "Maintenance", icon: Wrench },
+      { to: "/tenant/documents", label: "Documents", icon: FolderClosed },
+    ],
+  },
+];
 
 export function Sidebar({ role, open = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "true"
   );
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProfileMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [profileMenuOpen]);
 
   const handleLogout = async () => {
+    setProfileMenuOpen(false);
     await logout();
     navigate("/login");
   };
@@ -50,27 +148,7 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
     });
   };
 
-  const adminLinks = [
-    { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/admin/properties", label: "Properties & Units", icon: Building },
-    { to: "/admin/tenants", label: "Tenants", icon: Users },
-    { to: "/admin/utilities", label: "Utilities", icon: Zap },
-    { to: "/admin/billing", label: "Billing", icon: ReceiptText },
-    { to: "/admin/invoices", label: "Invoice", icon: FileText },
-    { to: "/admin/reports", label: "Financial Reports", icon: BarChart3 },
-    { to: "/admin/maintenance", label: "Maintenance", icon: Wrench },
-    { to: "/admin/documents", label: "Documents", icon: FileText },
-  ];
-
-  const tenantLinks = [
-    { to: "/tenant/dashboard", label: "Overview", icon: LayoutDashboard },
-    { to: "/tenant/billing", label: "My Invoices", icon: Banknote },
-    { to: "/tenant/excess-charges", label: "Excess Charges", icon: ReceiptText },
-    { to: "/tenant/maintenance", label: "Maintenance", icon: Wrench },
-    { to: "/tenant/documents", label: "Documents", icon: FileText },
-  ];
-
-  const links = role === "admin" ? adminLinks : tenantLinks;
+  const groups = role === "admin" ? ADMIN_GROUPS : TENANT_GROUPS;
 
   const initials = String(user?.name || "D")
     .split(" ")
@@ -117,90 +195,158 @@ export function Sidebar({ role, open = false, onClose }: SidebarProps) {
             </div>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="space-y-0.5 p-2">
-            {links.map((link, i) => {
-              const Icon = link.icon;
-              const isCollapsedDesktop = collapsed;
-              return (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  onClick={handleNav}
-                  title={isCollapsedDesktop ? link.label : undefined}
-                  className={({ isActive }) =>
-                    cn(
-                      "relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-150 ease-out",
-                      isCollapsedDesktop && "lg:justify-center lg:px-0",
-                      isActive
-                        ? "bg-accent-soft text-accent"
-                        : "text-muted hover:bg-hover hover:text-fg-soft"
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 hidden h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-accent lg:block" />
+          {/* Navigation Groups */}
+          <nav className="space-y-4 px-2.5 py-3">
+            {groups.map((group, groupIdx) => (
+              <div key={group.section ?? groupIdx} className="space-y-0.5">
+                {group.section && (
+                  <p
+                    className={cn(
+                      "px-2.5 pb-1 text-[11px] font-medium tracking-wider text-faint uppercase select-none",
+                      collapsed && "lg:hidden"
+                    )}
+                  >
+                    {group.section}
+                  </p>
+                )}
+
+                {group.items.map((link) => {
+                  const Icon = link.icon;
+                  const isCollapsedDesktop = collapsed;
+                  return (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      onClick={handleNav}
+                      title={isCollapsedDesktop ? link.label : undefined}
+                      className={({ isActive }) =>
+                        cn(
+                          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors duration-150 ease-out",
+                          isCollapsedDesktop && "lg:justify-center lg:px-0",
+                          isActive
+                            ? "bg-accent-soft font-semibold text-accent"
+                            : "font-medium text-fg-soft hover:bg-hover hover:text-fg"
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon
+                            strokeWidth={isActive ? 2 : 1.75}
+                            className={cn(
+                              "h-[17px] w-[17px] shrink-0 transition-colors",
+                              isCollapsedDesktop && "lg:mx-auto",
+                              isActive
+                                ? "text-accent"
+                                : "text-muted group-hover:text-fg-soft"
+                            )}
+                          />
+                          <span className={cn("truncate", isCollapsedDesktop && "lg:hidden")}>
+                            {link.label}
+                          </span>
+                        </>
                       )}
-                      <Icon className={cn("h-4 w-4 shrink-0", isCollapsedDesktop && "lg:mx-auto")} />
-                      <span className={cn("truncate", isCollapsedDesktop && "lg:hidden")}>
-                        {link.label}
-                      </span>
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 
-        {/* User Info, Theme Toggle & Logout */}
-        <div className="border-t border-edge p-3 space-y-2">
-          {/* User info row */}
-          <div className={cn(
-            "flex items-center gap-2.5 rounded-lg border border-edge bg-inset px-3 py-2",
-            collapsed && "lg:hidden"
-          )}>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1 truncate">
-              <p className="truncate text-[13px] font-medium text-fg leading-tight">{user?.name || ""}</p>
-              <p className="truncate text-[11px] text-muted">{user?.email || ""}</p>
-            </div>
-          </div>
+        {/* Profile Menu & Collapse Toggle */}
+        <div className="border-t border-edge p-3 space-y-1.5" ref={profileMenuRef}>
+          <div className="relative">
+            {profileMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Account menu"
+                className={cn(
+                  "absolute bottom-full mb-2 z-50 w-56 rounded-xl border border-edge bg-elevated p-1.5 shadow-lg shadow-black/15 animate-fade-in",
+                  collapsed ? "left-0" : "inset-x-0 w-full"
+                )}
+              >
+                <div className="border-b border-edge px-2.5 py-2 mb-1">
+                  <p className="truncate text-xs font-semibold text-fg">
+                    {user?.name || "Account"}
+                  </p>
+                  <p className="truncate text-[11px] text-muted">
+                    {user?.email || ""}
+                  </p>
+                </div>
 
-          {/* Collapsed desktop: just the avatar */}
-          <div
-            className={cn("hidden justify-center", collapsed && "lg:flex")}
-            title={user?.name || ""}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
-              {initials}
-            </div>
-          </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    toggleTheme();
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-fg-soft transition-colors hover:bg-hover hover:text-fg cursor-pointer"
+                >
+                  {isDark ? (
+                    <Sun className="h-4 w-4 shrink-0 text-amber-400" />
+                  ) : (
+                    <Moon className="h-4 w-4 shrink-0 text-muted" />
+                  )}
+                  <span>{isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}</span>
+                </button>
 
-          {/* Action row */}
-          <div className={cn("flex items-center gap-2", collapsed && "lg:flex-col lg:gap-1.5")}>
-            <ThemeToggle compact className="flex-1 lg:w-full" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setPasswordOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-fg-soft transition-colors hover:bg-hover hover:text-fg cursor-pointer"
+                >
+                  <KeyRound className="h-4 w-4 shrink-0 text-muted" />
+                  <span>Change password</span>
+                </button>
+
+                <div className="my-1 border-t border-edge" />
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-danger-fg transition-colors hover:bg-danger-bg cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            )}
+
+            {/* Clickable Profile Trigger */}
             <button
-              onClick={() => setPasswordOpen(true)}
-              title="Change password"
-              aria-label="Change password"
-              className="inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-2.5 text-xs font-medium text-muted transition-colors duration-150 hover:bg-hover hover:text-fg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:w-full"
+              type="button"
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="menu"
+              title={collapsed ? `${user?.name || "Account"} — Account settings` : undefined}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg border border-edge bg-inset px-2.5 py-2 text-left transition-colors duration-150 hover:border-edge-strong hover:bg-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                collapsed && "lg:justify-center lg:border-transparent lg:bg-transparent lg:px-0"
+              )}
             >
-              <KeyRound className="h-4 w-4" />
-              <span className={cn("ml-1.5", collapsed && "lg:hidden")}>Password</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              title="Log out"
-              aria-label="Log out"
-              className="inline-flex h-8 flex-1 items-center justify-center rounded-md border border-transparent px-2.5 text-xs font-medium text-muted transition-colors duration-150 hover:border-danger-border hover:bg-danger-bg hover:text-danger-fg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:w-full"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className={cn("ml-1.5", collapsed && "lg:hidden")}>Sign out</span>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
+                {initials}
+              </div>
+              <div className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>
+                <p className="truncate text-[13px] font-medium text-fg leading-tight">
+                  {user?.name || ""}
+                </p>
+                <p className="truncate text-[11px] text-muted">
+                  {user?.email || ""}
+                </p>
+              </div>
+              <ChevronsUpDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-muted",
+                  collapsed && "lg:hidden"
+                )}
+              />
             </button>
           </div>
 

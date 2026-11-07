@@ -12,6 +12,26 @@
         }
       })();
     </script>
+    <style>
+      html[data-theme="dark"] body { background-color: #090d16; color: #f1f4f9; }
+      html[data-theme="light"] body { background-color: #f6f7f8; color: #101828; }
+      .arirent-boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .arirent-boot-word {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .arirent-boot-word .gold { color: #c9a24b; }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="alternate icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
@@ -22,7 +42,17 @@
     <title>AriRent — Property & Rental Management</title>
   </head>
   <body class="antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <div class="arirent-boot" aria-hidden="true">
+        <svg width="56" height="56" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="border-radius: 25%;">
+          <rect x="0" y="0" width="120" height="120" rx="30" fill="#1B2A4A" />
+          <path d="M28 84 L60 34 L92 84" fill="none" stroke="#F1F4F9" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="60" cy="67" r="7" fill="#C9A24B" />
+          <rect x="56.5" y="69" width="7" height="15" rx="3.5" fill="#C9A24B" />
+        </svg>
+        <div class="arirent-boot-word"><span>Ari</span><span class="gold">Rent</span></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
