@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DomainException;
 use App\Http\Requests\Tenant\ApproveTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Http\Resources\BillResource;
@@ -23,25 +24,7 @@ class TenantController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (! $user || $user->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $filters = [];
-
-        if ($request->filled('status')) {
-            $filters['status'] = $request->status;
-        }
-
-        if ($request->filled('property_id')) {
-            $filters['property_id'] = $request->property_id;
-        }
-
-        if ($request->filled('search')) {
-            $filters['search'] = $request->search;
-        }
-
+        $filters = $request->only(['status', 'property_id', 'search']);
         $perPage = min((int) $request->input('per_page', 50), 250);
         $paginated = $this->tenantService->listTenants($filters, $perPage);
 
@@ -66,18 +49,12 @@ class TenantController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $tenant = $this->tenantService->getTenantDetails($id);
-
-        if (! $tenant) {
+        try {
+            $tenant = $this->tenantService->getTenantDetailsForUser($request->user(), $id);
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
-        }
-
-        if ($user && $user->role === 'tenant') {
-            $isOwn = ($tenant->user_id && $tenant->user_id === $user->id) || ($tenant->email === $user->email);
-            if (! $isOwn) {
-                return response()->json(['message' => 'Unauthorized to view this tenant profile.'], 403);
-            }
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
 
         $data = (new TenantResource($tenant))->toArray($request);
@@ -102,7 +79,7 @@ class TenantController extends Controller
                 'data' => new TenantResource($tenant),
                 'tenant' => new TenantResource($tenant),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
         }
     }
@@ -126,7 +103,7 @@ class TenantController extends Controller
                 'tenant' => new TenantResource($tenant),
                 'data' => new TenantResource($tenant),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
@@ -138,17 +115,13 @@ class TenantController extends Controller
      */
     public function reject(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->tenantService->rejectTenant($id);
 
             return response()->json([
                 'message' => 'Tenant application rejected.',
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
         }
     }
@@ -158,17 +131,13 @@ class TenantController extends Controller
      */
     public function vacate(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->tenantService->vacateTenant($id);
 
             return response()->json([
                 'message' => 'Tenant vacated. Room is now vacant.',
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -180,17 +149,13 @@ class TenantController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->tenantService->deleteTenant($id);
 
             return response()->json([
                 'message' => 'Tenant deleted successfully.',
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Tenant not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

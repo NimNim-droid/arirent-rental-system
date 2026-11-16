@@ -2,17 +2,19 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthService
 {
     public function __construct(
+        protected UserRepositoryInterface $userRepo,
         protected TenantRepositoryInterface $tenantRepo,
         protected RoomRepositoryInterface $roomRepo
     ) {}
@@ -22,10 +24,10 @@ class AuthService
      */
     public function login(string $email, string $password): array
     {
-        $user = User::where('email', $email)->first();
+        $user = $this->userRepo->findByEmail($email);
 
         if (! $user || ! Hash::check($password, $user->password)) {
-            throw new HttpException(401, 'Invalid credentials.');
+            throw new DomainException('Invalid credentials.', 401);
         }
 
         $tenant = null;
@@ -34,11 +36,11 @@ class AuthService
             $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
 
             if ($tenant && $tenant->status === 'pending_approval') {
-                throw new HttpException(403, 'Your account is pending landlord approval.');
+                throw new DomainException('Your account is pending landlord approval.', 403);
             }
 
             if ($tenant && $tenant->status === 'inactive') {
-                throw new HttpException(403, 'Your account has been deactivated.');
+                throw new DomainException('Your account has been deactivated.', 403);
             }
         }
 
@@ -68,16 +70,15 @@ class AuthService
     public function changePassword(User $user, string $currentPassword, string $newPassword): string
     {
         if (! Hash::check($currentPassword, $user->password)) {
-            throw new HttpException(422, 'Current password is incorrect.');
+            throw new DomainException('Current password is incorrect.', 422);
         }
 
         return DB::transaction(function () use ($user, $newPassword) {
-            $user->password = $newPassword;
-            $user->save();
+            $this->userRepo->updatePassword($user, $newPassword);
 
             // Keep the legacy tenant password column in sync; it is not used
             // for authentication but can be used by older admin tooling.
-            $user->tenant()->update(['password' => $user->password]);
+            $this->userRepo->syncTenantPassword($user, $user->password);
 
             $user->tokens()->delete();
 
@@ -93,27 +94,27 @@ class AuthService
         $room = $this->roomRepo->findByPropertyAndNumber((int) $data['property_id'], $data['room_number']);
 
         if (! $room) {
-            throw new HttpException(422, "Room {$data['room_number']} does not exist in the selected property.");
+            throw new DomainException("Room {$data['room_number']} does not exist in the selected property.", 422);
         }
 
         if (in_array($room->status, ['occupied', 'reserved'])) {
-            throw new HttpException(409, 'Selected room is already reserved or occupied.');
+            throw new DomainException('Selected room is already reserved or occupied.', 409);
         }
 
         $hashedPassword = Hash::make($data['password']);
 
         return DB::transaction(function () use ($data, $room, $hashedPassword) {
-            $user = User::create([
+            $user = $this->userRepo->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => $hashedPassword,
                 'role' => 'tenant',
             ]);
 
-            $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $data['name']));
+            $cleanName = strtolower((string) preg_replace('/[^a-zA-Z0-9]/', '', $data['name']));
             $username = $cleanName . rand(100, 999);
 
-            while (Tenant::where('username', $username)->exists()) {
+            while ($this->tenantRepo->existsByUsername($username)) {
                 $username = $cleanName . rand(100, 999);
             }
 
@@ -131,9 +132,7 @@ class AuthService
                 'water_rate' => 500.00,
             ]);
 
-            if ($room) {
-                $this->roomRepo->update($room->id, ['status' => 'reserved']);
-            }
+            $this->roomRepo->update($room->id, ['status' => 'reserved']);
 
             return $tenant;
         });

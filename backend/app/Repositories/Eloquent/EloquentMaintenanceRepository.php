@@ -6,6 +6,7 @@ use App\Models\MaintenanceTicket;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class EloquentMaintenanceRepository implements MaintenanceRepositoryInterface
 {
@@ -112,5 +113,39 @@ class EloquentMaintenanceRepository implements MaintenanceRepositoryInterface
     {
         $ticket = MaintenanceTicket::find($id);
         return $ticket ? $ticket->delete() : false;
+    }
+
+    public function countCreatedTodayForTenant(int $tenantId): int
+    {
+        return MaintenanceTicket::where('tenant_id', $tenantId)
+            ->whereDate('created_at', now())
+            ->count();
+    }
+
+    public function getRecent(?int $propertyId = null, int $limit = 5): Collection
+    {
+        $query = MaintenanceTicket::with('tenant:id,name')
+            ->select([
+                'id', 'tenant_id', 'property_id', 'room', 'type',
+                'description', 'priority', 'status', 'technician_name',
+                'admin_notes', 'created_at',
+            ])
+            ->latest()
+            ->take($limit);
+
+        if ($propertyId) {
+            $query->where('property_id', $propertyId);
+        }
+
+        return $query->get();
+    }
+
+    public function getRecentForTenant(int $tenantId, int $limit = 3): Collection
+    {
+        return MaintenanceTicket::where('tenant_id', $tenantId)
+            ->latest()
+            ->take($limit)
+            ->select(['id', 'type', 'description', 'priority', 'status', 'created_at'])
+            ->get();
     }
 }

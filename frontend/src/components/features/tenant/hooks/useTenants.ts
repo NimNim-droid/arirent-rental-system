@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import { tenantsService } from "@/lib/services/tenants";
+import { propertiesService } from "@/lib/services/properties";
 import { getErrorMessage } from "@/lib/errors";
-import type { Tenant } from "@/lib/types";
+import type { Property, Tenant } from "@/lib/types";
 
 export function useTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadProperties = useCallback(async () => {
+    try {
+      const data = await propertiesService.getProperties();
+      setProperties(data);
+    } catch {
+      // Non-blocking
+    }
+  }, []);
 
   const loadTenants = useCallback(async (search?: string, isSearchCall = false) => {
     if (isSearchCall) {
@@ -29,6 +40,10 @@ export function useTenants() {
       setIsSearching(false);
     }
   }, []);
+
+  useEffect(() => {
+    void loadProperties();
+  }, [loadProperties]);
 
   useEffect(() => {
     const isInitial = searchTerm === "" && loading;
@@ -75,8 +90,14 @@ export function useTenants() {
     });
   };
 
+  const refreshAll = useCallback(() => {
+    void loadTenants(searchTerm || undefined);
+    void loadProperties();
+  }, [loadTenants, loadProperties, searchTerm]);
+
   return {
     tenants,
+    properties,
     pendingApplicants,
     residents,
     searchTerm,
@@ -88,6 +109,8 @@ export function useTenants() {
     error,
     busyId,
     loadTenants,
+    loadProperties,
+    refreshAll,
     handleApprove,
     handleReject,
     handleVacate,

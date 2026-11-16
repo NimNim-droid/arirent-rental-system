@@ -25,7 +25,6 @@ const AdminDocuments = lazy(() => import("@/pages/admin/documents"));
 // Lazy-loaded tenant portal pages
 const TenantDashboard = lazy(() => import("@/pages/tenant/dashboard"));
 const TenantBilling = lazy(() => import("@/pages/tenant/billing"));
-const TenantExcessCharges = lazy(() => import("@/pages/tenant/excess-charges"));
 const TenantMaintenance = lazy(() => import("@/pages/tenant/maintenance"));
 const TenantDocuments = lazy(() => import("@/pages/tenant/documents"));
 
@@ -63,7 +62,7 @@ export default function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<TenantDashboard />} />
             <Route path="billing" element={<TenantBilling />} />
-            <Route path="excess-charges" element={<TenantExcessCharges />} />
+            <Route path="excess-charges" element={<Navigate to="/tenant/billing" replace />} />
             <Route path="maintenance" element={<TenantMaintenance />} />
             <Route path="documents" element={<TenantDocuments />} />
           </Route>

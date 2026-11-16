@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { billingService } from "@/lib/services/billing";
+import { excessChargesService } from "@/lib/services/excess-charges";
 import { settingsService } from "@/lib/services/settings";
 import { getErrorMessage } from "@/lib/errors";
-import type { Bill, Settings } from "@/lib/types";
+import type { Bill, ExcessCharge, Settings } from "@/lib/types";
 
 export function useTenantBilling() {
   const [bills, setBills] = useState<Bill[]>([]);
+  const [pendingCharges, setPendingCharges] = useState<ExcessCharge[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Bill | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -17,10 +19,14 @@ export function useTenantBilling() {
     setLoading(true);
     setError("");
     try {
-      const billsRes = await billingService.getBills({ per_page: 100 });
+      const [billsRes, chargesRes] = await Promise.all([
+        billingService.getBills({ per_page: 100 }),
+        excessChargesService.getCharges({ status: "pending" }).catch(() => [] as ExcessCharge[]),
+      ]);
       setBills(billsRes.data);
+      setPendingCharges(chargesRes);
     } catch (err) {
-      setError(getErrorMessage(err, "Unable to load your invoices."));
+      setError(getErrorMessage(err, "Unable to load your bills."));
     } finally {
       setLoading(false);
     }
@@ -75,8 +81,15 @@ export function useTenantBilling() {
     [unpaidBills]
   );
 
+  const pendingChargesTotal = useMemo(
+    () => pendingCharges.reduce((sum, c) => sum + Number(c.amount || 0), 0),
+    [pendingCharges]
+  );
+
   return {
     bills,
+    pendingCharges,
+    pendingChargesTotal,
     settings,
     selectedInvoice,
     showPaymentModal,

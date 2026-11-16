@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
-use App\Models\Tenant;
+use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +24,7 @@ class UpdateTenantRequest extends FormRequest
 
         if ($user->role === 'tenant') {
             $tenantId = (int) $this->route('id');
-            $tenant = Tenant::find($tenantId);
+            $tenant = app(TenantRepositoryInterface::class)->find($tenantId);
             return $tenant && ($tenant->user_id === $user->id || $tenant->email === $user->email);
         }
 

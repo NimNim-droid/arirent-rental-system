@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { FileText, FolderOpen, RefreshCw, AlertTriangle, Plus } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SectionHeader } from "@/components/common/section-header";
@@ -7,10 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonRows } from "@/components/ui/skeleton";
-import { documentsService } from "@/lib/services/documents";
-import { getErrorMessage } from "@/lib/errors";
-import type { DocumentItem } from "@/lib/types";
 import {
+  useDocuments,
   DocumentCard,
   AdminUploadDocModal,
   UnavailableDocModal,
@@ -26,71 +24,26 @@ const CATEGORIES = [
 ];
 
 export default function AdminDocuments() {
-  const [docs, setDocs] = useState<DocumentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const {
+    docs,
+    loading,
+    error,
+    successMsg,
+    unavailableDoc,
+    setUnavailableDoc,
+    deletingDoc,
+    setDeletingDoc,
+    deleteBusy,
+    loadDocs,
+    handleDownload,
+    handleDelete,
+    handleUploadSuccess,
+  } = useDocuments();
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [unavailableDoc, setUnavailableDoc] = useState<DocumentItem | null>(null);
-  const [deletingDoc, setDeletingDoc] = useState<DocumentItem | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const loadDocs = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await documentsService.getDocuments();
-      setDocs(res ?? []);
-    } catch (err) {
-      setDocs([]);
-      setError(getErrorMessage(err, "Unable to load documents."));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadDocs();
-  }, [loadDocs]);
-
-  const handleDownload = (doc: DocumentItem) => {
-    if (!doc.url || doc.url === "#") {
-      setUnavailableDoc(doc);
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = doc.url;
-    link.target = "_blank";
-    link.download = doc.name;
-    link.click();
-  };
-
-  const handleDelete = async (doc: DocumentItem) => {
-    setDeleteBusy(true);
-    setError("");
-    try {
-      await documentsService.deleteDocument(doc.id);
-      setDocs((prev) => prev.filter((d) => d.id !== doc.id));
-      setDeletingDoc(null);
-      setSuccessMsg(`"${doc.name}" deleted successfully.`);
-      setTimeout(() => setSuccessMsg(""), 4000);
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to delete the document."));
-    } finally {
-      setDeleteBusy(false);
-    }
-  };
-
-  const handleUploadSuccess = (newDoc: DocumentItem) => {
-    setDocs((prev) => [newDoc, ...prev]);
-    setSuccessMsg(`"${newDoc.name}" published successfully for tenants!`);
-    setTimeout(() => setSuccessMsg(""), 4000);
-  };
-
-  // Filtered documents
   const filteredDocs = useMemo(() => {
     return docs.filter((doc) => {
       const matchesSearch =

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Bill;
-use App\Models\Payment;
 use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Support\PrivateFile;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -17,7 +17,8 @@ class PaymentService
 {
     public function __construct(
         protected BillRepositoryInterface $billRepo,
-        protected TenantRepositoryInterface $tenantRepo
+        protected TenantRepositoryInterface $tenantRepo,
+        protected PaymentRepositoryInterface $paymentRepo
     ) {}
 
     /**
@@ -63,14 +64,14 @@ class PaymentService
 
                 $reference = (string) $data['gcash_ref'];
 
-                if (Payment::where('transaction_reference', $reference)->exists()) {
+                if ($this->paymentRepo->existsByReference($reference)) {
                     throw new InvalidArgumentException('That payment reference has already been used.');
                 }
 
                 $oldReceiptUrl = $bill->receipt_url;
                 $receiptUrl = $newReceiptUrl ?: $bill->receipt_url;
 
-                Payment::create([
+                $this->paymentRepo->create([
                     'bill_id' => $bill->id,
                     'tenant_id' => $bill->tenant_id,
                     'amount' => $amount,
@@ -124,11 +125,7 @@ class PaymentService
                 throw new InvalidArgumentException('This bill cannot be verified. Current status: ' . $bill->status);
             }
 
-            $pendingPayment = Payment::where('bill_id', $billId)
-                ->where('status', 'pending')
-                ->lockForUpdate()
-                ->latest()
-                ->first();
+            $pendingPayment = $this->paymentRepo->findPendingForBillForUpdate($billId);
 
             $totalAmount = (float) $bill->total_amount;
             $currentPaid = (float) ($bill->paid_amount ?? 0);
@@ -149,7 +146,7 @@ class PaymentService
                     throw new InvalidArgumentException('The payment amount exceeds the remaining balance. Adjust the invoice or reject the payment.');
                 }
 
-                $pendingPayment->update([
+                $this->paymentRepo->update($pendingPayment, [
                     'status' => 'confirmed',
                     'paid_at' => now(),
                 ]);
@@ -167,13 +164,10 @@ class PaymentService
                     'reject_reason' => null,
                 ]);
 
-                $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-                if ($tenant) {
-                    $tenant->decrement('balance', min((float) $tenant->balance, $paymentAmount));
-                }
+                $this->tenantRepo->decrementBalance((int) $bill->tenant_id, $paymentAmount);
             } else {
                 if ($pendingPayment) {
-                    $pendingPayment->update(['status' => 'failed']);
+                    $this->paymentRepo->update($pendingPayment, ['status' => 'failed']);
                 }
 
                 // If already partially paid previously, restore to partially_paid; otherwise unpaid
@@ -231,11 +225,11 @@ class PaymentService
 
             $reference = $data['transaction_reference'] ?? ('CASH-' . strtoupper(bin2hex(random_bytes(4))));
 
-            if (Payment::where('transaction_reference', $reference)->exists()) {
+            if ($this->paymentRepo->existsByReference($reference)) {
                 throw new InvalidArgumentException('That payment reference has already been used.');
             }
 
-            Payment::create([
+            $this->paymentRepo->create([
                 'bill_id' => $bill->id,
                 'tenant_id' => $bill->tenant_id,
                 'amount' => $amount,
@@ -261,10 +255,7 @@ class PaymentService
                 'reject_reason' => null,
             ]);
 
-            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-            if ($tenant) {
-                $tenant->decrement('balance', min((float) $tenant->balance, $amount));
-            }
+            $this->tenantRepo->decrementBalance((int) $bill->tenant_id, $amount);
 
             Cache::forget('admin_stats_all');
             Cache::forget("tenant_dashboard_{$bill->tenant_id}");

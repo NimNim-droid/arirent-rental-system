@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { RotateCw, AlertOctagon, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
@@ -15,17 +15,11 @@ import {
   InvoiceModal,
   DirectPaymentModal,
 } from "@/components/features/billing";
-import { billingService } from "@/lib/services/billing";
-import { propertiesService } from "@/lib/services/properties";
-import { tenantsService } from "@/lib/services/tenants";
+import { getErrorMessage } from "@/lib/errors";
 import { formatCurrency, formatInvoiceNumber } from "@/lib/formatters";
-import type { Bill, DelinquentTenant, Property, Tenant } from "@/lib/types";
+import type { Bill } from "@/lib/types";
 
 export default function AdminInvoices() {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [activeTenants, setActiveTenants] = useState<Tenant[]>([]);
-  const [delinquents, setDelinquents] = useState<DelinquentTenant[]>([]);
-
   // Filter toolbar
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
@@ -53,6 +47,9 @@ export default function AdminInvoices() {
 
   const {
     bills,
+    properties,
+    activeTenants,
+    delinquents,
     pendingPayments,
     selectedInvoice,
     message,
@@ -61,42 +58,12 @@ export default function AdminInvoices() {
     busyId,
     setSelectedInvoice,
     loadBills,
+    loadDelinquencies,
     runVerify,
     handleVoid,
-  } = useBilling();
-
-  const loadProperties = useCallback(async () => {
-    try {
-      const data = await propertiesService.getProperties();
-      setProperties(data);
-    } catch {
-      // Non-blocking
-    }
-  }, []);
-
-  const loadActiveTenants = useCallback(async () => {
-    try {
-      const res = await tenantsService.getTenants({ status: "active", per_page: 150 });
-      setActiveTenants(res.data);
-    } catch {
-      // Non-blocking
-    }
-  }, []);
-
-  const loadDelinquencies = useCallback(async () => {
-    try {
-      const res = await billingService.getDelinquencies();
-      setDelinquents(res.data);
-    } catch {
-      // Delinquency check non-blocking
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProperties();
-    loadActiveTenants();
-    loadDelinquencies();
-  }, [loadProperties, loadActiveTenants, loadDelinquencies]);
+    deleteBill,
+    bulkDeleteBills,
+  } = useBilling({ includeDelinquencies: true });
 
   // Filter tenants list dynamically based on selected property (cascading filter)
   const visibleTenants = useMemo(() => {
@@ -239,14 +206,12 @@ export default function AdminInvoices() {
     setIsBulkDeleting(true);
     setLocalError("");
     try {
-      const res = await billingService.bulkDeleteBills(selectedInvoiceIds);
+      const res = await bulkDeleteBills(selectedInvoiceIds);
       setSuccessMessage(`Successfully deleted ${res.deleted} invoice(s).`);
       setSelectedInvoiceIds([]);
       setIsConfirmBulkDeleteOpen(false);
-      await loadBills();
-      await loadDelinquencies();
-    } catch (err: any) {
-      setLocalError(err?.response?.data?.message || "Failed to delete selected invoices.");
+    } catch (err: unknown) {
+      setLocalError(getErrorMessage(err, "Failed to delete selected invoices."));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -257,7 +222,7 @@ export default function AdminInvoices() {
     setIsDeletingSingle(true);
     setLocalError("");
     try {
-      await billingService.deleteBill(String(deletingSingleBill.id));
+      await deleteBill(String(deletingSingleBill.id));
       const formattedNum = formatInvoiceNumber(
         deletingSingleBill.id,
         deletingSingleBill.created_at || deletingSingleBill.due_date
@@ -265,10 +230,8 @@ export default function AdminInvoices() {
       setSuccessMessage(`Invoice #${formattedNum} permanently deleted.`);
       setSelectedInvoiceIds((prev) => prev.filter((id) => id !== String(deletingSingleBill.id)));
       setDeletingSingleBill(null);
-      await loadBills();
-      await loadDelinquencies();
-    } catch (err: any) {
-      setLocalError(err?.response?.data?.message || "Failed to delete invoice.");
+    } catch (err: unknown) {
+      setLocalError(getErrorMessage(err, "Failed to delete invoice."));
     } finally {
       setIsDeletingSingle(false);
     }

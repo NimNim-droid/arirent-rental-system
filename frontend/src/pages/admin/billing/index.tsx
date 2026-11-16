@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Zap, PlusCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
@@ -13,27 +13,19 @@ import {
   BillingBillsTable,
   PendingChargesTable,
 } from "@/components/features/billing";
-import { tenantsService } from "@/lib/services/tenants";
-import { excessChargesService } from "@/lib/services/excess-charges";
-import { propertiesService } from "@/lib/services/properties";
 import { formatCurrency } from "@/lib/formatters";
-import type { Tenant, ExcessCharge, Bill, Property } from "@/lib/types";
+import type { ExcessCharge, Bill } from "@/lib/types";
 
 type BillingTab = "current" | "history" | "unpaid";
 
 export default function AdminBilling() {
   const [activeTab, setActiveTab] = useState<BillingTab>("current");
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [activeTenants, setActiveTenants] = useState<Tenant[]>([]);
-  const [excessCharges, setExcessCharges] = useState<ExcessCharge[]>([]);
-  const [loadingCharges, setLoadingCharges] = useState<boolean>(false);
   const [isExcessModalOpen, setIsExcessModalOpen] = useState<boolean>(false);
   const [directPaymentInvoice, setDirectPaymentInvoice] = useState<Bill | null>(null);
   const [deletingCharge, setDeletingCharge] = useState<ExcessCharge | null>(null);
   const [isDeletingCharge, setIsDeletingCharge] = useState<boolean>(false);
   const [voidingBill, setVoidingBill] = useState<Bill | null>(null);
   const [isVoidingBill, setIsVoidingBill] = useState<boolean>(false);
-  const [excessError, setExcessError] = useState<string>("");
 
   // Filters
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
@@ -45,53 +37,23 @@ export default function AdminBilling() {
 
   const {
     bills,
+    properties,
+    activeTenants,
+    excessCharges,
     selectedInvoice,
     message,
     error,
+    excessError,
     loading,
+    loadingCharges,
     generating,
     setSelectedInvoice,
     loadBills,
+    loadExcessCharges,
     handleGenerateBills,
     handleVoid,
-  } = useBilling();
-
-  const loadProperties = useCallback(async () => {
-    try {
-      const data = await propertiesService.getProperties();
-      setProperties(data);
-    } catch {
-      // Non-blocking
-    }
-  }, []);
-
-  const loadActiveTenants = useCallback(async () => {
-    try {
-      const res = await tenantsService.getTenants({ status: "active", per_page: 150 });
-      setActiveTenants(res.data);
-    } catch {
-      // Non-blocking
-    }
-  }, []);
-
-  const loadExcessCharges = useCallback(async () => {
-    setLoadingCharges(true);
-    setExcessError("");
-    try {
-      const data = await excessChargesService.getCharges({ status: "pending" });
-      setExcessCharges(data);
-    } catch {
-      setExcessError("Failed to load pending unbilled charges.");
-    } finally {
-      setLoadingCharges(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProperties();
-    loadActiveTenants();
-    loadExcessCharges();
-  }, [loadProperties, loadActiveTenants, loadExcessCharges]);
+    deleteExcessCharge,
+  } = useBilling({ includeExcessCharges: true });
 
   // Dynamic tenant options filtered by selected property
   const visibleTenants = useMemo(() => {
@@ -119,7 +81,6 @@ export default function AdminBilling() {
     try {
       await handleVoid(String(voidingBill.id));
       setVoidingBill(null);
-      await loadExcessCharges();
     } finally {
       setIsVoidingBill(false);
     }
@@ -129,11 +90,10 @@ export default function AdminBilling() {
     if (!deletingCharge) return;
     setIsDeletingCharge(true);
     try {
-      await excessChargesService.deleteCharge(deletingCharge.id);
-      setDeletingCharge(null);
-      await loadExcessCharges();
-    } catch (err: any) {
-      setExcessError(err?.response?.data?.message || "Failed to remove incidental charge.");
+      const deleted = await deleteExcessCharge(deletingCharge.id);
+      if (deleted) {
+        setDeletingCharge(null);
+      }
     } finally {
       setIsDeletingCharge(false);
     }

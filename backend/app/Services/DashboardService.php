@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Bill;
-use App\Models\MaintenanceTicket;
-use App\Models\Room;
-use App\Models\Tenant;
 use App\Models\User;
-use App\Models\UtilityReading;
+use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\MaintenanceRepositoryInterface;
+use App\Repositories\Contracts\ReadingRepositoryInterface;
+use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PrivateFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -17,7 +17,11 @@ class DashboardService
 {
     public function __construct(
         protected TenantRepositoryInterface $tenantRepo,
-        protected SettingsRepositoryInterface $settingsRepo
+        protected SettingsRepositoryInterface $settingsRepo,
+        protected BillRepositoryInterface $billRepo,
+        protected RoomRepositoryInterface $roomRepo,
+        protected ReadingRepositoryInterface $readingRepo,
+        protected MaintenanceRepositoryInterface $maintenanceRepo
     ) {}
 
     /**
@@ -28,52 +32,17 @@ class DashboardService
         $cacheKey = 'admin_stats_' . ($propertyId ?: 'all');
 
         return Cache::remember($cacheKey, 15, function () use ($propertyId) {
-            // Total revenue from all approved/paid bills
-            $billsQuery = Bill::where('status', 'paid');
-            if ($propertyId) {
-                $billsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-            }
-            $totalRevenue = (float) $billsQuery->sum('total_amount');
+            $totalRevenue = $this->billRepo->sumPaidRevenue($propertyId);
 
-            // Rooms & occupancy: single conditional aggregation query
-            $roomsQuery = Room::query();
-            if ($propertyId) {
-                $roomsQuery->where('property_id', $propertyId);
-            }
-            $roomStats = $roomsQuery->selectRaw('count(*) as total, count(case when status = "occupied" then 1 end) as occupied')->first();
-            $totalRooms = (int) ($roomStats->total ?? 0);
-            $occupiedRooms = (int) ($roomStats->occupied ?? 0);
+            $roomStats = $this->roomRepo->getOccupancyStats($propertyId);
+            $totalRooms = $roomStats['total'];
+            $occupiedRooms = $roomStats['occupied'];
             $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100, 1) : 0;
 
-            // Pending applications
-            $pendingQuery = Tenant::where('status', 'pending_approval');
-            if ($propertyId) {
-                $pendingQuery->where('property_id', $propertyId);
-            }
-            $pendingApplications = $pendingQuery->count();
+            $pendingApplications = $this->tenantRepo->countPendingApproval($propertyId);
+            $pendingPayments = $this->billRepo->countPendingVerification($propertyId);
 
-            // Pending payments awaiting verification
-            $pendingPaymentsQuery = Bill::where('status', 'pending_verification');
-            if ($propertyId) {
-                $pendingPaymentsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-            }
-            $pendingPayments = $pendingPaymentsQuery->count();
-
-            // Recent maintenance tickets with selective columns
-            $ticketsQuery = MaintenanceTicket::with('tenant:id,name')
-                ->select([
-                    'id', 'tenant_id', 'property_id', 'room', 'type',
-                    'description', 'priority', 'status', 'technician_name',
-                    'admin_notes', 'created_at',
-                ])
-                ->latest()
-                ->take(5);
-
-            if ($propertyId) {
-                $ticketsQuery->where('property_id', $propertyId);
-            }
-
-            $recentTickets = $ticketsQuery->get()->map(fn ($t) => [
+            $recentTickets = $this->maintenanceRepo->getRecent($propertyId, 5)->map(fn ($t) => [
                 'id' => (string) $t->id,
                 'tenant_id' => (string) $t->tenant_id,
                 'tenant_name' => $t->tenant?->name,
@@ -111,59 +80,32 @@ class DashboardService
             return null;
         }
 
-        // Ensure property relationship is loaded
         $tenant->loadMissing('property:id,name,city,address');
 
         $cacheKey = "tenant_dashboard_{$tenant->id}";
 
         return Cache::remember($cacheKey, 30, function () use ($tenant) {
-            // Room and rent
-            $room = Room::where('property_id', $tenant->property_id)
-                ->where('room_number', $tenant->room)
-                ->select('rent')
-                ->first();
-
-            // Earliest invoice that is still owed. Partially paid and
-            // under-review invoices are active too, not just 'unpaid'.
-            $latestBill = Bill::where('tenant_id', $tenant->id)
-                ->whereIn('status', ['unpaid', 'partially_paid', 'pending_verification'])
-                ->orderBy('due_date', 'asc')
-                ->select(['id', 'due_date'])
-                ->first();
+            $room = $this->roomRepo->findByPropertyAndNumber((int) $tenant->property_id, (string) $tenant->room);
+            $latestBill = $this->billRepo->findEarliestOwedForTenant((int) $tenant->id);
 
             // If the room record is missing, fall back to the rent actually
             // charged on the tenant's latest invoice instead of inventing one.
             $billedRent = $room
                 ? (float) $room->rent
-                : (float) Bill::where('tenant_id', $tenant->id)
-                    ->where('status', '!=', 'voided')
-                    ->latest('date')
-                    ->value('rent');
+                : $this->billRepo->getLatestNonVoidedRentForTenant((int) $tenant->id);
 
-            // Latest utility reading
-            $latestReading = UtilityReading::where('tenant_id', $tenant->id)
-                ->latest('date')
-                ->select(['usage_kwh', 'curr_reading', 'amount'])
-                ->first();
-
-            // System settings via repository
+            $latestReading = $this->readingRepo->getLatestReadingForTenant((int) $tenant->id);
             $settings = $this->settingsRepo->getGlobal();
             $elecRate = (float) $settings->elec_rate;
 
-            // Recent maintenance
-            $recentTickets = MaintenanceTicket::where('tenant_id', $tenant->id)
-                ->latest()
-                ->take(3)
-                ->select(['id', 'type', 'description', 'priority', 'status', 'created_at'])
-                ->get()
-                ->map(fn ($t) => [
-                    'id' => (string) $t->id,
-                    'type' => $t->type,
-                    'description' => $t->description,
-                    'priority' => $t->priority,
-                    'status' => $t->status,
-                    'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
-                ]);
+            $recentTickets = $this->maintenanceRepo->getRecentForTenant((int) $tenant->id, 3)->map(fn ($t) => [
+                'id' => (string) $t->id,
+                'type' => $t->type,
+                'description' => $t->description,
+                'priority' => $t->priority,
+                'status' => $t->status,
+                'date' => $t->created_at ? $t->created_at->format('Y-m-d') : null,
+            ]);
 
             return [
                 'outstanding_balance' => (float) $tenant->balance,
@@ -179,9 +121,12 @@ class DashboardService
                 ],
                 'electricity' => [
                     'usage_kwh' => $latestReading ? (float) $latestReading->usage_kwh : 0.00,
+                    'prev_reading' => $latestReading ? (float) $latestReading->prev_reading : 0.00,
                     'latest_reading' => $latestReading ? (float) $latestReading->curr_reading : 0.00,
                     'estimated_charge' => $latestReading ? (float) $latestReading->amount : 0.00,
                     'elec_rate' => $elecRate,
+                    'last_reading_date' => $latestReading?->date ? Carbon::parse($latestReading->date)->format('Y-m-d') : null,
+                    'meter_photo_url' => $latestReading ? PrivateFile::url($latestReading->meter_photo_url) : null,
                 ],
                 'recent_maintenance' => $recentTickets,
                 'settings' => [

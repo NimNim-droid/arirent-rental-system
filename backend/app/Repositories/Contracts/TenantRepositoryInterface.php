@@ -18,7 +18,13 @@ interface TenantRepositoryInterface
 
     public function incrementBalance(int $tenantId, float $amount): bool;
 
-    public function deleteUser(int $userId): bool;
+    public function decrementBalance(int $tenantId, float $amount): bool;
+
+    public function existsByUsername(string $username): bool;
+
+    public function countPendingApproval(?int $propertyId = null): int;
+
+    public function hasFinancialOrServiceHistory(int $tenantId): bool;
 
     public function create(array $attributes): Tenant;
 

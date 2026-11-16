@@ -3,7 +3,6 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Tenant;
-use App\Models\User;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -69,9 +68,49 @@ class EloquentTenantRepository implements TenantRepositoryInterface
         return (bool) Tenant::where('id', $tenantId)->increment('balance', $amount);
     }
 
-    public function deleteUser(int $userId): bool
+    public function decrementBalance(int $tenantId, float $amount): bool
     {
-        return (bool) User::where('id', $userId)->delete();
+        $tenant = Tenant::find($tenantId);
+        if (! $tenant || $amount <= 0) {
+            return false;
+        }
+
+        $safeDecrement = min((float) $tenant->balance, $amount);
+        if ($safeDecrement <= 0) {
+            return true;
+        }
+
+        return (bool) $tenant->decrement('balance', $safeDecrement);
+    }
+
+    public function existsByUsername(string $username): bool
+    {
+        return Tenant::where('username', $username)->exists();
+    }
+
+    public function countPendingApproval(?int $propertyId = null): int
+    {
+        $query = Tenant::where('status', 'pending_approval');
+
+        if ($propertyId) {
+            $query->where('property_id', $propertyId);
+        }
+
+        return $query->count();
+    }
+
+    public function hasFinancialOrServiceHistory(int $tenantId): bool
+    {
+        $tenant = Tenant::find($tenantId);
+        if (! $tenant) {
+            return false;
+        }
+
+        return $tenant->bills()->exists()
+            || $tenant->payments()->exists()
+            || $tenant->excessCharges()->exists()
+            || $tenant->utilityReadings()->exists()
+            || $tenant->maintenanceTickets()->exists();
     }
 
     public function create(array $attributes): Tenant

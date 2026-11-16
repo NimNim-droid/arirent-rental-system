@@ -3,19 +3,29 @@
 namespace App\Providers;
 
 use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\DocumentRepositoryInterface;
+use App\Repositories\Contracts\ExcessChargeRepositoryInterface;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
+use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentBillRepository;
+use App\Repositories\Eloquent\EloquentExcessChargeRepository;
 use App\Repositories\Eloquent\EloquentMaintenanceRepository;
+use App\Repositories\Eloquent\EloquentPaymentRepository;
 use App\Repositories\Eloquent\EloquentPropertyRepository;
 use App\Repositories\Eloquent\EloquentReadingRepository;
+use App\Repositories\Eloquent\EloquentReportRepository;
 use App\Repositories\Eloquent\EloquentRoomRepository;
 use App\Repositories\Eloquent\EloquentSettingsRepository;
 use App\Repositories\Eloquent\EloquentTenantRepository;
+use App\Repositories\Eloquent\EloquentUserRepository;
+use App\Repositories\Storage\LocalDocumentRepository;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -36,6 +46,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RoomRepositoryInterface::class, EloquentRoomRepository::class);
         $this->app->bind(MaintenanceRepositoryInterface::class, EloquentMaintenanceRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, EloquentSettingsRepository::class);
+        $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
+        $this->app->bind(PaymentRepositoryInterface::class, EloquentPaymentRepository::class);
+        $this->app->bind(ExcessChargeRepositoryInterface::class, EloquentExcessChargeRepository::class);
+        $this->app->bind(DocumentRepositoryInterface::class, LocalDocumentRepository::class);
+        $this->app->bind(ReportRepositoryInterface::class, EloquentReportRepository::class);
     }
 
     /**

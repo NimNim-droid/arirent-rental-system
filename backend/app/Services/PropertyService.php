@@ -78,7 +78,7 @@ class PropertyService
             throw new \RuntimeException('Cannot delete property with occupied rooms. Please vacate or reassign tenants first.');
         }
 
-        $property->rooms()->delete();
+        $this->roomRepo->deleteByPropertyId($id);
         $deleted = $this->propertyRepo->delete($id);
 
         Cache::forget('all_properties_with_counts');

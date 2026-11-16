@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -7,85 +6,21 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { useAuth } from "@/lib/auth-context";
-import { propertiesService } from "@/lib/services/properties";
-import { getErrorMessage } from "@/lib/errors";
+import { useRegister } from "@/components/features/auth";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
-  const [submitted, setSubmitted] = useState<{ name: string; room: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
-  const [rooms, setRooms] = useState<{ id: string; room_number: string; rent: number }[]>([]);
-  const [loadingRooms, setLoadingRooms] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    property_id: "",
-    room_number: "",
-    password: "",
-    password_confirmation: "",
-  });
-
-  useEffect(() => {
-    propertiesService.getProperties().then((res) => {
-      if (res && res.length > 0) {
-        setProperties(res);
-        setFormData((prev) => ({
-          ...prev,
-          property_id: prev.property_id || String(res[0].id),
-        }));
-      }
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!formData.property_id) return;
-    setLoadingRooms(true);
-    propertiesService.getRooms({ property_id: formData.property_id, status: "vacant" }).then((res) => {
-      const vacantRooms = res || [];
-      setRooms(vacantRooms);
-      setFormData((prev) => ({
-        ...prev,
-        room_number: vacantRooms.length > 0 ? vacantRooms[0].room_number : "",
-      }));
-    }).catch(() => {
-      setRooms([]);
-      setFormData((prev) => ({ ...prev, room_number: "" }));
-    }).finally(() => {
-      setLoadingRooms(false);
-    });
-  }, [formData.property_id]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    if (!formData.room_number || rooms.length === 0) {
-      setError("There are no available vacant rooms in the selected building. Please choose another property.");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.password_confirmation) {
-      setError("Passwords do not match. Please re-enter.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await register(formData);
-      setSubmitted({ name: res.tenant.name, room: res.tenant.room });
-    } catch (err) {
-      setError(getErrorMessage(err, "Unable to submit your application. Please try again."));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    submitted,
+    loading,
+    error,
+    properties,
+    rooms,
+    loadingRooms,
+    formData,
+    setFormData,
+    handleSubmit,
+  } = useRegister();
 
   if (submitted) {
     return (
@@ -245,14 +180,21 @@ export default function RegisterPage() {
                 loading={loading}
                 disabled={loading || loadingRooms || rooms.length === 0}
               >
-                {loading ? "Submitting…" : rooms.length === 0 ? "No Rooms Available to Apply" : "Submit Application"}
+                {loading
+                  ? "Submitting…"
+                  : rooms.length === 0
+                  ? "No Rooms Available to Apply"
+                  : "Submit Application"}
               </Button>
             </form>
           </Card>
 
           <p className="text-center text-xs text-muted">
             Already have an account?{" "}
-            <Link to="/login" className="inline-flex items-center gap-1 font-semibold text-accent hover:text-accent-strong">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1 font-semibold text-accent hover:text-accent-strong"
+            >
               <ArrowLeft className="h-3 w-3" />
               Back to sign in
             </Link>

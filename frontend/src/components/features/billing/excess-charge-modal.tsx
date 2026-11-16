@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
 import { PlusCircle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { excessChargesService } from "@/lib/services/excess-charges";
 import type { Tenant } from "@/lib/types";
+import { useExcessChargeForm } from "./hooks/useExcessChargeForm";
 
 interface ExcessChargeModalProps {
   open: boolean;
@@ -15,91 +14,31 @@ interface ExcessChargeModalProps {
 }
 
 export function ExcessChargeModal({ open, onClose, tenants, onSuccess }: ExcessChargeModalProps) {
-  const [tenantId, setTenantId] = useState<string>("");
-  const [title, setTitle] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [chargeDate, setChargeDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      if (tenants.length > 0 && (!tenantId || !tenants.some((t) => String(t.id) === String(tenantId)))) {
-        setTenantId(String(tenants[0].id));
-      }
-      setError(null);
-    }
-  }, [open, tenants, tenantId]);
-
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setAmount("");
-    setChargeDate(new Date().toISOString().split("T")[0]);
-    setError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const selectedTenant = tenantId || (tenants[0] ? String(tenants[0].id) : "");
-    if (!selectedTenant) {
-      setError("Please select an active tenant.");
-      return;
-    }
-
-    if (!title.trim()) {
-      setError("Please provide a title for the charge.");
-      return;
-    }
-
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError("Please enter a valid amount greater than zero.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await excessChargesService.createCharge({
-        tenant_id: selectedTenant,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        amount: numAmount,
-        charge_date: chargeDate,
-      });
-
-      resetForm();
-      onSuccess();
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create incidental charge.";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    tenantId,
+    setTenantId,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    amount,
+    setAmount,
+    chargeDate,
+    setChargeDate,
+    loading,
+    error,
+    handleClose,
+    handleSubmit,
+  } = useExcessChargeForm({ open, tenants, onClose, onSuccess });
 
   return (
     <Modal
       open={open}
-      onClose={() => {
-        resetForm();
-        onClose();
-      }}
+      onClose={handleClose}
       title="Add Tenant Incidental Charge"
       footer={
         <>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              resetForm();
-              onClose();
-            }}
-            disabled={loading}
-          >
+          <Button variant="secondary" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button id="charge-submit-button" onClick={handleSubmit} loading={loading}>
@@ -110,7 +49,8 @@ export function ExcessChargeModal({ open, onClose, tenants, onSuccess }: ExcessC
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-sm">
         <p className="text-xs text-muted">
-          Incidental charges (repairs, aircon cleaning, key replacements, etc.) will automatically be itemized and added to the tenant's next generated monthly invoice.
+          Incidental charges (repairs, aircon cleaning, key replacements, etc.) will automatically be
+          itemized and added to the tenant&apos;s next generated monthly invoice.
         </p>
 
         {error && (
@@ -121,7 +61,7 @@ export function ExcessChargeModal({ open, onClose, tenants, onSuccess }: ExcessC
 
         <div className="space-y-1.5">
           <label htmlFor="charge-tenant-select" className="text-xs font-semibold text-fg">
-            Tenant & Room
+            Tenant &amp; Room
           </label>
           <Select
             id="charge-tenant-select"

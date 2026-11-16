@@ -71,12 +71,8 @@ class RoomController extends Controller
     /**
      * Delete a room if it is not occupied.
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->propertyService->deleteRoom($id);
 

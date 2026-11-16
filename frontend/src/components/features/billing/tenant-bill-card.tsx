@@ -1,6 +1,6 @@
-import { ChevronRight, Calendar, AlertCircle } from "lucide-react";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { ChevronRight, AlertCircle } from "lucide-react";
 import { formatCurrency, formatDate, formatInvoiceNumber } from "@/lib/formatters";
+import { cn } from "@/lib/cn";
 import type { Bill } from "@/lib/types";
 
 interface TenantBillCardProps {
@@ -11,36 +11,44 @@ interface TenantBillCardProps {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; variant: BadgeProps["variant"] }
+  { label: string; tone: "warning" | "info" | "success" | "danger" | "neutral" }
 > = {
-  unpaid: { label: "Pending", variant: "warning" },
-  partially_paid: { label: "Partial", variant: "warning" },
-  pending_verification: { label: "Verification", variant: "info" },
-  paid: { label: "Paid", variant: "success" },
-  overdue: { label: "Overdue", variant: "danger" },
-  voided: { label: "Cancelled", variant: "neutral" },
+  unpaid: { label: "Due", tone: "warning" },
+  partially_paid: { label: "Partial", tone: "warning" },
+  pending_verification: { label: "Review", tone: "info" },
+  paid: { label: "On time", tone: "success" },
+  overdue: { label: "Overdue", tone: "danger" },
+  voided: { label: "Cancelled", tone: "neutral" },
 };
 
-function formatMonthYear(dateString?: string | null): string {
-  if (!dateString) return "Billing";
+function parseMonthAndYear(dateString?: string | null): { month: string; year: string } {
+  if (!dateString) return { month: "Bill", year: "" };
   try {
     if (/^\d{4}-\d{2}/.test(dateString)) {
-      const [year, month] = dateString.split("-").map(Number);
-      const d = new Date(year, month - 1, 1);
-      return d.toLocaleDateString("en-PH", { month: "short", year: "numeric" });
+      const [year, monthNum] = dateString.split("-").map(Number);
+      const d = new Date(year, monthNum - 1, 1);
+      return {
+        month: d.toLocaleDateString("en-PH", { month: "short" }),
+        year: String(year),
+      };
     }
     const d = new Date(dateString);
-    return isNaN(d.getTime())
-      ? dateString
-      : d.toLocaleDateString("en-PH", { month: "short", year: "numeric" });
-  } catch {
-    return dateString;
-  }
+    if (!isNaN(d.getTime())) {
+      return {
+        month: d.toLocaleDateString("en-PH", { month: "short" }),
+        year: String(d.getFullYear()),
+      };
+    }
+  } catch {}
+  return { month: "Bill", year: "" };
 }
 
 /**
- * Mobile-first Bill Card component matching the AriRent phone UI.
- * Used in the Tenant Billing page list for Unpaid and Paid sections.
+ * Mobile-first Bill Card matching the AriRent redesign (Mockup 3).
+ * Features:
+ * - Left Month & Year box (e.g. Oct 2026)
+ * - Center Invoice # and status timestamp
+ * - Right Amount and status chip
  */
 export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
   const paid = bill.paid_amount ?? 0;
@@ -48,25 +56,22 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
     bill.remaining_balance ?? Math.max(0, bill.total_amount - paid);
   const isPaid = bill.status === "paid" || remaining <= 0;
   const isOverdue = bill.status === "overdue";
-  const isPendingVerification = bill.status === "pending_verification";
   const canPay =
     (bill.status === "unpaid" || bill.status === "partially_paid" || isOverdue) &&
     remaining > 0;
 
   const statusMeta = STATUS_CONFIG[bill.status] ?? {
     label: bill.status,
-    variant: "neutral" as const,
+    tone: "neutral" as const,
   };
 
   const invoiceNo = formatInvoiceNumber(bill.id, bill.date || bill.due_date);
-  const monthYear = formatMonthYear(bill.date || bill.due_date);
-  const propertyTitle = bill.property_name || "AriRent Residences";
-  const roomTitle = bill.room ? `Room ${bill.room}` : "Unit";
+  const { month, year } = parseMonthAndYear(bill.date || bill.due_date);
 
   return (
     <div
       onClick={() => onView(bill)}
-      className="group relative cursor-pointer rounded-2xl border border-edge bg-card p-4 shadow-card transition-all duration-150 hover:border-edge-strong hover:shadow-soft active:scale-[0.99]"
+      className="group relative cursor-pointer rounded-2xl border border-edge bg-card p-3.5 sm:p-4 shadow-card transition-all duration-150 hover:border-edge-strong hover:shadow-soft active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -75,82 +80,54 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
           onView(bill);
         }
       }}
-      aria-label={`View invoice ${invoiceNo} for ${monthYear}`}
+      aria-label={`View bill #${invoiceNo} for ${month} ${year}`}
     >
-      {/* Top Header: Month Year + Invoice # on left, Status Badge on right */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="font-bold text-base text-fg tracking-tight">
-            {monthYear}
-          </span>
-          <span className="font-mono text-xs font-semibold text-muted">
+      <div className="flex items-center gap-3.5">
+        {/* Left: Month / Year Badge */}
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-inset border border-edge text-fg leading-none shadow-soft">
+          <span className="text-xs uppercase font-extrabold tracking-tight">{month}</span>
+          <span className="text-[10px] font-semibold text-muted mt-0.5">{year}</span>
+        </div>
+
+        {/* Center: Invoice ID & Subtitle */}
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-sm text-fg tracking-tight truncate">
             #{invoiceNo}
+          </p>
+          <p className="text-xs text-muted truncate mt-0.5">
+            {isPaid
+              ? `Paid ${formatDate(bill.payment_date || bill.date)}`
+              : `Due ${formatDate(bill.due_date)}`}
+          </p>
+        </div>
+
+        {/* Right: Amount & Status Chip */}
+        <div className="text-right shrink-0">
+          <p className="text-sm sm:text-base font-extrabold text-fg tabular-nums tracking-tight">
+            {formatCurrency(isPaid ? bill.total_amount : remaining)}
+          </p>
+          <span
+            className={cn(
+              "inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+              statusMeta.tone === "success"
+                ? "bg-success-bg text-success-fg"
+                : statusMeta.tone === "danger"
+                ? "bg-danger-bg text-danger-fg"
+                : statusMeta.tone === "info"
+                ? "bg-info-bg text-info-fg"
+                : "bg-warning-bg text-warning-fg"
+            )}
+          >
+            {statusMeta.label}
           </span>
         </div>
-        <Badge
-          variant={statusMeta.variant}
-          className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-        >
-          {statusMeta.label}
-        </Badge>
+
+        <ChevronRight className="h-4 w-4 text-muted group-hover:text-fg group-hover:translate-x-0.5 transition-all shrink-0 hidden sm:block" />
       </div>
 
-      {/* Property & Room subtitle */}
-      <p className="mt-1 text-xs text-muted truncate">
-        {propertyTitle} | {roomTitle}
-      </p>
-
-      {/* Middle row: Posted / Paid Date on left, Amount & Chevron on right */}
-      <div className="mt-3 flex items-end justify-between gap-3 border-t border-edge/60 pt-3">
-        <div className="space-y-1 min-w-0">
-          <p className="text-[11px] text-muted flex items-center gap-1">
-            <Calendar className="h-3 w-3 shrink-0 text-faint" />
-            <span>
-              {isPaid
-                ? `Paid on ${formatDate(bill.payment_date || bill.date)}`
-                : `Posted on ${formatDate(bill.date)}`}
-            </span>
-          </p>
-
-          <p
-            className={`text-xs font-semibold flex items-center gap-1 ${
-              isPaid
-                ? "text-success-fg"
-                : isOverdue
-                ? "text-danger-fg"
-                : isPendingVerification
-                ? "text-info-fg"
-                : "text-warning-fg"
-            }`}
-          >
-            {isPaid ? (
-              <span>Settled on time</span>
-            ) : isPendingVerification ? (
-              <span>Awaiting admin review</span>
-            ) : isOverdue ? (
-              <span>Overdue since {formatDate(bill.due_date)}</span>
-            ) : (
-              <span>Due on {formatDate(bill.due_date)}</span>
-            )}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 text-right">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-muted tracking-wider">
-              {isPaid ? "Total Paid" : "Amount Due"}
-            </p>
-            <p className="text-lg font-black tracking-tight text-fg tabular-nums">
-              {formatCurrency(isPaid ? bill.total_amount : remaining)}
-            </p>
-          </div>
-          <ChevronRight className="h-5 w-5 text-faint group-hover:text-accent transition-colors" />
-        </div>
-      </div>
-
-      {/* Reject Notice if previous payment was rejected */}
+      {/* Reject Notice if payment was rejected */}
       {bill.status === "unpaid" && bill.reject_reason && (
-        <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-danger-bg px-2.5 py-1.5 text-[11px] font-semibold text-danger-fg">
+        <div className="mt-2.5 flex items-start gap-1.5 rounded-lg bg-danger-bg px-2.5 py-1.5 text-[11px] font-semibold text-danger-fg">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <span className="truncate">Payment rejected: {bill.reject_reason}</span>
         </div>
@@ -158,14 +135,15 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
 
       {/* Quick Pay GCash Button for payable bills */}
       {canPay && onPay && (
-        <div className="mt-3 pt-2.5 border-t border-dashed border-edge flex items-center justify-end">
+        <div className="mt-3 pt-2.5 border-t border-dashed border-edge flex items-center justify-between">
+          <span className="text-[11px] text-muted font-medium">Settle outstanding balance</span>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onPay(bill);
             }}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong active:scale-95 transition-all cursor-pointer"
           >
             Pay GCash
           </button>

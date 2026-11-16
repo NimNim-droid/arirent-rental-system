@@ -9,4 +9,6 @@ export { TenantUnitCard } from "./tenant-unit-card";
 export { TenantStayCard } from "./tenant-stay-card";
 export { TenantOpenBillCard } from "./tenant-open-bill-card";
 export { TenantMaintenanceSummary } from "./tenant-maintenance-summary";
-export { TenantUnitDetailModal } from "./tenant-unit-detail-modal";
+export { TenantElectricityCard } from "./tenant-electricity-card";
+export { TenantQuickActions } from "./tenant-quick-actions";
+export { EmergencyHotlineModal } from "./emergency-hotline-modal";

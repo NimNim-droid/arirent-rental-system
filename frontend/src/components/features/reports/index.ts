@@ -1,3 +1,4 @@
+export { useReports } from "./hooks/useReports";
 export { DonutChart } from "./donut-chart";
 export { RevenueBarChart } from "./revenue-bar-chart";
 export { RevenueLineChart, type RevenueLineSeries } from "./revenue-line-chart";

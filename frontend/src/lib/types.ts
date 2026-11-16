@@ -250,6 +250,7 @@ export interface MaintenanceInput {
   description: string;
   priority: MaintenanceTicket["priority"];
   photo_url?: string;
+  photo?: File;
 }
 
 export interface Settings {
@@ -284,10 +285,13 @@ export interface TenantDashboardData {
   } | null;
   electricity?: {
     usage_kwh: number;
+    prev_reading?: number;
     latest_reading: number;
     estimated_charge: number;
     elec_rate: number;
     last_reading_date?: string | null;
+    /** Short-lived signed URL. Read-only: tenants can view but never upload or replace it. */
+    meter_photo_url?: string | null;
   } | null;
   recent_maintenance?: MaintenanceTicket[];
   settings?: Settings | null;

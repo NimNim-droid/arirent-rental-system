@@ -32,8 +32,10 @@ export const maintenanceService = {
     });
   },
 
-  async createTicket(payload: MaintenanceInput): Promise<MaintenanceTicket> {
-    const res = await api.post<{ data: MaintenanceTicket }>("/maintenance", payload);
+  async createTicket(payload: MaintenanceInput | FormData): Promise<MaintenanceTicket> {
+    const headers =
+      payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    const res = await api.post<{ data: MaintenanceTicket }>("/maintenance", payload, { headers });
     clientCache.invalidate("maintenance");
     clientCache.invalidate("dashboard");
     return res.data.data;

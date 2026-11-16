@@ -2,11 +2,15 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +20,8 @@ class TenantService
     public function __construct(
         protected TenantRepositoryInterface $tenantRepo,
         protected RoomRepositoryInterface $roomRepo,
-        protected ReadingRepositoryInterface $readingRepo
+        protected ReadingRepositoryInterface $readingRepo,
+        protected UserRepositoryInterface $userRepo
     ) {}
 
     /**
@@ -62,6 +67,30 @@ class TenantService
 
         $tenant->room_rent = $room ? (float) $room->rent : 0.00;
         $tenant->latest_reading = $latestReading ? (float) $latestReading->curr_reading : 0.00;
+
+        return $tenant;
+    }
+
+    /**
+     * Get tenant details while enforcing tenant-level ownership for non-admins.
+     *
+     * @throws ModelNotFoundException
+     * @throws DomainException
+     */
+    public function getTenantDetailsForUser(User $user, int $id): Tenant
+    {
+        $tenant = $this->getTenantDetails($id);
+
+        if (! $tenant) {
+            throw new ModelNotFoundException('Tenant not found.');
+        }
+
+        if ($user->role === 'tenant') {
+            $isOwn = ($tenant->user_id && $tenant->user_id === $user->id) || ($tenant->email === $user->email);
+            if (! $isOwn) {
+                throw new DomainException('Unauthorized to view this tenant profile.', 403);
+            }
+        }
 
         return $tenant;
     }
@@ -197,11 +226,7 @@ class TenantService
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Tenant not found.');
         }
 
-        if ($tenant->bills()->exists()
-            || $tenant->payments()->exists()
-            || $tenant->excessCharges()->exists()
-            || $tenant->utilityReadings()->exists()
-            || $tenant->maintenanceTickets()->exists()) {
+        if ($this->tenantRepo->hasFinancialOrServiceHistory($id)) {
             throw new \InvalidArgumentException('This tenant has billing or service history and cannot be deleted. Vacate the tenant instead.');
         }
 
@@ -212,7 +237,7 @@ class TenantService
             }
 
             if ($tenant->user_id) {
-                $this->tenantRepo->deleteUser($tenant->user_id);
+                $this->userRepo->delete((int) $tenant->user_id);
             }
 
             $deleted = $this->tenantRepo->delete($tenant->id);

@@ -382,4 +382,20 @@ select option {
     print-color-adjust: exact !important;
   }
 }
+
+/* ============ Mobile Bottom Sheet Animations ============ */
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 

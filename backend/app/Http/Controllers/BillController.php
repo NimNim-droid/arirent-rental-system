@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DomainException;
+use App\Http\Requests\Bill\BulkDeleteBillsRequest;
+use App\Http\Requests\Bill\DirectPaymentRequest;
 use App\Http\Requests\Bill\GenerateBillsRequest;
 use App\Http\Requests\Bill\ProcessPaymentRequest;
 use App\Http\Requests\Bill\StoreBillRequest;
 use App\Http\Requests\Bill\UpdateBillRequest;
 use App\Http\Requests\Bill\VerifyPaymentRequest;
 use App\Http\Resources\BillResource;
-use App\Repositories\Contracts\BillRepositoryInterface;
-use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Services\BillService;
 use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -19,8 +20,6 @@ use Illuminate\Http\Request;
 class BillController extends Controller
 {
     public function __construct(
-        protected BillRepositoryInterface $billRepo,
-        protected TenantRepositoryInterface $tenantRepo,
         protected BillService $billService,
         protected PaymentService $paymentService
     ) {}
@@ -30,31 +29,13 @@ class BillController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $filters = [];
-
-        // Role-based filtering
-        if ($user && $user->role === 'tenant') {
-            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
-
-            if (! $tenant) {
-                return response()->json(['data' => []]);
-            }
-
-            $filters['tenant_id'] = $tenant->id;
-        } else {
-            // Admin filters
-            if ($request->filled('tenant_id')) {
-                $filters['tenant_id'] = $request->tenant_id;
-            }
-
-            if ($request->filled('status')) {
-                $filters['status'] = $request->status;
-            }
-        }
-
+        $filters = $request->only(['tenant_id', 'status']);
         $perPage = min((int) $request->input('per_page', 50), 250);
-        $paginated = $this->billRepo->paginate($perPage, $filters);
+        $paginated = $this->billService->listBills($request->user(), $filters, $perPage);
+
+        if (! $paginated) {
+            return response()->json(['data' => []]);
+        }
 
         return response()->json([
             'data' => BillResource::collection($paginated->getCollection()),
@@ -75,33 +56,19 @@ class BillController extends Controller
     /**
      * Show a single bill.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $user = request()->user();
-        $bill = $this->billRepo->find($id, [
-            'tenant:id,name,room,property_id',
-            'tenant.property:id,name',
-            'payments',
-            'excessCharges',
-            'readings',
-        ]);
+        try {
+            $bill = $this->billService->getBillDetails($request->user(), $id);
 
-        if (! $bill) {
+            return response()->json([
+                'data' => new BillResource($bill),
+            ]);
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         }
-
-        // Tenants may only view their own bills (IDOR protection)
-        if ($user && $user->role === 'tenant') {
-            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
-
-            if (! $tenant || $bill->tenant_id !== $tenant->id) {
-                return response()->json(['message' => 'Unauthorized to view this bill.'], 403);
-            }
-        }
-
-        return response()->json([
-            'data' => new BillResource($bill),
-        ]);
     }
 
     /**
@@ -109,11 +76,8 @@ class BillController extends Controller
      */
     public function delinquencies(): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         $delinquents = $this->billService->getDelinquentTenants();
+
         return response()->json([
             'data' => $delinquents,
             'count' => count($delinquents),
@@ -123,28 +87,17 @@ class BillController extends Controller
     /**
      * Record a direct payment (Cash/Bank) by landlord. Admin only.
      */
-    public function directPayment(Request $request, int $id): JsonResponse
+    public function directPayment(DirectPaymentRequest $request, int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'payment_method' => ['nullable', 'string', 'in:cash,bank_transfer,gcash,card'],
-            'transaction_reference' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
         try {
-            $bill = $this->paymentService->recordDirectPayment($id, $validated);
+            $bill = $this->paymentService->recordDirectPayment($id, $request->validated());
 
             return response()->json([
                 'message' => 'Direct payment recorded successfully.',
                 'data' => new BillResource($bill),
                 'bill' => new BillResource($bill),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -192,7 +145,7 @@ class BillController extends Controller
                 'data' => new BillResource($bill),
                 'bill' => new BillResource($bill),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -204,10 +157,6 @@ class BillController extends Controller
      */
     public function void(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $bill = $this->billService->voidBill($id);
 
@@ -216,7 +165,7 @@ class BillController extends Controller
                 'data' => new BillResource($bill),
                 'bill' => new BillResource($bill),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -240,7 +189,7 @@ class BillController extends Controller
                 'data' => new BillResource($bill),
                 'bill' => new BillResource($bill),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -270,7 +219,7 @@ class BillController extends Controller
                 'data' => new BillResource($bill),
                 'bill' => new BillResource($bill),
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -278,21 +227,17 @@ class BillController extends Controller
     }
 
     /**
-     * Delete a bill.
+     * Delete a bill. Admin only.
      */
     public function destroy(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->billService->deleteBill($id);
 
             return response()->json([
                 'message' => 'Bill deleted successfully.',
             ]);
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Bill not found.'], 404);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -302,17 +247,9 @@ class BillController extends Controller
     /**
      * Bulk delete multiple bills. Admin only.
      */
-    public function bulkDestroy(Request $request): JsonResponse
+    public function bulkDestroy(BulkDeleteBillsRequest $request): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer'],
-        ]);
-
+        $validated = $request->validated();
         $deletedCount = $this->billService->bulkDeleteBills($validated['ids']);
 
         return response()->json([

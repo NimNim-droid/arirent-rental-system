@@ -20,8 +20,8 @@
 
 - [ ] **Phase 1: Critical Security & Logic Hotfixes (P0 - Immediate)** — mostly done; 1.4 partially fixed (see F-A3), new P0s found (F-A1, F-A2)
 - [x] **Phase 2: API Contract Harmonization & API Resources (P1)**
-- [ ] **Phase 3: Form Requests & Input Validation Hardening (P1)** — partial (see Group B)
-- [ ] **Phase 4: Layered Architecture - Repositories & Services (P2)** — partial (see Group C)
+- [x] **Phase 3: Form Requests & Input Validation Hardening (P1)**
+- [x] **Phase 4: Layered Architecture - Repositories & Services (P2)**
 - [x] **Phase 5: Automated Test Suite (P1/P2)** — 23 backend + 14 frontend tests passing
 - [ ] **Phase 6: Production Hardening & Build Verification (P3)**
 
@@ -94,7 +94,7 @@ Each item: create the Request class → move the `validate([...])` rules into `r
 - [x] **F-B7** Add a unique rule for admin email edits in [`UpdateTenantRequest`](file:///c:/dev/rental-system/backend/app/Http/Requests/Tenant/UpdateTenantRequest.php#L48)
   - **Problem:** `tenants.email` is `unique` in the database, but the rule is only `nullable|email`. A duplicate email causes a database error (500) instead of a clear 422 message.
   - **Fix:** `Rule::unique('tenants', 'email')->ignore($this->route('id'))`.
-- [ ] **F-B8** Unused Request files: [`Reading/UpdateReadingRequest.php`](file:///c:/dev/rental-system/backend/app/Http/Requests/Reading/UpdateReadingRequest.php) (no reading-update route exists) and [`Tenant/StoreTenantRequest.php`](file:///c:/dev/rental-system/backend/app/Http/Requests/Tenant/StoreTenantRequest.php) (tenants are created via `/register`). **Decide:** delete them, or keep them for a planned feature.
+- [x] **F-B8** Unused Request files: `Reading/UpdateReadingRequest.php` and `Tenant/StoreTenantRequest.php` removed.
 
 ---
 

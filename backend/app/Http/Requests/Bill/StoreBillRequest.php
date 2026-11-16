@@ -33,6 +33,8 @@ class StoreBillRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             'prev_reading' => ['nullable', 'numeric', 'min:0'],
             'curr_reading' => ['nullable', 'numeric', 'min:0'],
+            'excess_charge_ids' => ['nullable', 'array'],
+            'excess_charge_ids.*' => ['integer', 'exists:excess_charges,id'],
         ];
     }
 }

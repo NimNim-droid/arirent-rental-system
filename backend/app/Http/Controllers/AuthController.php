@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DomainException;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthController extends Controller
 {
@@ -29,7 +29,7 @@ class AuthController extends Controller
                 'token' => $result['token'],
                 'user' => $result['user'],
             ]);
-        } catch (HttpException $e) {
+        } catch (DomainException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], $e->getStatusCode());
@@ -55,7 +55,7 @@ class AuthController extends Controller
                     'room' => $tenant->room,
                 ],
             ], 201);
-        } catch (HttpException $e) {
+        } catch (DomainException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], $e->getStatusCode());
@@ -90,7 +90,7 @@ class AuthController extends Controller
                 'message' => 'Password changed successfully. Other sessions were signed out.',
                 'token' => $token,
             ]);
-        } catch (HttpException $e) {
+        } catch (DomainException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], $e->getStatusCode());

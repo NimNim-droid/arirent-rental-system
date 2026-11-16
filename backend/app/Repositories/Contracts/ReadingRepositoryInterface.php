@@ -21,4 +21,8 @@ interface ReadingRepositoryInterface
     public function getLatestReadingForTenant(int $tenantId): ?UtilityReading;
 
     public function getLatestReadingsForTenants(array $tenantIds, bool $unbilledOnly = true): Collection;
+
+    public function existsForBill(int $billId): bool;
+
+    public function releaseByBillId(int $billId): int;
 }

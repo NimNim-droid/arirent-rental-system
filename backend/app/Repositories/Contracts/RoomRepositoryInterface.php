@@ -21,4 +21,11 @@ interface RoomRepositoryInterface
     public function delete(int $id): bool;
 
     public function getRoomsByPropertyIds(array $propertyIds): BaseCollection;
+
+    /**
+     * @return array{total: int, occupied: int}
+     */
+    public function getOccupancyStats(?int $propertyId = null): array;
+
+    public function deleteByPropertyId(int $propertyId): int;
 }

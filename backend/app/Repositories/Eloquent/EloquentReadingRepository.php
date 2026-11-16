@@ -61,7 +61,7 @@ class EloquentReadingRepository implements ReadingRepositoryInterface
 
     public function getLatestReadingForTenant(int $tenantId): ?UtilityReading
     {
-        return UtilityReading::where('tenant_id', $tenantId)->latest('date')->first();
+        return UtilityReading::where('tenant_id', $tenantId)->latest('date')->latest('id')->first();
     }
 
     public function getLatestReadingsForTenants(array $tenantIds, bool $unbilledOnly = true): Collection
@@ -76,5 +76,15 @@ class EloquentReadingRepository implements ReadingRepositoryInterface
             ->get(['id', 'tenant_id', 'bill_id', 'curr_reading', 'amount', 'usage_kwh', 'date'])
             ->groupBy('tenant_id')
             ->map(fn ($g) => $g->first());
+    }
+
+    public function existsForBill(int $billId): bool
+    {
+        return UtilityReading::where('bill_id', $billId)->exists();
+    }
+
+    public function releaseByBillId(int $billId): int
+    {
+        return UtilityReading::where('bill_id', $billId)->update(['bill_id' => null]);
     }
 }

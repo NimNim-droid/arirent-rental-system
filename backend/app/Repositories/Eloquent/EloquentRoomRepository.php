@@ -64,4 +64,26 @@ class EloquentRoomRepository implements RoomRepositoryInterface
             ->get(['property_id', 'room_number', 'rent'])
             ->keyBy(fn ($r) => "{$r->property_id}-{$r->room_number}");
     }
+
+    public function getOccupancyStats(?int $propertyId = null): array
+    {
+        $query = Room::query();
+        if ($propertyId) {
+            $query->where('property_id', $propertyId);
+        }
+
+        $stats = $query
+            ->selectRaw("count(*) as total, count(case when status = 'occupied' then 1 end) as occupied")
+            ->first();
+
+        return [
+            'total' => (int) ($stats->total ?? 0),
+            'occupied' => (int) ($stats->occupied ?? 0),
+        ];
+    }
+
+    public function deleteByPropertyId(int $propertyId): int
+    {
+        return Room::where('property_id', $propertyId)->delete();
+    }
 }

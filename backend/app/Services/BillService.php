@@ -2,16 +2,18 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Models\Bill;
-use App\Models\ExcessCharge;
-use App\Models\Payment;
-use App\Models\UtilityReading;
+use App\Models\User;
 use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\ExcessChargeRepositoryInterface;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\SettingsRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Support\PrivateFile;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -25,8 +27,57 @@ class BillService
         protected TenantRepositoryInterface $tenantRepo,
         protected RoomRepositoryInterface $roomRepo,
         protected ReadingRepositoryInterface $readingRepo,
-        protected SettingsRepositoryInterface $settingsRepo
+        protected SettingsRepositoryInterface $settingsRepo,
+        protected PaymentRepositoryInterface $paymentRepo,
+        protected ExcessChargeRepositoryInterface $excessChargeRepo
     ) {}
+
+    /**
+     * List bills scoped by user role (tenants see only their own).
+     */
+    public function listBills(User $user, array $filters = [], int $perPage = 50): ?LengthAwarePaginator
+    {
+        if ($user->role === 'tenant') {
+            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
+            if (! $tenant) {
+                return null;
+            }
+
+            $filters = ['tenant_id' => $tenant->id];
+        }
+
+        return $this->billRepo->paginate($perPage, $filters);
+    }
+
+    /**
+     * Retrieve a single bill with relations, enforcing tenant ownership.
+     *
+     * @throws ModelNotFoundException
+     * @throws DomainException
+     */
+    public function getBillDetails(User $user, int $id): Bill
+    {
+        $bill = $this->billRepo->find($id, [
+            'tenant:id,name,room,property_id',
+            'tenant.property:id,name',
+            'payments',
+            'excessCharges',
+            'readings',
+        ]);
+
+        if (! $bill) {
+            throw new ModelNotFoundException('Bill not found.');
+        }
+
+        if ($user->role === 'tenant') {
+            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
+            if (! $tenant || $bill->tenant_id !== $tenant->id) {
+                throw new DomainException('Unauthorized to view this bill.', 403);
+            }
+        }
+
+        return $bill;
+    }
 
     public function createBill(array $data, ?float $prevReading = null, ?float $currReading = null): Bill
     {
@@ -42,10 +93,10 @@ class BillService
             $excessChargeIds = $data['excess_charge_ids'] ?? [];
             $excessCharges = collect();
             if (! empty($excessChargeIds)) {
-                $excessCharges = ExcessCharge::whereIn('id', $excessChargeIds)
-                    ->where('tenant_id', $data['tenant_id'])
-                    ->where('status', 'pending')
-                    ->get();
+                $excessCharges = $this->excessChargeRepo->findPendingByIdsForTenant(
+                    $excessChargeIds,
+                    (int) $data['tenant_id']
+                );
                 $excessTotal = (float) $excessCharges->sum('amount');
             }
 
@@ -68,10 +119,7 @@ class BillService
             ]);
 
             if ($excessCharges->isNotEmpty()) {
-                ExcessCharge::whereIn('id', $excessCharges->pluck('id'))->update([
-                    'bill_id' => $bill->id,
-                    'status' => 'billed',
-                ]);
+                $this->excessChargeRepo->attachToBill($excessCharges->pluck('id')->all(), (int) $bill->id);
             }
 
             if ($elecUsage > 0 || $elec > 0) {
@@ -89,10 +137,7 @@ class BillService
                 ]);
             }
 
-            $tenant = $this->tenantRepo->find((int) $data['tenant_id']);
-            if ($tenant) {
-                $tenant->increment('balance', $total);
-            }
+            $this->tenantRepo->incrementBalance((int) $data['tenant_id'], $total);
 
             Cache::forget('admin_stats_all');
             Cache::forget("tenant_dashboard_{$data['tenant_id']}");
@@ -185,9 +230,7 @@ class BillService
                 $elecUsage = $latestReading ? (float) $latestReading->usage_kwh : 0.00;
 
                 // Attach pending excess charges for this tenant
-                $pendingCharges = ExcessCharge::where('tenant_id', $tenant->id)
-                    ->where('status', 'pending')
-                    ->get();
+                $pendingCharges = $this->excessChargeRepo->getPendingForTenant((int) $tenant->id);
                 $excessChargesSum = (float) $pendingCharges->sum('amount');
 
                 $lateFee = isset($overdueTenantIds[$tenant->id]) ? 250.00 : 0.00;
@@ -210,10 +253,7 @@ class BillService
                 ]);
 
                 if ($pendingCharges->isNotEmpty()) {
-                    ExcessCharge::whereIn('id', $pendingCharges->pluck('id'))->update([
-                        'bill_id' => $bill->id,
-                        'status' => 'billed',
-                    ]);
+                    $this->excessChargeRepo->attachToBill($pendingCharges->pluck('id')->all(), (int) $bill->id);
                 }
 
                 if ($latestReading && ! empty($latestReading->id)) {
@@ -270,7 +310,7 @@ class BillService
             $newElec = isset($data['electricity']) ? (float) $data['electricity'] : (float) $bill->electricity;
             $newWater = isset($data['water']) ? (float) $data['water'] : (float) $bill->water;
             $newLateFee = isset($data['late_fee']) ? (float) $data['late_fee'] : (float) $bill->late_fee;
-            $excessTotal = (float) $bill->excessCharges()->sum('amount');
+            $excessTotal = $this->excessChargeRepo->sumForBill($id);
             $data['total_amount'] = round($newRent + $newElec + $newWater + $newLateFee + $excessTotal, 2);
         }
 
@@ -278,13 +318,12 @@ class BillService
             $bill = $this->billRepo->update($id, $data);
 
             // Reconcile tenant balance accurately with non-negative clamping.
-            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-            if ($tenant && $hasFinancialChanges && ! in_array($bill->status, ['paid', 'voided'], true)) {
+            if ($hasFinancialChanges && ! in_array($bill->status, ['paid', 'voided'], true)) {
                 $diff = round((float) $bill->total_amount - $oldTotal, 2);
                 if ($diff > 0) {
-                    $tenant->increment('balance', $diff);
+                    $this->tenantRepo->incrementBalance((int) $bill->tenant_id, $diff);
                 } elseif ($diff < 0) {
-                    $tenant->decrement('balance', min((float) $tenant->balance, abs($diff)));
+                    $this->tenantRepo->decrementBalance((int) $bill->tenant_id, abs($diff));
                 }
             }
 
@@ -317,19 +356,13 @@ class BillService
         return DB::transaction(function () use ($bill) {
             $oldTotal = (float) $bill->total_amount;
 
-            Payment::where('bill_id', $bill->id)
-                ->where('status', 'pending')
-                ->update(['status' => 'failed']);
-
-            UtilityReading::where('bill_id', $bill->id)->update(['bill_id' => null]);
-            ExcessCharge::where('bill_id', $bill->id)->update(['bill_id' => null, 'status' => 'pending']);
+            $this->paymentRepo->markPendingFailedForBill((int) $bill->id);
+            $this->readingRepo->releaseByBillId((int) $bill->id);
+            $this->excessChargeRepo->releaseByBillId((int) $bill->id);
 
             $bill = $this->billRepo->update($bill->id, ['status' => 'voided']);
 
-            $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-            if ($tenant) {
-                $tenant->decrement('balance', min((float) $tenant->balance, $oldTotal));
-            }
+            $this->tenantRepo->decrementBalance((int) $bill->tenant_id, $oldTotal);
 
             Cache::forget('admin_stats_all');
             Cache::forget("tenant_dashboard_{$bill->tenant_id}");
@@ -345,21 +378,18 @@ class BillService
             throw new ModelNotFoundException('Bill not found.');
         }
 
-        if ((float) $bill->paid_amount > 0 || $bill->payments()->exists()) {
+        if ((float) $bill->paid_amount > 0 || $this->paymentRepo->hasForBill($id)) {
             throw new InvalidArgumentException('Invoices with recorded payments cannot be deleted. Void the invoice instead.');
         }
 
         return DB::transaction(function () use ($id, $bill) {
             if (in_array($bill->status, ['unpaid', 'pending_verification'], true)) {
-                $tenant = $this->tenantRepo->find((int) $bill->tenant_id);
-                if ($tenant) {
-                    $tenant->decrement('balance', min((float) $tenant->balance, (float) $bill->total_amount));
-                }
+                $this->tenantRepo->decrementBalance((int) $bill->tenant_id, (float) $bill->total_amount);
             }
 
             // Release attached utility readings and excess charges
-            UtilityReading::where('bill_id', $id)->update(['bill_id' => null]);
-            ExcessCharge::where('bill_id', $id)->update(['bill_id' => null, 'status' => 'pending']);
+            $this->readingRepo->releaseByBillId($id);
+            $this->excessChargeRepo->releaseByBillId($id);
 
             $tenantId = $bill->tenant_id;
             $receiptUrl = $bill->receipt_url;
@@ -398,6 +428,34 @@ class BillService
      */
     public function getDelinquentTenants(): array
     {
-        return $this->billRepo->getDelinquentTenantsSummary(now()->format('Y-m-d'));
+        $overdueBills = $this->billRepo->getOverdueBillsWithTenant(now()->format('Y-m-d'));
+        $grouped = $overdueBills->groupBy('tenant_id');
+        $delinquents = [];
+
+        foreach ($grouped as $tenantId => $bills) {
+            if ($bills->count() < 2) {
+                continue;
+            }
+
+            $tenant = $bills->first()->tenant;
+            $delinquents[] = [
+                'tenant_id' => $tenantId,
+                'tenant_name' => $tenant?->name ?? 'Unknown',
+                'room' => $tenant?->room ?? 'N/A',
+                'property_name' => $tenant?->property?->name ?? 'N/A',
+                'overdue_count' => $bills->count(),
+                'total_overdue' => (float) $bills->sum('remaining_balance'),
+                'bills' => $bills->map(fn ($b) => [
+                    'id' => $b->id,
+                    'total_amount' => (float) $b->total_amount,
+                    'paid_amount' => (float) $b->paid_amount,
+                    'remaining_balance' => (float) $b->remaining_balance,
+                    'due_date' => $b->due_date,
+                    'status' => $b->status,
+                ])->values()->all(),
+            ];
+        }
+
+        return $delinquents;
     }
 }

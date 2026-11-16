@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { CalendarX2, CreditCard, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { CalendarX2, CreditCard, CheckCircle2, Clock, AlertTriangle, ChevronRight } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,29 +55,27 @@ export function TenantOpenBillCard({
   if (!bill) {
     const hasBalance = outstandingBalance > 0;
     return (
-      <div className={`${cardClass} flex items-center gap-3`}>
+      <Link
+        to="/tenant/billing"
+        className={`${cardClass} flex items-center gap-3.5 transition-all hover:border-edge-strong hover:shadow-soft active:scale-[0.99] group cursor-pointer`}
+      >
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
             hasBalance ? "bg-warning-bg text-warning-fg" : "bg-success-bg text-success-fg"
           }`}
         >
           {hasBalance ? <Clock className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-fg">
+          <p className="text-sm font-bold text-fg">
             {hasBalance ? formatCurrency(outstandingBalance) : "You're all caught up"}
           </p>
-          <p className="text-xs text-muted">
-            {hasBalance ? "Outstanding balance on your account" : "No open bills right now."}
+          <p className="text-xs text-muted truncate">
+            {hasBalance ? "Outstanding balance on your account" : "Nothing to pay right now."}
           </p>
         </div>
-        <Link
-          to="/tenant/billing"
-          className="shrink-0 text-xs font-semibold text-accent hover:text-accent-strong"
-        >
-          {hasBalance ? "View Bills" : "History"}
-        </Link>
-      </div>
+        <ChevronRight className="h-4 w-4 text-muted group-hover:text-fg group-hover:translate-x-0.5 transition-all shrink-0" />
+      </Link>
     );
   }
 

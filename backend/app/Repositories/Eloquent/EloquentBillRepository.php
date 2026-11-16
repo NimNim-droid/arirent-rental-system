@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Bill;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class EloquentBillRepository implements BillRepositoryInterface
 {
@@ -94,40 +95,12 @@ class EloquentBillRepository implements BillRepositoryInterface
             ->all();
     }
 
-    public function getDelinquentTenantsSummary(string $today): array
+    public function getOverdueBillsWithTenant(string $today): Collection
     {
-        $overdueBills = Bill::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])
+        return Bill::with(['tenant:id,name,room,property_id', 'tenant.property:id,name'])
             ->whereIn('status', ['unpaid', 'partially_paid'])
             ->where('due_date', '<', $today)
             ->get();
-
-        $grouped = $overdueBills->groupBy('tenant_id');
-        $delinquents = [];
-
-        foreach ($grouped as $tenantId => $bills) {
-            if ($bills->count() >= 2) {
-                $tenant = $bills->first()->tenant;
-                $totalOverdue = $bills->sum('remaining_balance');
-                $delinquents[] = [
-                    'tenant_id' => $tenantId,
-                    'tenant_name' => $tenant?->name ?? 'Unknown',
-                    'room' => $tenant?->room ?? 'N/A',
-                    'property_name' => $tenant?->property?->name ?? 'N/A',
-                    'overdue_count' => $bills->count(),
-                    'total_overdue' => (float) $totalOverdue,
-                    'bills' => $bills->map(fn ($b) => [
-                        'id' => $b->id,
-                        'total_amount' => (float) $b->total_amount,
-                        'paid_amount' => (float) $b->paid_amount,
-                        'remaining_balance' => (float) $b->remaining_balance,
-                        'due_date' => $b->due_date,
-                        'status' => $b->status,
-                    ])->values()->all(),
-                ];
-            }
-        }
-
-        return $delinquents;
     }
 
     public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill
@@ -140,5 +113,44 @@ class EloquentBillRepository implements BillRepositoryInterface
         }
 
         return $query->latest('date')->first();
+    }
+
+    public function sumPaidRevenue(?int $propertyId = null): float
+    {
+        $query = Bill::where('status', 'paid');
+
+        if ($propertyId) {
+            $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
+        }
+
+        return (float) $query->sum('total_amount');
+    }
+
+    public function countPendingVerification(?int $propertyId = null): int
+    {
+        $query = Bill::where('status', 'pending_verification');
+
+        if ($propertyId) {
+            $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
+        }
+
+        return $query->count();
+    }
+
+    public function findEarliestOwedForTenant(int $tenantId): ?Bill
+    {
+        return Bill::where('tenant_id', $tenantId)
+            ->whereIn('status', ['unpaid', 'partially_paid', 'pending_verification'])
+            ->orderBy('due_date', 'asc')
+            ->select(['id', 'due_date'])
+            ->first();
+    }
+
+    public function getLatestNonVoidedRentForTenant(int $tenantId): float
+    {
+        return (float) Bill::where('tenant_id', $tenantId)
+            ->where('status', '!=', 'voided')
+            ->latest('date')
+            ->value('rent');
     }
 }

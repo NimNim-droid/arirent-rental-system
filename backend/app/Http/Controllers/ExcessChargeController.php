@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ExcessCharge\StoreExcessChargeRequest;
 use App\Http\Resources\ExcessChargeResource;
-use App\Models\ExcessCharge;
-use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Services\ExcessChargeService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class ExcessChargeController extends Controller
 {
     public function __construct(
-        protected TenantRepositoryInterface $tenantRepo
+        protected ExcessChargeService $excessChargeService
     ) {}
 
     /**
@@ -19,25 +21,10 @@ class ExcessChargeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $query = ExcessCharge::with(['tenant:id,name,room', 'bill:id,date,status'])->latest('charge_date');
-
-        if ($user && $user->role === 'tenant') {
-            $tenant = $this->tenantRepo->findByUserIdOrEmail($user->id, $user->email);
-            if (! $tenant) {
-                return response()->json(['data' => []]);
-            }
-            $query->where('tenant_id', $tenant->id);
-        } else {
-            if ($request->filled('tenant_id')) {
-                $query->where('tenant_id', $request->tenant_id);
-            }
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-        }
-
-        $charges = $query->get();
+        $charges = $this->excessChargeService->listCharges(
+            $request->user(),
+            $request->only(['tenant_id', 'status'])
+        );
 
         return response()->json([
             'data' => ExcessChargeResource::collection($charges),
@@ -47,32 +34,13 @@ class ExcessChargeController extends Controller
     /**
      * Create an excess charge for a tenant. Admin only.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreExcessChargeRequest $request): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
-        $validated = $request->validate([
-            'tenant_id' => ['required', 'exists:tenants,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'charge_date' => ['required', 'date'],
-        ]);
-
-        $charge = ExcessCharge::create([
-            'tenant_id' => $validated['tenant_id'],
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'amount' => $validated['amount'],
-            'charge_date' => $validated['charge_date'],
-            'status' => 'pending',
-        ]);
+        $charge = $this->excessChargeService->createCharge($request->validated());
 
         return response()->json([
             'message' => 'Excess charge recorded successfully.',
-            'data' => new ExcessChargeResource($charge->load('tenant:id,name,room')),
+            'data' => new ExcessChargeResource($charge),
         ], 201);
     }
 
@@ -81,23 +49,16 @@ class ExcessChargeController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        if (request()->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
+        try {
+            $this->excessChargeService->deleteCharge($id);
 
-        $charge = ExcessCharge::find($id);
-        if (! $charge) {
+            return response()->json([
+                'message' => 'Excess charge removed successfully.',
+            ]);
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Excess charge not found.'], 404);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        if ($charge->status === 'billed') {
-            return response()->json(['message' => 'Cannot delete an excess charge that has already been attached to a generated bill.'], 422);
-        }
-
-        $charge->delete();
-
-        return response()->json([
-            'message' => 'Excess charge removed successfully.',
-        ]);
     }
 }

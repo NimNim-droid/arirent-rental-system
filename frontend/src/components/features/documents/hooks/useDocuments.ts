@@ -17,6 +17,7 @@ export function useDocuments() {
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await documentsService.getDocuments();
       setDocs(res ?? []);
@@ -75,6 +76,7 @@ export function useDocuments() {
     const link = document.createElement("a");
     link.href = doc.url;
     link.target = "_blank";
+    link.download = doc.name;
     link.click();
   };
 
@@ -85,11 +87,19 @@ export function useDocuments() {
       await documentsService.deleteDocument(doc.id);
       setDocs((prev) => prev.filter((d) => d.id !== doc.id));
       setDeletingDoc(null);
+      setSuccessMsg(`"${doc.name}" deleted successfully.`);
+      setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err) {
       setError(getErrorMessage(err, "Unable to delete the document."));
     } finally {
       setDeleteBusy(false);
     }
+  };
+
+  const handleUploadSuccess = (newDoc: DocumentItem) => {
+    setDocs((prev) => [newDoc, ...prev]);
+    setSuccessMsg(`"${newDoc.name}" published successfully for tenants!`);
+    setTimeout(() => setSuccessMsg(""), 4000);
   };
 
   return {
@@ -108,5 +118,6 @@ export function useDocuments() {
     handleFiles,
     handleDownload,
     handleDelete,
+    handleUploadSuccess,
   };
 }

@@ -14,7 +14,6 @@ import {
   ReceiptText,
   BarChart3,
   KeyRound,
-  Wallet,
   ChevronsUpDown,
   Moon,
   Sun,
@@ -84,8 +83,7 @@ const TENANT_GROUPS: NavGroup[] = [
   {
     section: "Billing & Payments",
     items: [
-      { to: "/tenant/billing", label: "My Invoices", icon: ReceiptText },
-      { to: "/tenant/excess-charges", label: "Excess Charges", icon: Wallet },
+      { to: "/tenant/billing", label: "My Bills", icon: ReceiptText },
     ],
   },
   {

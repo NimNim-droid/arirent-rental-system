@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
-import { Zap, AlertCircle, Camera, Check } from "lucide-react";
+import { Zap, AlertCircle, Camera } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { utilitiesService } from "@/lib/services/utilities";
-import { formatCurrency, formatLocalDateString } from "@/lib/formatters";
-import { getErrorMessage } from "@/lib/errors";
+import { formatCurrency } from "@/lib/formatters";
 import type { Tenant, Property } from "@/lib/types";
+import { useAddReadingForm } from "./hooks/useAddReadingForm";
 
 interface AddReadingModalProps {
   open: boolean;
@@ -28,100 +26,38 @@ export function AddReadingModal({
   getLatestReading,
   onSuccess,
 }: AddReadingModalProps) {
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
-  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
-  const [prevReading, setPrevReading] = useState<number>(0);
-  const [currReading, setCurrReading] = useState<number | "">("");
-  const [readingDate, setReadingDate] = useState<string>(formatLocalDateString());
-  const [customRate, setCustomRate] = useState<number>(elecRate);
-  const [meterPhoto, setMeterPhoto] = useState<File | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  // Sync customRate when elecRate prop updates
-  useEffect(() => {
-    setCustomRate(elecRate);
-  }, [elecRate]);
-
-  // Filter tenants by property if property filter is selected
-  const availableTenants = tenants.filter((t) => {
-    if (selectedPropertyId === "all") return true;
-    return String(t.property_id) === String(selectedPropertyId);
+  const {
+    selectedPropertyId,
+    setSelectedPropertyId,
+    selectedTenantId,
+    setSelectedTenantId,
+    prevReading,
+    setPrevReading,
+    currReading,
+    setCurrReading,
+    readingDate,
+    setReadingDate,
+    customRate,
+    meterPhoto,
+    meterPhotoPreview,
+    setMeterPhoto,
+    loading,
+    formError,
+    setFormError,
+    availableTenants,
+    usage,
+    totalAmount,
+    isInvalidReading,
+    handleTenantChange,
+    handleSubmit,
+  } = useAddReadingForm({
+    open,
+    tenants,
+    elecRate,
+    getLatestReading,
+    onSuccess,
+    onClose,
   });
-
-  // When modal opens or property changes, set initial tenant
-  useEffect(() => {
-    if (open && availableTenants.length > 0) {
-      if (!selectedTenantId || !availableTenants.some((t) => t.id === selectedTenantId)) {
-        const first = availableTenants[0];
-        setSelectedTenantId(first.id);
-        const lastReading = getLatestReading(first.id);
-        setPrevReading(lastReading);
-        setCurrReading("");
-      }
-    }
-  }, [open, selectedPropertyId, availableTenants, selectedTenantId, getLatestReading]);
-
-  // Reset photo on modal close/open
-  useEffect(() => {
-    if (!open) {
-      setMeterPhoto(null);
-      setFormError(null);
-    }
-  }, [open]);
-
-  // When selected tenant changes, fetch previous reading automatically
-  const handleTenantChange = (tenantId: string) => {
-    setSelectedTenantId(tenantId);
-    const last = getLatestReading(tenantId);
-    setPrevReading(last);
-    setCurrReading("");
-    setFormError(null);
-  };
-
-  const currentNumber = typeof currReading === "number" ? currReading : 0;
-  const usage = Math.max(0, currentNumber - prevReading);
-  const totalAmount = usage * customRate;
-  const isInvalidReading = currentNumber > 0 && currentNumber < prevReading;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!selectedTenantId) {
-      setFormError("Please select a tenant.");
-      return;
-    }
-
-    if (currReading === "" || isNaN(Number(currReading))) {
-      setFormError("Please enter a valid current meter reading.");
-      return;
-    }
-
-    if (currentNumber < prevReading) {
-      setFormError("Current reading cannot be lower than the previous reading.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await utilitiesService.createReading({
-        tenant_id: selectedTenantId,
-        prev_reading: prevReading,
-        curr_reading: currentNumber,
-        date: readingDate,
-        meter_photo: meterPhoto,
-      });
-
-      setMeterPhoto(null);
-      onSuccess();
-      onClose();
-    } catch (err) {
-      setFormError(getErrorMessage(err, "Failed to record meter reading."));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <Modal open={open} onClose={onClose} title="Record Electric Meter Reading" maxWidth="md">
@@ -157,7 +93,7 @@ export function AddReadingModal({
 
           <div>
             <label className="block text-xs font-semibold text-fg-soft mb-1.5">
-              Select Tenant & Unit <span className="text-danger">*</span>
+              Select Tenant &amp; Unit <span className="text-danger">*</span>
             </label>
             <Select
               value={selectedTenantId}
@@ -276,9 +212,10 @@ export function AddReadingModal({
             className="flex items-center justify-between cursor-pointer rounded-xl border border-dashed border-border p-3 transition-colors hover:border-primary hover:bg-subtle/50"
           >
             <input
+              key={meterPhoto ? "has-photo" : "no-photo"}
               id="meter-photo-input"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="sr-only"
               onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
@@ -294,7 +231,7 @@ export function AddReadingModal({
               {meterPhoto ? (
                 <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-border shrink-0 bg-subtle">
                   <img
-                    src={URL.createObjectURL(meterPhoto)}
+                    src={meterPhotoPreview ?? ""}
                     alt="Meter preview"
                     className="h-full w-full object-cover"
                   />

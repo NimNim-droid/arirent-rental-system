@@ -8,7 +8,6 @@ use App\Http\Resources\PropertyResource;
 use App\Services\PropertyService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class PropertyController extends Controller
 {
@@ -77,12 +76,8 @@ class PropertyController extends Controller
     /**
      * Delete a property if it has no occupied units.
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->propertyService->deleteProperty($id);
 

@@ -93,24 +93,26 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
     </div>
   );
 
-  // Tenant home: greeting bar (avatar + name, centered brand, theme toggle)
-  if (isTenantHome) {
+  // Tenant header: avatar on left, centered brand, theme toggle on right matching mobile redesign
+  if (isTenant) {
     return (
-      <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-app/85 px-4 py-3 backdrop-blur-md">
+      <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-app/90 px-4 py-2.5 backdrop-blur-md border-b border-edge/60">
         <div className="relative flex min-w-0 items-center gap-2.5" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((o) => !o)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-white shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             title={name}
             aria-label={`Account menu for ${name}`}
             aria-expanded={profileOpen}
           >
             {initials}
           </button>
-          <div className="min-w-0 leading-tight">
-            <p className="text-[11px] text-muted">Hello,</p>
-            <p className="truncate text-sm font-bold text-fg">{firstName}!</p>
-          </div>
+          {isTenantHome && (
+            <div className="min-w-0 leading-tight">
+              <p className="text-[10px] text-muted font-medium">Hello,</p>
+              <p className="truncate text-xs font-bold text-fg">{firstName}!</p>
+            </div>
+          )}
           {profileOpen && accountMenu}
         </div>
         <Logo size="sm" />

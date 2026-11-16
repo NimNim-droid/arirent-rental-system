@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Maintenance\IndexMaintenanceRequest;
 use App\Http\Requests\Maintenance\StoreMaintenanceRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceRequest;
 use App\Http\Resources\MaintenanceResource;
 use App\Services\MaintenanceService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 class MaintenanceController extends Controller
@@ -20,14 +20,8 @@ class MaintenanceController extends Controller
     /**
      * List maintenance tickets. Role-scoped.
      */
-    public function index(Request $request): JsonResponse
+    public function index(IndexMaintenanceRequest $request): JsonResponse
     {
-        $request->validate([
-            'search' => ['nullable', 'string', 'max:100'],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-        ]);
-
         $filters = $request->only(['tenant_id', 'status', 'property_id', 'search', 'date_from', 'date_to']);
         $perPage = (int) $request->input('per_page', 50);
 
@@ -94,12 +88,8 @@ class MaintenanceController extends Controller
     /**
      * Delete a maintenance ticket. Admin only.
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         try {
             $this->maintenanceService->deleteTicket($id);
 

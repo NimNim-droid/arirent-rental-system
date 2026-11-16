@@ -949,6 +949,9 @@ npm run dev
 # App running at http://localhost:3000
 
 # Default Admin Login
-# Email: admin@arirent.com
-# Password: admin
+# Email: admin@arirent.com (from SEED_ADMIN_EMAIL in backend/.env)
+# Password: generated randomly on first seed unless SEED_ADMIN_PASSWORD is set.
+# To reset: docker exec -it arirent-backend-app php artisan tinker
+#   $u = App\Models\User::where('email', 'admin@arirent.com')->first();
+#   $u->password = 'NewPassword'; $u->save();
 ```

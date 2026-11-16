@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AlertBanner } from "@/components/ui/alert-banner";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatters";
@@ -25,6 +26,8 @@ type BillFilterTab = "all" | "unpaid" | "paid";
 export default function TenantBilling() {
   const {
     bills,
+    pendingCharges,
+    pendingChargesTotal,
     settings,
     selectedInvoice,
     showPaymentModal,
@@ -40,7 +43,7 @@ export default function TenantBilling() {
     closeStatementModal,
   } = useTenantBilling();
 
-  const [activeTab, setActiveTab] = useState<BillFilterTab>("all");
+  const [activeTab, setActiveTab] = useState<BillFilterTab>("unpaid");
 
   const paidBills = useMemo(
     () => bills.filter((b) => b.status === "paid" || b.status === "voided"),
@@ -75,7 +78,7 @@ export default function TenantBilling() {
       <div className="hidden lg:flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-fg">
-            My Bills & Invoices
+            My Bills
           </h1>
           <p className="text-xs text-muted mt-0.5">
             View room rent, metered electricity consumption, and settle via GCash
@@ -97,34 +100,33 @@ export default function TenantBilling() {
         <AlertBanner variant="danger" message={error} onRetry={loadBills} />
       )}
 
-      {/* Segmented Filter Tabs: Billings (All) | Unpaid | Paid */}
-      <div className="flex border-b border-edge">
-        <button
-          type="button"
-          onClick={() => setActiveTab("all")}
-          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
-            activeTab === "all"
-              ? "text-accent"
-              : "text-muted hover:text-fg"
-          }`}
-        >
-          Billings
-          <span className="ml-1.5 rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-            {bills.length}
-          </span>
-          {activeTab === "all" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
-          )}
-        </button>
+      {/* Amount Due Header matching Mockup 3 */}
+      <div className="space-y-1 pt-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Amount due</p>
+        <p className="text-4xl sm:text-5xl font-black text-fg tabular-nums tracking-tight">
+          {formatCurrency(unpaidTotal)}
+        </p>
+        {unpaidTotal === 0 ? (
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold text-success-fg pt-1">
+            <CheckCircle2 className="h-4 w-4" /> Nothing to pay right now
+          </p>
+        ) : (
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold text-warning-fg pt-1">
+            <AlertTriangle className="h-4 w-4" /> Please pay before the due date to avoid late surcharges
+          </p>
+        )}
+      </div>
 
+      {/* Segmented Filter: [ Unpaid | Paid ] matching Mockup 3 */}
+      <div className="flex rounded-2xl bg-inset p-1 border border-edge">
         <button
           type="button"
           onClick={() => setActiveTab("unpaid")}
-          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === "unpaid"
-              ? "text-accent"
+              ? "bg-[#14233F] text-white dark:bg-[#1D3560] shadow-soft"
               : "text-muted hover:text-fg"
-          }`}
+            }`}
         >
           Unpaid
           {unpaidBills.length > 0 && (
@@ -132,61 +134,20 @@ export default function TenantBilling() {
               {unpaidBills.length}
             </span>
           )}
-          {activeTab === "unpaid" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
-          )}
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("paid")}
-          className={`relative pb-2.5 px-3 text-sm font-bold transition-colors cursor-pointer ${
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === "paid"
-              ? "text-accent"
+              ? "bg-[#14233F] text-white dark:bg-[#1D3560] shadow-soft"
               : "text-muted hover:text-fg"
-          }`}
+            }`}
         >
-          Paid History
-          <span className="ml-1.5 rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-            {paidBills.length}
-          </span>
-          {activeTab === "paid" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
-          )}
+          Paid ({paidBills.length})
         </button>
       </div>
-
-      {/* Dark Hero Banner matching mockup slide 1 */}
-      {loading ? (
-        <Skeleton className="h-28 w-full rounded-3xl" />
-      ) : (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#121c32] via-[#1a2846] to-[#0f182c] p-5 text-white shadow-card">
-          <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                <span>Unpaid Bills</span>
-                {unpaidBills.length > 0 && (
-                  <span className="inline-flex h-2 w-2 rounded-full bg-warning-fg animate-pulse" />
-                )}
-              </h2>
-              <p className="text-xs text-white/75 leading-relaxed max-w-xs">
-                {unpaidBills.length > 0
-                  ? "Please pay all billings before the due date to avoid late surcharges."
-                  : "All caught up! You have no outstanding invoices at this moment."}
-              </p>
-            </div>
-
-            <div className="text-right shrink-0">
-              <p className="text-[10px] uppercase font-bold text-white/60 tracking-wider">
-                Total Due
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-white tabular-nums">
-                {formatCurrency(unpaidTotal)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Loading Skeleton */}
       {loading && (
@@ -199,9 +160,22 @@ export default function TenantBilling() {
       {/* Empty State */}
       {!loading && bills.length === 0 && (
         <EmptyState
-          title="No invoices yet"
+          title="No bills yet"
           description="Your monthly billing statements will appear here once issued by the property admin."
         />
+      )}
+
+      {/* Empty State when in Unpaid tab with 0 unpaid bills */}
+      {!loading && activeTab === "unpaid" && unpaidBills.length === 0 && bills.length > 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-edge bg-card p-8 text-center shadow-card space-y-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-success-bg text-success-fg">
+            <CheckCircle2 className="h-6 w-6 stroke-[2.25]" />
+          </div>
+          <p className="text-base font-bold text-fg">No unpaid bills</p>
+          <p className="text-xs text-muted max-w-xs">
+            You're all caught up! Your next billing statement will show up here.
+          </p>
+        </div>
       )}
 
       {/* Section 1: Unpaid Bills */}
@@ -250,6 +224,54 @@ export default function TenantBilling() {
               Pay Now
             </button>
           )}
+        </div>
+      )}
+
+      {/* Upcoming unbilled add-on fees (appliance permit, maintenance, etc.) */}
+      {!loading && pendingCharges.length > 0 && activeTab !== "paid" && (
+        <div className="rounded-2xl border border-warning-border/60 bg-warning-bg/20 p-4 shadow-card">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-fg">
+                <Clock className="h-3.5 w-3.5 text-warning-fg" />
+                <span>Upcoming Add-on Charges</span>
+              </div>
+              <p className="text-[11px] text-muted">
+                These itemized fees will be included in your next billing statement.
+              </p>
+            </div>
+            <Badge variant="warning" className="shrink-0 tabular-nums font-bold">
+              {formatCurrency(pendingChargesTotal)}
+            </Badge>
+          </div>
+          <div className="mt-3 divide-y divide-edge/60 border-t border-edge/60 pt-1">
+            {pendingCharges.map((charge) => (
+              <div key={charge.id} className="flex items-center justify-between py-2 text-xs">
+                <div className="min-w-0 pr-3">
+                  <p className="font-semibold text-fg truncate">{charge.title}</p>
+                  {charge.description && (
+                    <p className="text-[11px] text-muted truncate">{charge.description}</p>
+                  )}
+                </div>
+                <span className="shrink-0 font-bold tabular-nums text-fg">
+                  {formatCurrency(charge.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State when in Paid tab with 0 paid bills */}
+      {!loading && activeTab === "paid" && paidBills.length === 0 && bills.length > 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-edge bg-card p-8 text-center shadow-card space-y-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-inset text-muted">
+            <Receipt className="h-6 w-6 stroke-[2.25]" />
+          </div>
+          <p className="text-base font-bold text-fg">No paid history yet</p>
+          <p className="text-xs text-muted max-w-xs">
+            Past settled receipts and statements will appear here.
+          </p>
         </div>
       )}
 

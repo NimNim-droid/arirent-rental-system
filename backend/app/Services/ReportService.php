@@ -3,15 +3,15 @@
 namespace App\Services;
 
 use App\Models\Bill;
-use App\Models\Payment;
-use App\Models\Property;
-use App\Models\Room;
-use App\Models\Tenant;
+use App\Repositories\Contracts\ReportRepositoryInterface;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
+    public function __construct(
+        protected ReportRepositoryInterface $reportRepo
+    ) {}
+
     /**
      * Accounts-receivable aging buckets, measured in days past the invoice due date.
      * 'current' means not yet due (including due today).
@@ -36,33 +36,8 @@ class ReportService
         ?int $propertyId = null,
         ?int $year = null
     ): array {
-        // 1. Build base bills query (excluding voided bills)
-        $billsQuery = Bill::query()->where('status', '!=', 'voided');
-
-        if ($propertyId) {
-            $billsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-        }
-
-        if ($month && $month !== 'all') {
-            $billsQuery->where(function ($q) use ($month) {
-                $q->where('date', 'like', "{$month}%")
-                  ->orWhere(function ($sq) use ($month) {
-                      $sq->whereNull('date')
-                         ->where('created_at', 'like', "{$month}%");
-                  });
-            });
-        }
-
-        if ($year) {
-            $billsQuery->where(function ($q) use ($year) {
-                $q->whereYear('date', $year)
-                  ->orWhere(function ($sq) use ($year) {
-                      $sq->whereNull('date')->whereYear('created_at', $year);
-                  });
-            });
-        }
-
-        $bills = $billsQuery->with(['tenant.property', 'excessCharges'])->get();
+        // 1. Fetch base bills (excluding voided bills) via repository
+        $bills = $this->reportRepo->getBillsForReport($month, $propertyId, $year);
 
         // 2. Calculate Top-Level KPIs
         $totalBilled = (float) $bills->sum('total_amount');
@@ -75,18 +50,7 @@ class ReportService
         $growthRate = 0.0;
         if ($month && $month !== 'all' && preg_match('/^\d{4}-\d{2}$/', $month)) {
             $prevMonthDate = Carbon::createFromFormat('Y-m', $month)->subMonth()->format('Y-m');
-            $prevBillsQuery = Bill::query()->where('status', '!=', 'voided');
-            if ($propertyId) {
-                $prevBillsQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-            }
-            $prevBillsQuery->where(function ($q) use ($prevMonthDate) {
-                $q->where('date', 'like', "{$prevMonthDate}%")
-                  ->orWhere(function ($sq) use ($prevMonthDate) {
-                      $sq->whereNull('date')
-                         ->where('created_at', 'like', "{$prevMonthDate}%");
-                  });
-            });
-            $prevMonthCollected = (float) $prevBillsQuery->sum('paid_amount');
+            $prevMonthCollected = $this->reportRepo->sumCollectedForMonth($prevMonthDate, $propertyId);
             if ($prevMonthCollected > 0) {
                 $growthRate = round((($totalCollected - $prevMonthCollected) / $prevMonthCollected) * 100, 1);
             }
@@ -148,10 +112,7 @@ class ReportService
         ];
 
         // Reconciliation: bill-level paid_amount vs confirmed rows in the payments ledger
-        $confirmedPayments = (float) Payment::query()
-            ->whereIn('bill_id', $bills->pluck('id'))
-            ->where('status', 'confirmed')
-            ->sum('amount');
+        $confirmedPayments = $this->reportRepo->sumConfirmedPaymentsForBills($bills->pluck('id')->all());
         $reconciliation = [
             'recorded_paid_amount' => $totalCollected,
             'confirmed_payments' => $confirmedPayments,
@@ -160,11 +121,7 @@ class ReportService
         ];
 
         // 5. Per-Property Financial Performance
-        $propertiesQuery = Property::with(['rooms', 'tenants'])->orderBy('name');
-        if ($propertyId) {
-            $propertiesQuery->where('id', $propertyId);
-        }
-        $properties = $propertiesQuery->get();
+        $properties = $this->reportRepo->getPropertiesWithRoomsAndTenants($propertyId);
 
         $propertyPerformance = $properties->map(function ($p) use ($bills) {
             $propBills = $bills->filter(function ($b) use ($p) {
@@ -202,40 +159,19 @@ class ReportService
             $ym = $trendDate->format('Y-m');
             $trendLabel = $trendDate->format('M Y');
 
-            $monthQuery = Bill::query()->where('status', '!=', 'voided');
-            if ($propertyId) {
-                $monthQuery->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-            }
-            $monthQuery->where(function ($q) use ($ym) {
-                $q->where('date', 'like', "{$ym}%")
-                  ->orWhere(function ($sq) use ($ym) {
-                      $sq->whereNull('date')
-                         ->where('created_at', 'like', "{$ym}%");
-                  });
-            });
-
-            $mBilled = (float) $monthQuery->sum('total_amount');
-            $mCollected = (float) $monthQuery->sum('paid_amount');
-            $mOutstanding = (float) $monthQuery->sum('remaining_balance');
+            $totals = $this->reportRepo->getMonthlyTrendTotals($ym, $propertyId);
 
             $monthlyTrend[] = [
                 'month' => $ym,
                 'label' => $trendLabel,
-                'billed' => $mBilled,
-                'collected' => $mCollected,
-                'outstanding' => $mOutstanding,
+                'billed' => $totals['billed'],
+                'collected' => $totals['collected'],
+                'outstanding' => $totals['outstanding'],
             ];
         }
 
         // 7. Available Months list (for frontend filter dropdown)
-        $availableMonths = Bill::where('status', '!=', 'voided')
-            ->selectRaw('DISTINCT SUBSTRING(COALESCE(date, created_at), 1, 7) as ym')
-            ->whereNotNull(DB::raw('COALESCE(date, created_at)'))
-            ->pluck('ym')
-            ->filter(fn ($ym) => preg_match('/^\d{4}-\d{2}$/', $ym))
-            ->sortDesc()
-            ->values()
-            ->all();
+        $availableMonths = $this->reportRepo->getAvailableBillMonths();
 
         // 8. Executive annual view used by the Financial Report page.
         $reportYear = $year
@@ -690,7 +626,7 @@ class ReportService
     private function yearlyCollected(int $year, ?int $propertyId): array
     {
         $startYear = $year - 4;
-        $bills = $this->billsForRange(
+        $bills = $this->reportRepo->getBillsInDateRange(
             Carbon::create($startYear, 1, 1)->startOfDay(),
             Carbon::create($year, 12, 31)->endOfDay(),
             $propertyId
@@ -726,35 +662,11 @@ class ReportService
      */
     private function billsForYear(int $year, ?int $propertyId)
     {
-        return $this->billsForRange(
+        return $this->reportRepo->getBillsInDateRange(
             Carbon::create($year, 1, 1)->startOfDay(),
             Carbon::create($year, 12, 31)->endOfDay(),
             $propertyId
         );
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, Bill>
-     */
-    private function billsForRange(Carbon $from, Carbon $to, ?int $propertyId)
-    {
-        $query = Bill::query()
-            ->where('status', '!=', 'voided')
-            ->with(['tenant.property', 'excessCharges']);
-
-        if ($propertyId) {
-            $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-        }
-
-        $query->where(function ($q) use ($from, $to) {
-            $q->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-              ->orWhere(function ($sq) use ($from, $to) {
-                  $sq->whereNull('date')
-                     ->whereBetween('created_at', [$from, $to]);
-              });
-        });
-
-        return $query->get();
     }
 
     private function percentChange(float $current, float $previous): float
@@ -777,17 +689,7 @@ class ReportService
     private function getArAging(?int $propertyId): array
     {
         $today = Carbon::today();
-
-        $query = Bill::query()
-            ->whereIn('status', ['unpaid', 'partially_paid'])
-            ->where('remaining_balance', '>', 0)
-            ->with('tenant.property');
-
-        if ($propertyId) {
-            $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
-        }
-
-        $bills = $query->get();
+        $bills = $this->reportRepo->getOpenBillsForArAging($propertyId);
 
         $buckets = [];
         foreach (self::AGING_BUCKETS as $def) {

@@ -172,6 +172,46 @@ class SecurityHardeningTest extends TestCase
         $this->get($path)->assertStatus(403);
     }
 
+    public function test_maintenance_photo_uploads_are_private_and_cleaned_up_on_delete(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $createRes = $this->post(
+            '/api/maintenance',
+            [
+                'type' => 'plumbing',
+                'description' => 'Pipe leak under kitchen sink',
+                'priority' => 'urgent',
+                'photo' => UploadedFile::fake()->create('leak.jpg', 10, 'image/jpeg'),
+            ],
+            ['Accept' => 'application/json']
+        );
+
+        $createRes->assertStatus(201);
+        $ticketId = $createRes->json('data.id');
+        $photoUrl = $createRes->json('data.photo_url');
+
+        $this->assertIsString($photoUrl);
+        $this->assertStringContainsString('/api/files/maintenance/', $photoUrl);
+        $this->assertStringNotContainsString('/storage/', $photoUrl);
+        $this->assertCount(1, Storage::disk('local')->allFiles('maintenance'));
+        $this->assertCount(0, Storage::disk('public')->allFiles('maintenance'));
+
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin-maint@example.com',
+            'password' => Hash::make('secret'),
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+        $this->deleteJson("/api/maintenance/{$ticketId}")->assertOk();
+        $this->assertCount(0, Storage::disk('local')->allFiles('maintenance'));
+    }
+
     public function test_documents_are_served_through_signed_urls(): void
     {
         Storage::fake('local');

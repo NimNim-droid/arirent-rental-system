@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { RotateCw, X, UserPlus, Building, Users } from "lucide-react";
+import { useState, useMemo } from "react";
+import { RotateCw, X, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -14,15 +13,13 @@ import {
   EditTenantModal,
   AddTenantModal,
 } from "@/components/features/tenant";
-import { propertiesService } from "@/lib/services/properties";
-import type { Tenant, Property } from "@/lib/types";
+import type { Tenant } from "@/lib/types";
 
 type StatusTab = "all" | "active" | "pending_approval" | "inactive";
 
 export default function AdminTenants() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
   const [selectedStatusTab, setSelectedStatusTab] = useState<StatusTab>("all");
-  const [properties, setProperties] = useState<Property[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   // Modals state
@@ -33,6 +30,7 @@ export default function AdminTenants() {
 
   const {
     tenants,
+    properties,
     searchTerm,
     setSearchTerm,
     selectedTenant,
@@ -41,24 +39,11 @@ export default function AdminTenants() {
     isSearching,
     error,
     busyId,
-    loadTenants,
+    refreshAll,
     handleApprove,
     handleVacate,
     handleDelete,
   } = useTenants();
-
-  const loadProperties = useCallback(async () => {
-    try {
-      const data = await propertiesService.getProperties();
-      setProperties(data);
-    } catch {
-      // Non-blocking
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProperties();
-  }, [loadProperties]);
 
   // Filter tenants by property, status tab, and search term
   const filteredTenants = useMemo(() => {
@@ -90,8 +75,7 @@ export default function AdminTenants() {
   }, [tenants, selectedPropertyId]);
 
   const handleRefresh = () => {
-    loadTenants(searchTerm || undefined);
-    loadProperties();
+    refreshAll();
   };
 
   const handleClearSearch = () => {

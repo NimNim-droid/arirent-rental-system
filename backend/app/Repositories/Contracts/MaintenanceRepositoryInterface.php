@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\MaintenanceTicket;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 interface MaintenanceRepositoryInterface
 {
@@ -21,4 +22,10 @@ interface MaintenanceRepositoryInterface
     public function update(int $id, array $attributes): MaintenanceTicket;
 
     public function delete(int $id): bool;
+
+    public function countCreatedTodayForTenant(int $tenantId): int;
+
+    public function getRecent(?int $propertyId = null, int $limit = 5): Collection;
+
+    public function getRecentForTenant(int $tenantId, int $limit = 3): Collection;
 }

@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Bill;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 interface BillRepositoryInterface
 {
@@ -28,7 +29,15 @@ interface BillRepositoryInterface
 
     public function getOverdueTenantIds(string $today): array;
 
-    public function getDelinquentTenantsSummary(string $today): array;
+    public function getOverdueBillsWithTenant(string $today): Collection;
 
     public function findForTenantInMonth(int $tenantId, string $monthStart, string $monthEnd, ?string $status = null): ?Bill;
+
+    public function sumPaidRevenue(?int $propertyId = null): float;
+
+    public function countPendingVerification(?int $propertyId = null): int;
+
+    public function findEarliestOwedForTenant(int $tenantId): ?Bill;
+
+    public function getLatestNonVoidedRentForTenant(int $tenantId): float;
 }

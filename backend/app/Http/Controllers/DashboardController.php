@@ -17,10 +17,6 @@ class DashboardController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
-
         $propertyId = $request->query('property_id') ? (int) $request->query('property_id') : null;
         $data = $this->dashboardService->getAdminStats($propertyId);
 

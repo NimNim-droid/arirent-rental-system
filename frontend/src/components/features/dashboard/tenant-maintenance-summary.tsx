@@ -1,7 +1,7 @@
 import { Link } from "react-router";
-import { Plus, Wrench, ChevronRight } from "lucide-react";
+import { Wrench, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/cn";
+import { formatDate } from "@/lib/formatters";
 import type { MaintenanceTicket } from "@/lib/types";
 
 interface TenantMaintenanceSummaryProps {
@@ -18,44 +18,10 @@ const STATUS_LABEL: Record<MaintenanceTicket["status"], string> = {
   archived: "Archived",
 };
 
-const TYPE_LABEL: Record<MaintenanceTicket["type"], string> = {
-  plumbing: "Plumbing",
-  electrical: "Electrical",
-  appliances: "Appliances",
-  general: "General",
-};
-
-function CountTile({
-  value,
-  label,
-  tone,
-}: {
-  value: number;
-  label: string;
-  tone: "warning" | "success";
-}) {
-  return (
-    <Link
-      to="/tenant/maintenance"
-      className="flex flex-col items-center justify-center gap-2 rounded-3xl border border-edge bg-card p-3 shadow-card transition-transform active:scale-95"
-    >
-      <span className="text-2xl font-extrabold text-fg tabular-nums">{value}</span>
-      <span
-        className={cn(
-          "rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-          tone === "warning"
-            ? "border-warning-border bg-warning-bg text-warning-fg"
-            : "border-success-border bg-success-bg text-success-fg"
-        )}
-      >
-        {label}
-      </span>
-    </Link>
-  );
-}
-
 /**
- * Maintenance quick actions on the tenant home: report an issue and ticket counts.
+ * Maintenance summary card on tenant home matching the AriRent redesign:
+ * - Top: Recent ticket status with chevron
+ * - Bottom: 2 clean stat counters (Open vs Resolved)
  */
 export function TenantMaintenanceSummary({
   openCount,
@@ -66,50 +32,64 @@ export function TenantMaintenanceSummary({
   if (loading) {
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[104px] rounded-3xl" />
-          ))}
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
         </div>
       </div>
     );
   }
 
+  const ticketDate = latestTicket?.created_at || latestTicket?.date;
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
-        <Link
-          to="/tenant/maintenance"
-          className="group flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-accent-border bg-accent-soft/40 p-3 text-center transition-all hover:bg-accent-soft active:scale-95"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-accent shadow-card transition-transform group-hover:scale-105">
-            <Plus className="h-5 w-5" />
-          </span>
-          <span className="text-[11px] font-semibold leading-tight text-accent">Report Issue</span>
-        </Link>
-        <CountTile value={openCount} label="Open" tone="warning" />
-        <CountTile value={resolvedCount} label="Resolved" tone="success" />
-      </div>
+      {/* Latest Ticket or All clear state */}
+      <Link
+        to="/tenant/maintenance"
+        className="flex items-center gap-3.5 rounded-2xl border border-edge bg-card p-3.5 shadow-card transition-all hover:border-edge-strong hover:shadow-soft active:scale-[0.99] group"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-inset text-fg-soft border border-edge">
+          {latestTicket ? (
+            <Wrench className="h-5 w-5 text-accent" />
+          ) : (
+            <CheckCircle2 className="h-5 w-5 text-success-fg" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-fg">
+            {latestTicket?.description || "All maintenance requests resolved"}
+          </p>
+          <p className="text-xs text-muted truncate">
+            {latestTicket
+              ? `${STATUS_LABEL[latestTicket.status] || latestTicket.status} · requested ${
+                  ticketDate ? formatDate(ticketDate) : "recently"
+                }`
+              : "No issues reported in your unit."}
+          </p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted group-hover:text-fg group-hover:translate-x-0.5 transition-all shrink-0" />
+      </Link>
 
-      {latestTicket && (
+      {/* 2 Stat Counters: Open vs Resolved */}
+      <div className="grid grid-cols-2 gap-3">
         <Link
           to="/tenant/maintenance"
-          className="flex items-center gap-3 rounded-3xl border border-edge bg-card p-3.5 shadow-card transition-colors hover:bg-hover active:scale-[0.99]"
+          className="flex flex-col items-center justify-center rounded-2xl border border-edge bg-card p-3.5 shadow-card text-center transition-all hover:border-edge-strong active:scale-95"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-info-bg text-info-fg">
-            <Wrench className="h-4 w-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-fg">
-              Latest request · {TYPE_LABEL[latestTicket.type] ?? latestTicket.type}
-            </p>
-            <p className="truncate text-[11px] text-muted">
-              {STATUS_LABEL[latestTicket.status] ?? latestTicket.status} — {latestTicket.description}
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-faint" />
+          <span className="text-2xl font-black text-fg tabular-nums">{openCount}</span>
+          <span className="text-xs font-semibold text-muted">Open</span>
         </Link>
-      )}
+
+        <Link
+          to="/tenant/maintenance"
+          className="flex flex-col items-center justify-center rounded-2xl border border-edge bg-card p-3.5 shadow-card text-center transition-all hover:border-edge-strong active:scale-95"
+        >
+          <span className="text-2xl font-black text-fg tabular-nums">{resolvedCount}</span>
+          <span className="text-xs font-semibold text-muted">Resolved</span>
+        </Link>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ use App\Models\MaintenanceTicket;
 use App\Models\User;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PrivateFile;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
@@ -84,9 +85,7 @@ class MaintenanceService
         // Enforce the 3-ticket daily limit per tenant so a tenant cannot flood
         // the system with maintenance tickets in a single day.
         $dailyLimit = 3;
-        $ticketsToday = MaintenanceTicket::where('tenant_id', $activeTenant->id)
-            ->whereDate('created_at', now())
-            ->count();
+        $ticketsToday = $this->maintenanceRepo->countCreatedTodayForTenant((int) $activeTenant->id);
 
         if ($ticketsToday >= $dailyLimit) {
             throw new InvalidArgumentException(
@@ -98,8 +97,7 @@ class MaintenanceService
 
         $photoUrl = $data['photo_url'] ?? null;
         if ($photoFile) {
-            $path = $photoFile->store('maintenance', 'public');
-            $photoUrl = '/storage/' . $path;
+            $photoUrl = PrivateFile::store($photoFile, 'maintenance');
         }
 
         return $this->maintenanceRepo->create([
@@ -133,7 +131,7 @@ class MaintenanceService
     }
 
     /**
-     * Delete a maintenance ticket.
+     * Delete a maintenance ticket and clean up any uploaded photo.
      */
     public function deleteTicket(int $id): bool
     {
@@ -143,6 +141,13 @@ class MaintenanceService
             throw new ModelNotFoundException('Ticket not found.');
         }
 
-        return $this->maintenanceRepo->delete($id);
+        $photoUrl = $ticket->photo_url;
+        $deleted = $this->maintenanceRepo->delete($id);
+
+        if ($deleted) {
+            PrivateFile::delete($photoUrl);
+        }
+
+        return $deleted;
     }
 }

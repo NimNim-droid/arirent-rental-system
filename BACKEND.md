@@ -68,134 +68,183 @@ API ROUTE
 ```
 backend/
 ├── app/
+│   ├── Console/
+│   │   └── Commands/
+│   │       ├── MigratePublicFiles.php
+│   │       ├── ReconcileTenantBalances.php
+│   │       └── RotateAdminPassword.php
+│   │
 │   ├── Exceptions/
-│   │   └──InsufficientAgeException.php
+│   │   └── DomainException.php
 │   │
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── AuthController.php
-│   │   │   ├── PropertyController.php
-│   │   │   ├── RoomController.php
-│   │   │   ├── TenantController.php
 │   │   │   ├── BillController.php
-│   │   │   ├── ReadingController.php
+│   │   │   ├── Controller.php
+│   │   │   ├── DashboardController.php
+│   │   │   ├── DocumentController.php
+│   │   │   ├── ExcessChargeController.php
+│   │   │   ├── FileController.php
 │   │   │   ├── MaintenanceController.php
+│   │   │   ├── PropertyController.php
+│   │   │   ├── ReadingController.php
+│   │   │   ├── ReportController.php
+│   │   │   ├── RoomController.php
 │   │   │   ├── SettingsController.php
-│   │   │   └── DashboardController.php
+│   │   │   └── TenantController.php
+│   │   │
+│   │   ├── Middleware/
+│   │   │   └── EnsureAdmin.php
 │   │   │
 │   │   ├── Requests/
 │   │   │   ├── Auth/
+│   │   │   │   ├── ChangePasswordRequest.php
 │   │   │   │   ├── LoginRequest.php
 │   │   │   │   └── RegisterRequest.php
-│   │   │   ├── Property/
-│   │   │   │   └── StorePropertyRequest.php
-│   │   │   ├── Room/
-│   │   │   │   └── StoreRoomRequest.php
-│   │   │   ├── Tenant/
-│   │   │   │   ├── StoreTenantRequest.php
-│   │   │   │   └── UpdateTenantRequest.php
 │   │   │   ├── Bill/
+│   │   │   │   ├── BulkDeleteBillsRequest.php
+│   │   │   │   ├── DirectPaymentRequest.php
+│   │   │   │   ├── GenerateBillsRequest.php
+│   │   │   │   ├── ProcessPaymentRequest.php
 │   │   │   │   ├── StoreBillRequest.php
-│   │   │   │   └── UpdateBillRequest.php
-│   │   │   ├── Reading/
-│   │   │   │   └── StoreReadingRequest.php
+│   │   │   │   ├── UpdateBillRequest.php
+│   │   │   │   └── VerifyPaymentRequest.php
+│   │   │   ├── Document/
+│   │   │   │   └── StoreDocumentRequest.php
+│   │   │   ├── ExcessCharge/
+│   │   │   │   └── StoreExcessChargeRequest.php
 │   │   │   ├── Maintenance/
+│   │   │   │   ├── IndexMaintenanceRequest.php
 │   │   │   │   ├── StoreMaintenanceRequest.php
 │   │   │   │   └── UpdateMaintenanceRequest.php
-│   │   │   └── Settings/
-│   │   │       └── UpdateSettingsRequest.php
+│   │   │   ├── Property/
+│   │   │   │   ├── StorePropertyRequest.php
+│   │   │   │   └── UpdatePropertyRequest.php
+│   │   │   ├── Reading/
+│   │   │   │   └── StoreReadingRequest.php
+│   │   │   ├── Room/
+│   │   │   │   ├── StoreRoomRequest.php
+│   │   │   │   └── UpdateRoomRequest.php
+│   │   │   ├── Settings/
+│   │   │   │   └── UpdateSettingsRequest.php
+│   │   │   └── Tenant/
+│   │   │       ├── ApproveTenantRequest.php
+│   │   │       └── UpdateTenantRequest.php
 │   │   │
 │   │   └── Resources/
-│   │       ├── PropertyResource.php
-│   │       ├── RoomResource.php
-│   │       ├── TenantResource.php
 │   │       ├── BillResource.php
-│   │       ├── ReadingResource.php
+│   │       ├── DocumentResource.php
+│   │       ├── ExcessChargeResource.php
 │   │       ├── MaintenanceResource.php
+│   │       ├── PaymentResource.php
+│   │       ├── PropertyResource.php
+│   │       ├── ReadingResource.php
+│   │       ├── RoomResource.php
 │   │       ├── SettingsResource.php
-│   │       └── DashboardResource.php
+│   │       └── TenantResource.php
 │   │
 │   ├── Models/
+│   │   ├── Bill.php
+│   │   ├── ExcessCharge.php
+│   │   ├── MaintenanceTicket.php
+│   │   ├── Payment.php
 │   │   ├── Property.php
 │   │   ├── Room.php
+│   │   ├── Setting.php
 │   │   ├── Tenant.php
 │   │   ├── User.php
-│   │   ├── Bill.php
-│   │   ├── UtilityReading.php
-│   │   ├── MaintenanceTicket.php
-│   │   └── Setting.php
+│   │   └── UtilityReading.php
+│   │
+│   ├── Providers/
+│   │   └── AppServiceProvider.php
 │   │
 │   ├── Repositories/
 │   │   ├── Contracts/
 │   │   │   ├── BillRepositoryInterface.php
+│   │   │   ├── DocumentRepositoryInterface.php
+│   │   │   ├── ExcessChargeRepositoryInterface.php
 │   │   │   ├── MaintenanceRepositoryInterface.php
+│   │   │   ├── PaymentRepositoryInterface.php
 │   │   │   ├── PropertyRepositoryInterface.php
 │   │   │   ├── ReadingRepositoryInterface.php
+│   │   │   ├── ReportRepositoryInterface.php
 │   │   │   ├── RoomRepositoryInterface.php
 │   │   │   ├── SettingsRepositoryInterface.php
-│   │   │   └── TenantRepositoryInterface.php
+│   │   │   ├── TenantRepositoryInterface.php
+│   │   │   └── UserRepositoryInterface.php
 │   │   │
-│   │   └── Eloquent/
-│   │       ├── EloquentBillRepository.php
-│   │       ├── EloquentMaintenanceRepository.php
-│   │       ├── EloquentPropertyRepository.php
-│   │       ├── EloquentReadingRepository.php
-│   │       ├── EloquentRoomRepository.php
-│   │       ├── EloquentSettingsRepository.php
-│   │       └── EloquentTenantRepository.php
+│   │   ├── Eloquent/
+│   │   │   ├── EloquentBillRepository.php
+│   │   │   ├── EloquentExcessChargeRepository.php
+│   │   │   ├── EloquentMaintenanceRepository.php
+│   │   │   ├── EloquentPaymentRepository.php
+│   │   │   ├── EloquentPropertyRepository.php
+│   │   │   ├── EloquentReadingRepository.php
+│   │   │   ├── EloquentReportRepository.php
+│   │   │   ├── EloquentRoomRepository.php
+│   │   │   ├── EloquentSettingsRepository.php
+│   │   │   ├── EloquentTenantRepository.php
+│   │   │   └── EloquentUserRepository.php
+│   │   │
+│   │   └── Storage/
+│   │       └── LocalDocumentRepository.php
 │   │
 │   ├── Services/
+│   │   ├── AuthService.php
 │   │   ├── BillService.php
 │   │   ├── DashboardService.php
+│   │   ├── DocumentService.php
+│   │   ├── ExcessChargeService.php
 │   │   ├── MaintenanceService.php
 │   │   ├── PaymentService.php
 │   │   ├── PropertyService.php
+│   │   ├── ReportService.php
 │   │   ├── SettingsService.php
 │   │   ├── TenantService.php
 │   │   └── UtilityService.php
 │   │
-│   └── Providers/
-│       └── AppServiceProvider.php
+│   └── Support/
+│       └── PrivateFile.php
 │
 ├── bootstrap/
 ├── config/
 ├── database/
 │   ├── migrations/
-│   │   ├── 0001_01_01_000000_create_users_table.php
-│   │   ├── 2026_09_07_000001_create_properties_table.php
-│   │   ├── 2026_09_07_000002_create_rooms_table.php
-│   │   ├── 2026_09_07_000003_create_tenants_table.php
-│   │   ├── 2026_09_07_000004_create_utility_readings_table.php
-│   │   ├── 2026_09_07_000005_create_bills_table.php
-│   │   ├── 2026_09_07_000006_create_maintenance_tickets_table.php
-│   │   └── 2026_09_07_000007_create_settings_table.php
 │   └── seeders/
-│       └── AriRentDatabaseSeeder.php
+│       └── DatabaseSeeder.php
 │
 ├── docker/
 │   ├── nginx/
 │   │   └── default.conf
 │   └── php/
-│       └── local.ini
+│       ├── local.ini
+│       └── zz-docker.conf
 │
 ├── public/
 ├── resources/
 ├── routes/
 │   ├── api.php
+│   ├── console.php
 │   └── web.php
 │
 ├── storage/
 ├── tests/
 │   ├── Feature/
-│   │   ├── AuthApiTest.php
-│   │   ├── PropertyApiTest.php
-│   │   ├── TenantApiTest.php
-│   │   ├── BillApiTest.php
-│   │   ├── ReadingApiTest.php
-│   │   ├── MaintenanceApiTest.php
-│   │   └── SettingsApiTest.php
+│   │   ├── ArchitectureTest.php
+│   │   ├── AuthTest.php
+│   │   ├── BalanceReconciliationTest.php
+│   │   ├── BillWorkflowTest.php
+│   │   ├── FinancialReportTest.php
+│   │   ├── MaintenanceAndSettingsTest.php
+│   │   ├── Pillar1AccountingTest.php
+│   │   ├── SecurityHardeningTest.php
+│   │   ├── SecurityTest.php
+│   │   ├── TenantDashboardDataTest.php
+│   │   └── UtilityReadingTest.php
 │   └── Unit/
-│       └── ArchitectureBindingTest.php
+│       └── TestCase.php
+```
 │
 ├── .dockerignore
 ├── .editorconfig

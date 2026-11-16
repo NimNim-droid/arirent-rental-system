@@ -1,4 +1,4 @@
-import { useState, useRef, useId } from "react";
+import { useId } from "react";
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatFileSize } from "@/lib/formatters";
-import { documentsService } from "@/lib/services/documents";
-import { getErrorMessage } from "@/lib/errors";
 import type { DocumentItem } from "@/lib/types";
+import {
+  DOCUMENT_CATEGORIES,
+  useUploadDocumentForm,
+} from "./hooks/useUploadDocumentForm";
 
 interface AdminUploadDocModalProps {
   open: boolean;
@@ -16,99 +18,31 @@ interface AdminUploadDocModalProps {
   onSuccess: (newDoc: DocumentItem) => void;
 }
 
-const CATEGORIES = [
-  "Contracts & Agreements",
-  "House Rules & Regulations",
-  "Checklists & Guides",
-  "Notices & Policies",
-  "Other Documentation",
-];
-
 export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDocModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [description, setDescription] = useState("");
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
+  const {
+    fileInputRef,
+    file,
+    setFile,
+    name,
+    setName,
+    category,
+    setCategory,
+    description,
+    setDescription,
+    dragActive,
+    uploading,
+    error,
+    handleFileChange,
+    handleDrop,
+    handleDragOver,
+    handleDragLeave,
+    handleClose,
+    handleSubmit,
+  } = useUploadDocumentForm({ onSuccess, onClose });
 
   const nameInputId = useId();
   const categorySelectId = useId();
   const descriptionId = useId();
-
-  const handleFileChange = (incomingFile: File | null) => {
-    if (!incomingFile) return;
-    setFile(incomingFile);
-    setError("");
-    if (!name) {
-      // Prepopulate name without raw extension for clean presentation
-      const baseName = incomingFile.name.replace(/\.[^/.]+$/, "");
-      setName(baseName);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragActive(false);
-  };
-
-  const resetForm = () => {
-    setFile(null);
-    setName("");
-    setCategory(CATEGORIES[0]);
-    setDescription("");
-    setError("");
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleClose = () => {
-    if (uploading) return;
-    resetForm();
-    onClose();
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) {
-      setError("Please select a file to upload.");
-      return;
-    }
-
-    setUploading(true);
-    setError("");
-
-    try {
-      const doc = await documentsService.uploadDocument(file, {
-        name: name.trim() || file.name,
-        category,
-        description: description.trim() || undefined,
-      });
-
-      resetForm();
-      onSuccess(doc);
-      onClose();
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to upload document. Please try again."));
-    } finally {
-      setUploading(false);
-    }
-  };
 
   return (
     <Modal
@@ -212,7 +146,7 @@ export function AdminUploadDocModal({ open, onClose, onSuccess }: AdminUploadDoc
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          {CATEGORIES.map((cat) => (
+          {DOCUMENT_CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
