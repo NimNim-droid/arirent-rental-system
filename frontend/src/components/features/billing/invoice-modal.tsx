@@ -50,7 +50,7 @@ export function InvoiceModal({
     <Modal
       open={isOpen}
       onClose={onClose}
-      title={`Receipt & Statement — #${formattedInvoiceNo}`}
+      title={`Invoice ${formattedInvoiceNo}`}
       maxWidth="md"
       footer={
         <div className="flex w-full items-center justify-between no-print">
