@@ -14,6 +14,12 @@ class RegisterRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('email')) {
+            $this->merge([
+                'email' => strtolower(trim((string) $this->email)),
+            ]);
+        }
+
         if ($this->has('property_id')) {
             $cleaned = (int) preg_replace('/[^0-9]/', '', (string) $this->property_id);
             $this->merge([

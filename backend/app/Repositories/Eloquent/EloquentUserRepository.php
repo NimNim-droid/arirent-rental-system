@@ -9,7 +9,10 @@ class EloquentUserRepository implements UserRepositoryInterface
 {
     public function findByEmail(string $email): ?User
     {
-        return User::where('email', $email)->first();
+        $normalized = strtolower(trim($email));
+
+        // PostgreSQL string equality is case-sensitive; compare lowercased so login behaves like MySQL.
+        return User::whereRaw('LOWER(email) = ?', [$normalized])->first();
     }
 
     public function create(array $attributes): User

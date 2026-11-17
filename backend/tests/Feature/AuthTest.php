@@ -241,4 +241,53 @@ class AuthTest extends TestCase
                 'message' => 'Selected room is already reserved or occupied.',
             ]);
     }
+
+    public function test_registered_and_approved_tenant_can_login_with_case_insensitive_email(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('AdminPass12345!'),
+            'role' => 'admin',
+        ]);
+
+        $property = Property::create([
+            'name' => 'Makati Suites',
+            'city' => 'Makati',
+            'address' => 'Ayala Ave',
+        ]);
+
+        Room::create([
+            'property_id' => $property->id,
+            'room_number' => '102',
+            'rent' => 12000.00,
+            'status' => 'vacant',
+        ]);
+
+        $regResponse = $this->postJson('/api/auth/register', [
+            'name' => 'Min Rhods',
+            'email' => 'Minrhods@gmail.com',
+            'password' => 'nimrodneri2006',
+            'password_confirmation' => 'nimrodneri2006',
+            'property_id' => $property->id,
+            'room_number' => '102',
+            'phone' => '09171234567',
+        ]);
+
+        $regResponse->assertStatus(201);
+        $tenantId = $regResponse->json('tenant.id');
+
+        \Laravel\Sanctum\Sanctum::actingAs($admin);
+        $this->postJson("/api/tenants/{$tenantId}/approve")->assertOk();
+
+        // Logging in with different casing must still match the registered user.
+        $loginResponse = $this->postJson('/api/auth/login', [
+            'email' => 'MINRHODS@gmail.com',
+            'password' => 'nimrodneri2006',
+        ]);
+
+        $loginResponse->assertStatus(200)
+            ->assertJsonPath('user.email', 'minrhods@gmail.com')
+            ->assertJsonPath('user.tenant.status', 'active');
+    }
 }
