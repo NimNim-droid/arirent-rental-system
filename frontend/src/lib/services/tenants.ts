@@ -56,5 +56,10 @@ export const tenantsService = {
     clientCache.invalidate("rooms");
     clientCache.invalidate("properties");
     clientCache.invalidate("dashboard");
+    clientCache.invalidate("bills");
+    clientCache.invalidate("bill:");
+    clientCache.invalidate("excess_charges");
+    clientCache.invalidate("readings");
+    clientCache.invalidate("maintenance");
   },
 };

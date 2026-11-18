@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Bill;
 use App\Models\ExcessCharge;
+use App\Models\MaintenanceTicket;
 use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UtilityReading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -397,6 +399,93 @@ class Pillar1AccountingTest extends TestCase
         $this->deleteJson("/api/tenants/{$tenant->id}")->assertStatus(200);
 
         $this->assertDatabaseMissing('tenants', ['id' => $tenant->id]);
+    }
+
+    public function test_inactive_tenant_with_billing_history_can_be_deleted(): void
+    {
+        $inactiveUser = User::factory()->create([
+            'role' => 'tenant',
+            'email' => 'former@example.com',
+        ]);
+
+        // Shares Room 101 with the active $this->tenant to ensure deleting an inactive record
+        // does not mark an active tenant's occupied room as vacant.
+        $inactiveTenant = Tenant::create([
+            'user_id' => $inactiveUser->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'username' => 'formertenant',
+            'password' => \Illuminate\Support\Facades\Hash::make('secret'),
+            'name' => 'Former Tenant',
+            'email' => 'former@example.com',
+            'phone' => '09170000002',
+            'status' => 'inactive',
+            'balance' => 0.00,
+            'move_in_date' => '2025-01-01',
+            'vacated_date' => '2025-12-31',
+        ]);
+
+        $bill = Bill::create([
+            'tenant_id' => $inactiveTenant->id,
+            'rent' => 8000.00,
+            'total_amount' => 8000.00,
+            'paid_amount' => 8000.00,
+            'remaining_balance' => 0.00,
+            'date' => '2025-12-01',
+            'due_date' => '2025-12-05',
+            'status' => 'paid',
+        ]);
+
+        $payment = Payment::create([
+            'bill_id' => $bill->id,
+            'tenant_id' => $inactiveTenant->id,
+            'amount' => 8000.00,
+            'payment_method' => 'cash',
+            'status' => 'confirmed',
+        ]);
+
+        $charge = ExcessCharge::create([
+            'tenant_id' => $inactiveTenant->id,
+            'bill_id' => $bill->id,
+            'title' => 'Late fee',
+            'description' => 'Late fee',
+            'amount' => 200.00,
+            'charge_date' => '2025-12-01',
+            'status' => 'billed',
+        ]);
+
+        $reading = UtilityReading::create([
+            'tenant_id' => $inactiveTenant->id,
+            'bill_id' => $bill->id,
+            'prev_reading' => 100,
+            'curr_reading' => 150,
+            'usage_kwh' => 50,
+            'amount' => 600.00,
+            'type' => 'electricity',
+            'date' => '2025-12-01',
+        ]);
+
+        $ticket = MaintenanceTicket::create([
+            'tenant_id' => $inactiveTenant->id,
+            'property_id' => $this->property->id,
+            'room' => '101',
+            'type' => 'plumbing',
+            'description' => 'Faucet drip',
+            'priority' => 'normal',
+            'status' => 'resolved',
+        ]);
+
+        Sanctum::actingAs($this->adminUser);
+        $this->deleteJson("/api/tenants/{$inactiveTenant->id}")->assertStatus(200);
+
+        $this->assertDatabaseMissing('tenants', ['id' => $inactiveTenant->id]);
+        $this->assertDatabaseMissing('users', ['id' => $inactiveUser->id]);
+        $this->assertDatabaseMissing('bills', ['id' => $bill->id]);
+        $this->assertDatabaseMissing('payments', ['id' => $payment->id]);
+        $this->assertDatabaseMissing('excess_charges', ['id' => $charge->id]);
+        $this->assertDatabaseMissing('utility_readings', ['id' => $reading->id]);
+        $this->assertDatabaseMissing('maintenance_tickets', ['id' => $ticket->id]);
+        $this->assertEquals('occupied', $this->room->fresh()->status);
     }
 
     public function test_delinquency_endpoint_returns_tenants_with_consecutive_overdue_bills(): void
