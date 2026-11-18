@@ -40,6 +40,9 @@ Route::get('/properties', [PropertyController::class, 'index']);
 Route::get('/properties/{id}', [PropertyController::class, 'show']);
 Route::get('/rooms', [RoomController::class, 'index']);
 
+// Public Xendit webhook callback
+Route::post('/webhooks/xendit', [BillController::class, 'xenditWebhook']);
+
 // Signed, short-lived URLs for private uploads.
 Route::get('/files/{path}', [FileController::class, 'show'])
     ->where('path', '.*')
@@ -66,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bills/{id}', [BillController::class, 'show']);
     Route::post('/bills/{id}/pay', [BillController::class, 'pay']);
     Route::post('/bills/{id}/payment', [BillController::class, 'pay']);
+    Route::post('/bills/{id}/xendit/checkout', [BillController::class, 'xenditCheckout']);
+    Route::post('/bills/{id}/xendit/verify', [BillController::class, 'xenditVerify']);
 
     Route::get('/excess-charges', [ExcessChargeController::class, 'index']);
 

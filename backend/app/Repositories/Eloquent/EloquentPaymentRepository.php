@@ -12,6 +12,13 @@ class EloquentPaymentRepository implements PaymentRepositoryInterface
         return Payment::where('transaction_reference', $reference)->exists();
     }
 
+    public function findByReferenceForUpdate(string $reference): ?Payment
+    {
+        return Payment::where('transaction_reference', $reference)
+            ->lockForUpdate()
+            ->first();
+    }
+
     public function findPendingForBillForUpdate(int $billId): ?Payment
     {
         return Payment::where('bill_id', $billId)

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import {
   CreditCard,
   QrCode,
@@ -13,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatters";
+import { billingService } from "@/lib/services/billing";
+import { getErrorMessage } from "@/lib/errors";
 import {
   useTenantBilling,
   TenantBillCard,
@@ -44,6 +47,60 @@ export default function TenantBilling() {
   } = useTenantBilling();
 
   const [activeTab, setActiveTab] = useState<BillFilterTab>("unpaid");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [xenditFeedback, setXenditFeedback] = useState<{
+    tone: "success" | "warning" | "danger";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const xenditStatus = searchParams.get("xendit_status");
+    const billId = searchParams.get("bill_id");
+    const externalId = searchParams.get("external_id") ?? undefined;
+
+    if (!xenditStatus || !billId) return;
+
+    // Clean query params immediately so page refreshes do not re-run verification
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("xendit_status");
+    nextParams.delete("bill_id");
+    nextParams.delete("external_id");
+    setSearchParams(nextParams, { replace: true });
+
+    if (xenditStatus === "cancelled") {
+      setXenditFeedback({
+        tone: "warning",
+        message: "Online checkout was cancelled. You can retry anytime before the due date.",
+      });
+      return;
+    }
+
+    if (xenditStatus === "success") {
+      let active = true;
+      (async () => {
+        try {
+          const res = await billingService.verifyXenditPayment(billId, {
+            external_id: externalId,
+          });
+          if (!active) return;
+          setXenditFeedback({
+            tone: "success",
+            message: res.message || "Online payment confirmed via Xendit!",
+          });
+          await loadBills();
+        } catch (err) {
+          if (!active) return;
+          setXenditFeedback({
+            tone: "danger",
+            message: getErrorMessage(err, "Unable to verify Xendit payment status yet."),
+          });
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }
+  }, [searchParams, setSearchParams, loadBills]);
 
   const paidBills = useMemo(
     () => bills.filter((b) => b.status === "paid" || b.status === "voided"),
@@ -81,7 +138,7 @@ export default function TenantBilling() {
             My Bills
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            View room rent, metered electricity consumption, and settle via GCash
+            View room rent, metered electricity consumption, and pay online via Xendit (GCash, Maya, Bank, Card)
           </p>
         </div>
         {unpaidTotal > 0 && (
@@ -98,6 +155,13 @@ export default function TenantBilling() {
 
       {error && (
         <AlertBanner variant="danger" message={error} onRetry={loadBills} />
+      )}
+
+      {xenditFeedback && (
+        <AlertBanner
+          variant={xenditFeedback.tone}
+          message={xenditFeedback.message}
+        />
       )}
 
       {/* Amount Due Header matching Mockup 3 */}
@@ -208,9 +272,9 @@ export default function TenantBilling() {
               <QrCode className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-fg">Instant Settlement</p>
+              <p className="text-xs font-bold text-fg">Instant Online Settlement</p>
               <p className="text-[11px] text-muted leading-snug">
-                Pay via GCash QR & reference
+                Pay via GCash, Maya, Bank Transfer, Card, or QR Ph
               </p>
             </div>
           </div>

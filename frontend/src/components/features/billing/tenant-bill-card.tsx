@@ -145,7 +145,7 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
             }}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong active:scale-95 transition-all cursor-pointer"
           >
-            Pay GCash
+            Pay Online
           </button>
         </div>
       )}

@@ -11,8 +11,11 @@ use App\Http\Requests\Bill\StoreBillRequest;
 use App\Http\Requests\Bill\UpdateBillRequest;
 use App\Http\Requests\Bill\VerifyPaymentRequest;
 use App\Http\Resources\BillResource;
+use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Services\BillService;
 use App\Services\PaymentService;
+use App\Services\XenditService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +24,8 @@ class BillController extends Controller
 {
     public function __construct(
         protected BillService $billService,
-        protected PaymentService $paymentService
+        protected PaymentService $paymentService,
+        protected XenditService $xenditService
     ) {}
 
     /**
@@ -194,6 +198,125 @@ class BillController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Create a Xendit online checkout session for a bill (GCash, Maya, Bank Transfer, Card, QR Ph).
+     */
+    public function xenditCheckout(Request $request, int $id): JsonResponse
+    {
+        if (! $this->canAccessBill($request, $id)) {
+            return response()->json(['message' => 'This action is unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'amount' => ['nullable', 'numeric', 'min:1'],
+            'redirect_origin' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $origin = (string) ($validated['redirect_origin'] ?? $request->header('Origin') ?? config('app.url'));
+
+        try {
+            $session = $this->xenditService->createCheckoutInvoice(
+                $id,
+                isset($validated['amount']) ? (float) $validated['amount'] : 0.0,
+                $origin
+            );
+
+            return response()->json([
+                'message' => 'Xendit checkout session created.',
+                'data' => $session,
+                ...$session,
+            ]);
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Verify and confirm a Xendit online payment after redirect back to the app.
+     */
+    public function xenditVerify(Request $request, int $id): JsonResponse
+    {
+        if (! $this->canAccessBill($request, $id)) {
+            return response()->json(['message' => 'This action is unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'invoice_id' => ['nullable', 'string', 'max:120'],
+            'external_id' => ['nullable', 'string', 'max:120'],
+            'payment_channel' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $lookupId = $validated['invoice_id'] ?? $validated['external_id'] ?? null;
+
+        try {
+            $bill = $this->xenditService->verifyAndConfirmPayment(
+                $id,
+                $lookupId,
+                $validated['payment_channel'] ?? null
+            );
+
+            return response()->json([
+                'message' => 'Online payment confirmed via Xendit!',
+                'data' => new BillResource($bill),
+                'bill' => new BillResource($bill),
+            ]);
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => 'Bill not found.'], 404);
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Handle incoming Xendit Invoice Webhook callback.
+     */
+    public function xenditWebhook(Request $request): JsonResponse
+    {
+        try {
+            $bill = $this->xenditService->handleWebhook(
+                $request->all(),
+                $request->header('x-callback-token')
+            );
+
+            return response()->json([
+                'message' => 'Webhook processed.',
+                'bill_id' => $bill?->id,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 401);
+        }
+    }
+
+    /**
+     * Check whether the current user is allowed to pay/verify the specified bill.
+     */
+    protected function canAccessBill(Request $request, int $billId): bool
+    {
+        $user = $request->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        if ($user->role === 'tenant') {
+            $bill = app(BillRepositoryInterface::class)->find($billId);
+            if (! $bill) {
+                return true; // Let controller return 404
+            }
+
+            $tenant = app(TenantRepositoryInterface::class)->findByUserIdOrEmail($user->id, $user->email);
+
+            return $tenant && (int) $bill->tenant_id === (int) $tenant->id;
+        }
+
+        return false;
     }
 
     /**
