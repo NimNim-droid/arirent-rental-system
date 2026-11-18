@@ -22,7 +22,7 @@ export function TenantBottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t border-edge bg-card/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.35)] transition-colors"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 6px)" }}
     >
-      <div className="grid grid-cols-4 h-15 max-w-md mx-auto items-center px-1">
+      <div className="grid grid-cols-4 h-14 max-w-md mx-auto items-center px-1">
         {TENANT_TABS.map((tab) => {
           const Icon = tab.icon;
           return (

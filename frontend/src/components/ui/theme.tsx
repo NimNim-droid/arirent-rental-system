@@ -9,6 +9,11 @@ import {
 
 type Theme = "light" | "dark";
 
+const THEME_META_COLOR: Record<Theme, string> = {
+  light: "#f6f7f8",
+  dark: "#090d16",
+};
+
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
@@ -31,6 +36,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute("content", THEME_META_COLOR[theme]);
+    }
     try {
       localStorage.setItem("arirent_theme", theme);
     } catch {

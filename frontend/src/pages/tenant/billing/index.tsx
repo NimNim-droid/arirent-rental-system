@@ -209,8 +209,8 @@ export default function TenantBilling() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-fg">Instant Settlement</p>
-              <p className="text-[11px] text-muted truncate">
-                Pay securely via GCash QR & reference upload
+              <p className="text-[11px] text-muted leading-snug">
+                Pay via GCash QR & reference
               </p>
             </div>
           </div>
