@@ -46,7 +46,7 @@ class ProcessPaymentRequest extends FormRequest
     {
         return [
             'amount' => ['nullable', 'numeric', 'min:1'],
-            'payment_method' => ['nullable', 'string', 'in:gcash,card,cash,bank_transfer'],
+            'payment_method' => ['nullable', 'string', 'in:gcash,maya,paymaya,card,cash,bank_transfer,qrph,xendit'],
             'gcash_ref' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
             'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,heic,heif', 'max:10240'],
@@ -61,7 +61,7 @@ class ProcessPaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'gcash_ref.required' => 'The GCash reference number is required.',
+            'gcash_ref.required' => 'The transaction reference number is required.',
             'receipt.mimes' => 'The receipt must be an image (JPG, PNG, WebP) or PDF file.',
             'receipt.max' => 'The receipt file must not exceed 10MB.',
         ];

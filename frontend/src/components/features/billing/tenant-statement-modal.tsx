@@ -186,7 +186,7 @@ export function TenantStatementModal({
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#14233F] dark:bg-[#1D3560] py-3.5 px-4 text-sm font-bold text-white shadow-soft transition-all hover:opacity-95 active:scale-95 cursor-pointer"
             >
               <QrCode className="h-4 w-4" />
-              <span>Pay via GCash</span>
+              <span>Pay Online</span>
             </button>
           ) : (
             <button
