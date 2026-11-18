@@ -1,7 +1,8 @@
-import { useId, useEffect, useRef, useState, type ReactNode } from "react";
+import { useId, useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useBottomSheetSwipe } from "./hooks/useBottomSheetSwipe";
 
 interface ModalProps {
   open: boolean;
@@ -24,46 +25,22 @@ const MAX_WIDTHS = {
  * Responsive Modal / Bottom Sheet Component.
  * - Mobile (< 640px): Slides up as an authentic Bottom Sheet with grab handle and swipe-down-to-dismiss gesture.
  * - Desktop (>= 640px): Centers as an elevated floating dialog with backdrop blur.
- * - Tapping outside or pressing Escape cancels and closes.
+ * - Tapping outside, pressing Escape, or pulling down the sheet cancels and closes.
  */
 export function Modal({ open, onClose, title = "", hideHeader = false, children, footer, maxWidth = "md" }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  const [dragOffset, setDragOffset] = useState<number>(0);
-  const touchStartY = useRef<number | null>(null);
+  const safeClose = useBottomSheetSwipe({ open, panelRef, backdropRef, onClose });
 
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current == null) return;
-    const currentY = e.touches[0].clientY;
-    const delta = currentY - touchStartY.current;
-    if (delta > 0) {
-      setDragOffset(delta);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (dragOffset > 70) {
-      onCloseRef.current();
-    }
-    setDragOffset(0);
-    touchStartY.current = null;
-  };
+  const onCloseRef = useRef(safeClose);
+  onCloseRef.current = safeClose;
 
   useEffect(() => {
-    if (!open) {
-      setDragOffset(0);
-      return;
-    }
+    if (!open) return;
 
     previousFocusRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
@@ -115,11 +92,12 @@ export function Modal({ open, onClose, title = "", hideHeader = false, children,
   if (!open) return null;
 
   const modalElement = (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain">
       {/* Backdrop: Clicking outside cancels / closes */}
       <div
+        ref={backdropRef}
         className="fixed inset-0 animate-fade-in bg-slate-950/70 backdrop-blur-sm cursor-pointer"
-        onClick={onClose}
+        onClick={safeClose}
         aria-hidden="true"
       />
 
@@ -129,28 +107,21 @@ export function Modal({ open, onClose, title = "", hideHeader = false, children,
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        style={{
-          transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
-          transition: dragOffset > 0 ? "none" : undefined,
-        }}
         className={cn(
           "relative z-10 flex max-h-[88vh] sm:max-h-[90vh] w-full flex-col rounded-t-[28px] sm:rounded-2xl border-t sm:border border-edge bg-card shadow-2xl animate-slide-up sm:animate-scale-in overflow-hidden",
           MAX_WIDTHS[maxWidth]
         )}
       >
         {/* Grab Handle Bar (Top Swipe-Down to Dismiss on Mobile) */}
-        <div
-          className="pt-3 pb-1 flex justify-center cursor-grab active:cursor-grabbing touch-none select-none relative"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+        <div className="pt-3.5 pb-2 flex shrink-0 justify-center cursor-grab active:cursor-grabbing touch-none select-none relative">
           <div className="w-10 h-1.5 rounded-full bg-edge-strong/80" />
           {hideHeader && (
             <button
               ref={closeButtonRef}
-              onClick={onClose}
-              className="absolute right-4 top-2 rounded-lg p-1 text-muted hover:text-fg transition-colors"
+              type="button"
+              data-modal-close="true"
+              onClick={safeClose}
+              className="absolute right-4 top-2 rounded-lg p-1.5 text-muted hover:bg-hover hover:text-fg transition-colors cursor-pointer"
               aria-label="Close dialog"
             >
               <X className="h-4 w-4" />
@@ -159,13 +130,15 @@ export function Modal({ open, onClose, title = "", hideHeader = false, children,
         </div>
 
         {!hideHeader && title && (
-          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-edge px-5 sm:px-6 py-3.5 sm:py-4">
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-edge px-5 sm:px-6 py-3.5 sm:py-4 touch-none select-none">
             <h3 id={titleId} className="text-base sm:text-lg font-bold tracking-tight text-fg">
               {title}
             </h3>
             <button
               ref={closeButtonRef}
-              onClick={onClose}
+              type="button"
+              data-modal-close="true"
+              onClick={safeClose}
               className="-mr-1 rounded-lg p-1.5 text-muted transition-all duration-200 hover:bg-hover hover:text-fg cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="Close dialog"
             >
@@ -174,7 +147,7 @@ export function Modal({ open, onClose, title = "", hideHeader = false, children,
           </div>
         )}
 
-        <div className="overflow-y-auto px-5 sm:px-6 py-4 sm:py-5">{children}</div>
+        <div className="overflow-y-auto overscroll-y-contain px-5 sm:px-6 pt-3 pb-4 sm:py-5">{children}</div>
 
         {footer && (
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-edge px-5 sm:px-6 py-3.5 sm:py-4">
