@@ -96,11 +96,11 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
   // Tenant header: avatar on left, centered brand, theme toggle on right matching mobile redesign
   if (isTenant) {
     return (
-      <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-app/90 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] backdrop-blur-md border-b border-edge/60">
+      <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-card/85 px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top,0px))] backdrop-blur-xl border-b border-edge/80">
         <div className="relative flex min-w-0 items-center gap-2.5" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((o) => !o)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy text-xs font-bold text-white ring-2 ring-brand-gold/25 shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             title={name}
             aria-label={`Account menu for ${name}`}
             aria-expanded={profileOpen}
@@ -109,8 +109,8 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
           </button>
           {isTenantHome && (
             <div className="min-w-0 leading-tight">
-              <p className="text-[10px] text-muted font-medium">Hello,</p>
-              <p className="truncate text-xs font-bold text-fg">{firstName}!</p>
+              <p className="text-[11px] text-muted font-medium">Hello,</p>
+              <p className="truncate text-xs font-bold text-fg tracking-tight">{firstName}!</p>
             </div>
           )}
           {profileOpen && accountMenu}

@@ -79,7 +79,7 @@ export function TenantBalanceCard({
               onClick={() => navigate("/tenant/billing")}
               className="w-full sm:w-auto"
             >
-              Pay via GCash <ArrowRight className="h-4 w-4" />
+              Pay Online <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
             <Link to="/tenant/billing">

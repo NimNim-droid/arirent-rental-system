@@ -9,6 +9,14 @@ export interface BillQuery {
   page?: number;
 }
 
+export interface XenditCheckoutSession {
+  checkout_url: string;
+  invoice_id: string;
+  external_id: string;
+  amount: number;
+  mode: "live_api" | "simulator";
+}
+
 export const billingService = {
   async getBills(params?: BillQuery): Promise<PaginatedResponse<Bill>> {
     const cacheKey = `bills:${JSON.stringify(params || {})}`;
@@ -96,10 +104,11 @@ export const billingService = {
    */
   async submitPayment(
     id: string,
-    payload: { gcash_ref: string; amount?: number; notes?: string; receipt?: File }
+    payload: { gcash_ref: string; payment_method?: string; amount?: number; notes?: string; receipt?: File }
   ): Promise<string> {
     const body = new FormData();
     body.append("gcash_ref", payload.gcash_ref);
+    if (payload.payment_method) body.append("payment_method", payload.payment_method);
     if (payload.amount) body.append("amount", String(payload.amount));
     if (payload.notes) body.append("notes", payload.notes);
     if (payload.receipt) body.append("receipt", payload.receipt);
@@ -109,6 +118,36 @@ export const billingService = {
     clientCache.invalidate(`bill:${id}`);
     clientCache.invalidate("dashboard");
     return res.data.message;
+  },
+
+  /**
+   * Creates a Xendit online checkout session (GCash, Maya, Bank Transfer, Card, QR Ph).
+   */
+  async createXenditCheckout(
+    id: string,
+    payload: { amount?: number; redirect_origin?: string; preferred_method?: string }
+  ): Promise<XenditCheckoutSession> {
+    const res = await api.post<XenditCheckoutSession>(`/bills/${id}/xendit/checkout`, {
+      amount: payload.amount,
+      redirect_origin: payload.redirect_origin ?? window.location.origin,
+      preferred_method: payload.preferred_method,
+    });
+    return res.data;
+  },
+
+  /**
+   * Verifies and confirms a Xendit payment after redirect back to the app.
+   */
+  async verifyXenditPayment(
+    id: string,
+    payload: { invoice_id?: string; external_id?: string; payment_channel?: string } = {}
+  ): Promise<{ message: string; bill: Bill }> {
+    const res = await api.post<{ message: string; bill: Bill }>(`/bills/${id}/xendit/verify`, payload);
+    clientCache.invalidate("bills");
+    clientCache.invalidate(`bill:${id}`);
+    clientCache.invalidate("tenants");
+    clientCache.invalidate("dashboard");
+    return res.data;
   },
 
   /**
