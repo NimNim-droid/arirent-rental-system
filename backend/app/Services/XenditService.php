@@ -27,7 +27,7 @@ class XenditService
      *
      * @return array{checkout_url: string, invoice_id: string, external_id: string, amount: float, mode: string}
      */
-    public function createCheckoutInvoice(int $billId, float $requestedAmount, string $frontendOrigin): array
+    public function createCheckoutInvoice(int $billId, float $requestedAmount, string $frontendOrigin, ?string $preferredMethod = null): array
     {
         $bill = $this->billRepo->find($billId);
         if (! $bill) {
@@ -95,10 +95,24 @@ class XenditService
                 }
             }
 
+            $xenditMethods = $this->resolveXenditPaymentMethods($preferredMethod);
+            if (! empty($xenditMethods)) {
+                $payload['payment_methods'] = $xenditMethods;
+            }
+
             $response = Http::withBasicAuth($secretKey, '')
                 ->timeout(15)
                 ->acceptJson()
                 ->post('https://api.xendit.co/v2/invoices', $payload);
+
+            // Fallback without payment_methods filter if merchant account doesn't have a specific sub-channel enabled
+            if (! $response->successful() && isset($payload['payment_methods'])) {
+                unset($payload['payment_methods']);
+                $response = Http::withBasicAuth($secretKey, '')
+                    ->timeout(15)
+                    ->acceptJson()
+                    ->post('https://api.xendit.co/v2/invoices', $payload);
+            }
 
             if (! $response->successful()) {
                 $errorMsg = $response->json('message') ?? 'Unable to create Xendit checkout session.';
@@ -329,6 +343,23 @@ class XenditService
 
             return $bill;
         });
+    }
+
+    /**
+     * Map a tenant's selected payment option in AriRent to Xendit's payment_methods filter.
+     *
+     * @return array<int, string>
+     */
+    protected function resolveXenditPaymentMethods(?string $preferredMethod): array
+    {
+        return match (strtolower((string) $preferredMethod)) {
+            'gcash' => ['GCASH'],
+            'maya', 'paymaya' => ['PAYMAYA'],
+            'qrph' => ['QRPH'],
+            'card' => ['CREDIT_CARD'],
+            'bank_transfer' => ['DD_BPI', 'DD_UBP', 'DD_RCBC', 'DD_CBC', 'BDO', 'BPI'],
+            default => [],
+        };
     }
 
     /**

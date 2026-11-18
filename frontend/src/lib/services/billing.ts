@@ -125,11 +125,12 @@ export const billingService = {
    */
   async createXenditCheckout(
     id: string,
-    payload: { amount?: number; redirect_origin?: string }
+    payload: { amount?: number; redirect_origin?: string; preferred_method?: string }
   ): Promise<XenditCheckoutSession> {
     const res = await api.post<XenditCheckoutSession>(`/bills/${id}/xendit/checkout`, {
       amount: payload.amount,
       redirect_origin: payload.redirect_origin ?? window.location.origin,
+      preferred_method: payload.preferred_method,
     });
     return res.data;
   },

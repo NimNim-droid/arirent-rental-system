@@ -14,14 +14,14 @@ interface GCashPaymentModalProps {
   onPaymentSuccess?: () => void | Promise<void>;
 }
 
-const SIMULATOR_CHANNELS = [
-  { id: "GCASH", label: "GCash" },
-  { id: "MAYA", label: "Maya" },
-  { id: "BDO", label: "BDO" },
-  { id: "BPI", label: "BPI" },
-  { id: "UNIONBANK", label: "UnionBank" },
-  { id: "CREDIT_CARD", label: "Card" },
+const PAYMENT_OPTIONS = [
+  { id: "gcash", label: "GCash", sub: "E-Wallet", simChannel: "GCASH" },
+  { id: "maya", label: "Maya", sub: "E-Wallet", simChannel: "MAYA" },
+  { id: "bank_transfer", label: "Bank Transfer", sub: "BDO · BPI · UnionBank", simChannel: "BDO" },
+  { id: "card", label: "Card", sub: "Visa · Mastercard", simChannel: "CREDIT_CARD" },
 ] as const;
+
+type PreferredMethodId = (typeof PAYMENT_OPTIONS)[number]["id"];
 
 export function GCashPaymentModal({
   open,
@@ -30,13 +30,11 @@ export function GCashPaymentModal({
   onPaymentSuccess,
 }: GCashPaymentModalProps) {
   const [amount, setAmount] = useState<string>("");
+  const [preferredMethod, setPreferredMethod] = useState<PreferredMethodId>("gcash");
   const [submitting, setSubmitting] = useState(false);
   const [paymentMsg, setPaymentMsg] = useState("");
   const [paymentError, setPaymentError] = useState("");
-
-  // Fallback simulator only if XENDIT_SECRET_KEY is not set on backend
   const [simulatorSession, setSimulatorSession] = useState<XenditCheckoutSession | null>(null);
-  const [selectedChannel, setSelectedChannel] = useState<string>("GCASH");
 
   const paid = invoice?.paid_amount ?? 0;
   const remaining = invoice
@@ -47,10 +45,10 @@ export function GCashPaymentModal({
     if (invoice && open) {
       const rem = invoice.remaining_balance ?? Math.max(0, invoice.total_amount - (invoice.paid_amount ?? 0));
       setAmount(rem > 0 ? rem.toFixed(2) : invoice.total_amount.toFixed(2));
+      setPreferredMethod("gcash");
       setPaymentMsg("");
       setPaymentError("");
       setSimulatorSession(null);
-      setSelectedChannel("GCASH");
     }
   }, [invoice, open]);
 
@@ -61,6 +59,8 @@ export function GCashPaymentModal({
   const parsedAmount = parseFloat(amount);
   const validDisplayAmount =
     !isNaN(parsedAmount) && parsedAmount > 0 ? formatCurrency(parsedAmount) : formatCurrency(remaining);
+
+  const activeOption = PAYMENT_OPTIONS.find((o) => o.id === preferredMethod) ?? PAYMENT_OPTIONS[0];
 
   const handleClose = () => {
     setPaymentMsg("");
@@ -90,6 +90,7 @@ export function GCashPaymentModal({
       const session = await billingService.createXenditCheckout(invoice.id, {
         amount: numAmount,
         redirect_origin: window.location.origin,
+        preferred_method: preferredMethod,
       });
 
       if (session.mode === "live_api") {
@@ -113,7 +114,7 @@ export function GCashPaymentModal({
       const res = await billingService.verifyXenditPayment(invoice.id, {
         invoice_id: simulatorSession.invoice_id,
         external_id: simulatorSession.external_id,
-        payment_channel: selectedChannel,
+        payment_channel: activeOption.simChannel,
       });
       setSimulatorSession(null);
       setPaymentMsg(res.message);
@@ -148,7 +149,7 @@ export function GCashPaymentModal({
         <div className="space-y-4 pt-1 pb-1">
           <div className="space-y-0.5">
             <h2 className="text-lg font-bold tracking-tight text-fg">
-              Choose payment method
+              Confirm {activeOption.label} payment
             </h2>
             <p className="text-xs text-muted font-medium">
               {invoiceNo} · {formatCurrency(simulatorSession.amount)}
@@ -162,33 +163,15 @@ export function GCashPaymentModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            {SIMULATOR_CHANNELS.map((ch) => {
-              const active = selectedChannel === ch.id;
-              return (
-                <button
-                  key={ch.id}
-                  type="button"
-                  onClick={() => setSelectedChannel(ch.id)}
-                  className={`rounded-xl border px-3.5 py-3 text-left text-xs font-bold transition-all cursor-pointer ${
-                    active
-                      ? "border-fg bg-inset text-fg"
-                      : "border-edge bg-card text-muted hover:text-fg"
-                  }`}
-                >
-                  {ch.label}
-                </button>
-              );
-            })}
-          </div>
-
           <button
             type="button"
             onClick={handleConfirmSimulatorPayment}
             disabled={submitting}
             className="flex w-full items-center justify-center rounded-2xl bg-[#14233F] dark:bg-[#1D3560] py-3.5 px-4 text-sm font-bold text-white shadow-soft transition-all hover:opacity-95 active:scale-95 disabled:opacity-50 cursor-pointer"
           >
-            {submitting ? "Processing..." : `Pay ${formatCurrency(simulatorSession.amount)}`}
+            {submitting
+              ? "Processing..."
+              : `Pay ${formatCurrency(simulatorSession.amount)} with ${activeOption.label}`}
           </button>
         </div>
       ) : (
@@ -236,6 +219,33 @@ export function GCashPaymentModal({
             </div>
           </div>
 
+          {/* Payment Method Selector */}
+          <div className="space-y-1.5">
+            <span className="block text-xs font-medium text-muted">
+              Payment method
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {PAYMENT_OPTIONS.map((opt) => {
+                const selected = preferredMethod === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPreferredMethod(opt.id)}
+                    className={`flex flex-col items-start rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                      selected
+                        ? "border-[#14233F] bg-[#14233F]/5 dark:border-[#4B74B8] dark:bg-[#1D3560]/25"
+                        : "border-edge bg-card hover:border-edge-strong"
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-fg">{opt.label}</span>
+                    <span className="text-[10px] text-muted mt-0.5">{opt.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Simple Payment Amount Input */}
           <div className="space-y-1.5">
             <label htmlFor="pay-amount" className="block text-xs font-medium text-muted">
@@ -259,17 +269,16 @@ export function GCashPaymentModal({
           </div>
 
           {/* Primary Action Button */}
-          <div className="pt-1 space-y-2">
+          <div className="pt-1">
             <button
               type="submit"
               disabled={submitting}
               className="flex w-full items-center justify-center rounded-2xl bg-[#14233F] dark:bg-[#1D3560] py-3.5 px-4 text-sm font-bold text-white shadow-soft transition-all hover:opacity-95 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? "Opening checkout..." : `Pay ${validDisplayAmount}`}
+              {submitting
+                ? "Opening checkout..."
+                : `Pay ${validDisplayAmount} with ${activeOption.label}`}
             </button>
-            <p className="text-center text-[11px] text-muted">
-              GCash · Maya · Bank Transfer · Card
-            </p>
           </div>
         </form>
       )}

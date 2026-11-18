@@ -212,6 +212,7 @@ class BillController extends Controller
         $validated = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:1'],
             'redirect_origin' => ['nullable', 'string', 'max:255'],
+            'preferred_method' => ['nullable', 'string', 'in:gcash,maya,bank_transfer,card,qrph'],
         ]);
 
         $origin = (string) ($validated['redirect_origin'] ?? $request->header('Origin') ?? config('app.url'));
@@ -220,7 +221,8 @@ class BillController extends Controller
             $session = $this->xenditService->createCheckoutInvoice(
                 $id,
                 isset($validated['amount']) ? (float) $validated['amount'] : 0.0,
-                $origin
+                $origin,
+                $validated['preferred_method'] ?? null
             );
 
             return response()->json([
