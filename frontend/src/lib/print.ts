@@ -56,11 +56,31 @@ export function printReceiptElement(elementId: string = "printable-receipt"): vo
             width: 100%;
             max-width: 480px;
             margin: 0 auto;
-            border: 1px dashed #64748b;
-            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
             padding: 24px;
             background: #ffffff;
           }
+          /* Statement layout (matches ReceiptCard) */
+          .rc-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #cbd5e1; }
+          .rc-title { font-size: 16px; font-weight: 600; color: #0f172a; }
+          .rc-muted { color: #475569; }
+          .rc-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; color: #475569; }
+          .rc-badge { display: inline-block; margin-top: 4px; padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 4px; font-size: 11px; font-weight: 600; color: #0f172a; }
+          .rc-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; padding: 14px 0; border-bottom: 1px solid #cbd5e1; font-size: 11px; }
+          .rc-info dd { margin: 0; }
+          .rc-label { color: #64748b; font-size: 11px; }
+          .rc-value { color: #0f172a; font-weight: 500; font-size: 12px; }
+          .rc-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 12px; }
+          .rc-table th { padding: 6px 0; text-align: left; font-weight: 500; font-size: 11px; color: #64748b; border-bottom: 1px solid #cbd5e1; }
+          .rc-table tbody td { padding: 8px 0; vertical-align: top; border-bottom: 1px solid #e2e8f0; }
+          .rc-table tfoot td { padding: 4px 0; }
+          .rc-table .amt { text-align: right; }
+          .rc-table td span.block, .block { display: block; }
+          .rc-total { font-weight: 600; color: #0f172a; }
+          .rc-section { margin-top: 14px; padding-top: 10px; border-top: 1px solid #cbd5e1; }
+          .rc-footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b; }
+
           /* Typography & Layout Utilities */
           .text-center { text-align: center; }
           .text-right { text-align: right; }

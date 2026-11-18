@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router";
 import { PageLoading } from "@/components/common/page-loading";
 import { useAuth } from "@/lib/auth-context";
 
@@ -28,6 +28,16 @@ const TenantBilling = lazy(() => import("@/pages/tenant/billing"));
 const TenantMaintenance = lazy(() => import("@/pages/tenant/maintenance"));
 const TenantDocuments = lazy(() => import("@/pages/tenant/documents"));
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   const { initializing } = useAuth();
 
@@ -37,6 +47,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* Public Routes */}

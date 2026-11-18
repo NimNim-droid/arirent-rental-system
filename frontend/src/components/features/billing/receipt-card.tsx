@@ -1,17 +1,4 @@
-import {
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Camera,
-  Home,
-  Zap,
-  Droplet,
-  Layers,
-  ShieldCheck,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import {
   formatCurrency,
   formatDate,
@@ -24,393 +11,239 @@ interface ReceiptCardProps {
   invoice: Bill;
 }
 
-function calculateDaysLeft(dueDateString?: string | null): number | null {
-  if (!dueDateString) return null;
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+const STATUS_META: Record<Bill["status"], { label: string; variant: BadgeProps["variant"] }> = {
+  paid: { label: "Paid", variant: "success" },
+  unpaid: { label: "Unpaid", variant: "warning" },
+  partially_paid: { label: "Partially paid", variant: "warning" },
+  pending_verification: { label: "Pending approval", variant: "info" },
+  overdue: { label: "Overdue", variant: "danger" },
+  voided: { label: "Cancelled", variant: "neutral" },
+};
 
-    let due: Date;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dueDateString)) {
-      const [year, month, day] = dueDateString.split("-").map(Number);
-      due = new Date(year, month - 1, day);
-    } else {
-      due = new Date(dueDateString);
-    }
-    due.setHours(0, 0, 0, 0);
+function isPastDue(dueDateString?: string | null): boolean {
+  if (!dueDateString) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const diffTime = due.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  } catch {
-    return null;
+  let due: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dueDateString)) {
+    const [year, month, day] = dueDateString.split("-").map(Number);
+    due = new Date(year, month - 1, day);
+  } else {
+    due = new Date(dueDateString);
   }
+  due.setHours(0, 0, 0, 0);
+
+  return due.getTime() < today.getTime();
 }
 
 /**
- * ReceiptCard Component
- * Modern statement of account matching the AriRent phone UI.
- * Formatted with clean itemized lines (Rent, Electricity with kWh, Water flat rate, Excess charges)
- * and print-friendly overrides for official physical receipts.
+ * Plain statement of account used for the admin invoice view, the tenant
+ * download, and printing. Layout: header, details, itemized table, totals,
+ * payments, and meter proof. Class names prefixed with `rc-` are styled by the
+ * print helper (lib/print.ts) so the printed copy matches the screen.
  */
 export function ReceiptCard({ invoice }: ReceiptCardProps) {
   const paid = invoice.paid_amount ?? 0;
   const remaining =
     invoice.remaining_balance ?? Math.max(0, invoice.total_amount - paid);
-  const isPaid = invoice.status === "paid" || remaining <= 0;
-  const isPartiallyPaid = invoice.status === "partially_paid";
-  const isOverdue = invoice.status === "overdue";
-  const isPendingVerification = invoice.status === "pending_verification";
   const isVoided = invoice.status === "voided";
+  const isPaid = !isVoided && (invoice.status === "paid" || remaining <= 0);
+  const pastDue = !isPaid && !isVoided && (invoice.status === "overdue" || isPastDue(invoice.due_date));
 
   const propertyName =
-    invoice.property_name ||
-    invoice.tenant?.property?.name ||
-    "AriRent Residences";
-  const residentName =
-    invoice.tenant_name || invoice.tenant?.name || "Valued Resident";
+    invoice.property_name || invoice.tenant?.property?.name || "AriRent Residences";
+  const residentName = invoice.tenant_name || invoice.tenant?.name || "Resident";
   const roomNumber = invoice.room || invoice.tenant?.room || "—";
   const excessCharges = invoice.excess_charges || [];
+  const payments = (invoice.payments || []).filter((p) => p.status === "confirmed");
 
-  const formattedInvoiceNo = formatInvoiceNumber(
-    invoice.id,
-    invoice.date || invoice.due_date
-  );
+  const invoiceNo = formatInvoiceNumber(invoice.id, invoice.date || invoice.due_date);
+  const status = STATUS_META[invoice.status] ?? {
+    label: invoice.status,
+    variant: "neutral" as const,
+  };
 
-  const daysLeft = calculateDaysLeft(invoice.due_date);
+  const electricReading = (invoice.readings || []).find((r) => r.type !== "water");
+  const meterPhotos = (invoice.readings || []).filter((r) => r.meter_photo_url);
 
-  // Count itemized lines
-  let lineCount = 3; // Rent, Electricity, Water
-  if (excessCharges.length > 0) lineCount += excessCharges.length;
-  if (invoice.late_fee > 0) lineCount += 1;
+  const electricityDetail = electricReading
+    ? `${electricReading.prev_reading} → ${electricReading.curr_reading} kWh (${formatUsage(electricReading.usage_kwh)})`
+    : invoice.elec_usage > 0
+    ? formatUsage(invoice.elec_usage)
+    : null;
 
-  // Reading submeter detail
-  const latestReading = invoice.readings?.[0];
+  const th = "py-2 text-xs font-medium text-muted border-b border-edge";
+  const td = "py-2.5 align-top border-b border-edge/60";
 
   return (
     <div
       id="printable-receipt"
-      className="receipt-card mx-auto max-w-lg space-y-4 rounded-3xl border border-edge bg-card p-4 sm:p-6 text-sm shadow-card print:border-none print:p-0 print:shadow-none print:max-w-full"
+      className="receipt-card mx-auto max-w-lg rounded-lg border border-edge bg-card p-5 text-sm text-fg print:border-none print:p-0"
     >
-      {/* ================= 1. Dark Hero Header Banner ================= */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#121c32] via-[#1a2846] to-[#0f182c] p-5 text-white shadow-soft print:bg-white print:p-2 print:text-black print:border-b print:border-gray-300">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <span className="font-mono text-xs font-semibold text-white/70 print:text-gray-600">
-              #{formattedInvoiceNo} &bull; Billing Cycle
-            </span>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-white/60 print:text-gray-500">
-              Total Balance Payable
-            </p>
-            <p className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white tabular-nums print:text-black">
-              {formatCurrency(isPaid ? invoice.total_amount : remaining)}
-            </p>
-          </div>
-
-          <Badge
-            variant={
-              isPaid
-                ? "success"
-                : isPartiallyPaid
-                ? "warning"
-                : isOverdue
-                ? "danger"
-                : isPendingVerification
-                ? "info"
-                : isVoided
-                ? "neutral"
-                : "warning"
-            }
-            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider print:border print:border-gray-400 print:text-black print:bg-transparent"
-          >
-            {isPaid
-              ? "Paid"
-              : isPartiallyPaid
-              ? "Partial Payment"
-              : isPendingVerification
-              ? "Pending Verification"
-              : isOverdue
-              ? "Overdue"
-              : isVoided
-              ? "Cancelled"
-              : "Pending Payment"}
+      {/* Header */}
+      <div className="rc-header flex items-start justify-between gap-3 border-b border-edge pb-4">
+        <div className="min-w-0">
+          <p className="rc-title text-base font-semibold text-fg">{propertyName}</p>
+          <p className="rc-muted text-xs text-muted">Statement of Account</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="rc-mono font-mono text-xs text-muted">{invoiceNo}</p>
+          <Badge variant={status.variant} className="mt-1 rc-badge">
+            {status.label}
           </Badge>
         </div>
-
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-white/15 pt-3 text-xs text-white/80 print:border-gray-300 print:text-gray-700">
-          <div className="flex items-center gap-2 min-w-0">
-            <Building2 className="h-4 w-4 shrink-0 text-[#C9A24B] print:hidden" />
-            <div className="truncate">
-              <span className="font-semibold text-white print:text-black">
-                {propertyName}
-              </span>
-              <span className="mx-1.5 text-white/40">|</span>
-              <span>Unit {roomNumber} &bull; {residentName}</span>
-            </div>
-          </div>
-          <div className="shrink-0 text-right text-[11px] text-white/70 print:text-gray-600">
-            Statement: {formatDate(invoice.date)}
-          </div>
-        </div>
       </div>
 
-      {/* ================= 2. Due Date Alert Banner ================= */}
-      {!isPaid && !isVoided && (
-        <div
-          className={`flex items-start gap-2.5 rounded-2xl border p-3 text-xs ${
-            isOverdue || (daysLeft !== null && daysLeft <= 0)
-              ? "border-danger-border bg-danger-bg/50 text-danger-fg"
-              : daysLeft !== null && daysLeft <= 3
-              ? "border-warning-border bg-warning-bg/60 text-warning-fg"
-              : "border-info-border bg-info-bg/40 text-info-fg"
-          } print:border-gray-300 print:bg-transparent print:text-black`}
-        >
-          <Clock className="h-4 w-4 shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <p className="font-bold">
-              Due on {formatDate(invoice.due_date)}
-              {daysLeft !== null && (
-                <span className="ml-1 font-semibold opacity-90">
-                  {daysLeft > 0
-                    ? `(${daysLeft} ${daysLeft === 1 ? "day" : "days"} left)`
-                    : daysLeft === 0
-                    ? "(Due Today)"
-                    : `(${Math.abs(daysLeft)} days overdue)`}
-                </span>
-              )}
-            </p>
-            <p className="text-[11px] opacity-85 mt-0.5">
-              {isOverdue || (daysLeft !== null && daysLeft < 0)
-                ? "This invoice is past due. Please settle immediately to avoid additional penalties."
-                : "Please pay before due date to keep your rental account in good standing."}
-            </p>
-          </div>
+      {/* Details */}
+      <dl className="rc-info grid grid-cols-2 gap-x-4 gap-y-3 border-b border-edge py-4 text-xs">
+        <div>
+          <dt className="rc-label text-muted">Tenant</dt>
+          <dd className="rc-value font-medium text-fg">{residentName}</dd>
         </div>
+        <div>
+          <dt className="rc-label text-muted">Unit</dt>
+          <dd className="rc-value font-medium text-fg">Room {roomNumber}</dd>
+        </div>
+        <div>
+          <dt className="rc-label text-muted">Statement date</dt>
+          <dd className="rc-value font-medium text-fg">{formatDate(invoice.date)}</dd>
+        </div>
+        <div>
+          <dt className="rc-label text-muted">Due date</dt>
+          <dd className={`rc-value font-medium ${pastDue ? "text-danger-fg" : "text-fg"}`}>
+            {formatDate(invoice.due_date)}
+            {pastDue && " (past due)"}
+          </dd>
+        </div>
+      </dl>
+
+      {/* Itemized charges */}
+      <table className="rc-table mt-4 w-full text-xs">
+        <thead>
+          <tr>
+            <th className={`${th} text-left`}>Description</th>
+            <th className={`${th} text-right amt`}>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className={td}>Monthly rent</td>
+            <td className={`${td} text-right tabular-nums amt`}>{formatCurrency(invoice.rent)}</td>
+          </tr>
+          <tr>
+            <td className={td}>
+              Electricity
+              {electricityDetail && (
+                <span className="rc-muted block text-[11px] text-muted">{electricityDetail}</span>
+              )}
+            </td>
+            <td className={`${td} text-right tabular-nums amt`}>
+              {formatCurrency(invoice.electricity)}
+            </td>
+          </tr>
+          <tr>
+            <td className={td}>Water</td>
+            <td className={`${td} text-right tabular-nums amt`}>{formatCurrency(invoice.water)}</td>
+          </tr>
+          {excessCharges.map((charge) => (
+            <tr key={charge.id}>
+              <td className={td}>
+                {charge.title}
+                {charge.description && (
+                  <span className="rc-muted block text-[11px] text-muted">{charge.description}</span>
+                )}
+              </td>
+              <td className={`${td} text-right tabular-nums amt`}>
+                {formatCurrency(charge.amount)}
+              </td>
+            </tr>
+          ))}
+          {invoice.late_fee > 0 && (
+            <tr>
+              <td className={td}>Late fee</td>
+              <td className={`${td} text-right tabular-nums amt`}>
+                {formatCurrency(invoice.late_fee)}
+              </td>
+            </tr>
+          )}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td className="rc-total pt-3 font-semibold text-fg">Total</td>
+            <td className="rc-total amt pt-3 text-right font-semibold tabular-nums text-fg">
+              {formatCurrency(invoice.total_amount)}
+            </td>
+          </tr>
+          {paid > 0 && (
+            <tr>
+              <td className="py-1 text-muted">Amount paid</td>
+              <td className="amt py-1 text-right tabular-nums text-muted">
+                {formatCurrency(paid)}
+              </td>
+            </tr>
+          )}
+          {!isPaid && !isVoided && (
+            <tr>
+              <td className="rc-total py-1 font-semibold text-fg">Balance due</td>
+              <td className="rc-total amt py-1 text-right font-semibold tabular-nums text-fg">
+                {formatCurrency(remaining)}
+              </td>
+            </tr>
+          )}
+        </tfoot>
+      </table>
+
+      {/* Payments */}
+      {isPaid && (
+        <p className="rc-muted mt-4 text-xs text-muted">
+          Paid in full{invoice.payment_date || invoice.approved_date
+            ? ` on ${formatDate(invoice.payment_date || invoice.approved_date)}`
+            : ""}
+          .
+        </p>
       )}
 
-      {/* ================= 3. Itemized Breakdown ================= */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between border-b border-edge pb-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-fg flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-accent print:hidden" />
-            <span>Itemized Breakdown</span>
-          </h3>
-          <span className="text-[11px] font-semibold text-muted">
-            {lineCount} Line Items
-          </span>
-        </div>
-
-        <div className="space-y-2 text-xs">
-          {/* Monthly Base Rent */}
-          <div className="flex items-start justify-between rounded-xl border border-edge/60 bg-hover/30 p-2.5">
-            <div className="flex items-start gap-2.5 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                <Home className="h-3.5 w-3.5" />
+      {payments.length > 0 && (
+        <div className="rc-section mt-4 border-t border-edge pt-3">
+          <p className="rc-label mb-1 text-xs font-medium text-muted">Payments received</p>
+          {payments.map((p) => (
+            <div key={p.id} className="flex justify-between gap-3 py-1 text-xs">
+              <span className="rc-muted text-muted">
+                {p.payment_method ? p.payment_method.toUpperCase() : "Payment"}
+                {p.transaction_reference ? ` · Ref ${p.transaction_reference}` : ""}
               </span>
-              <div className="min-w-0">
-                <p className="font-bold text-fg">Monthly Base Rent</p>
-                <p className="text-[11px] text-muted">
-                  Standard lease &bull; Unit {roomNumber}
-                </p>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="font-bold text-fg tabular-nums">
-                {formatCurrency(invoice.rent)}
-              </span>
-              <p className="text-[10px] text-muted font-medium">Fixed Rate</p>
-            </div>
-          </div>
-
-          {/* Electricity Submeter */}
-          <div className="flex items-start justify-between rounded-xl border border-edge/60 bg-hover/30 p-2.5">
-            <div className="flex items-start gap-2.5 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning-bg text-warning-fg">
-                <Zap className="h-3.5 w-3.5" />
-              </span>
-              <div className="min-w-0">
-                <p className="font-bold text-fg">Electricity Submeter</p>
-                <p className="text-[11px] text-muted">
-                  {latestReading
-                    ? `Prev: ${latestReading.prev_reading} kWh \u2022 Curr: ${latestReading.curr_reading} kWh`
-                    : invoice.elec_usage > 0
-                    ? `${formatUsage(invoice.elec_usage)} consumed`
-                    : "Submeter monthly consumption"}
-                </p>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="font-bold text-fg tabular-nums">
-                {formatCurrency(invoice.electricity)}
-              </span>
-              <p className="text-[10px] text-muted font-medium">Metered</p>
-            </div>
-          </div>
-
-          {/* Water Utility */}
-          <div className="flex items-start justify-between rounded-xl border border-edge/60 bg-hover/30 p-2.5">
-            <div className="flex items-start gap-2.5 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-info-bg text-info-fg">
-                <Droplet className="h-3.5 w-3.5" />
-              </span>
-              <div className="min-w-0">
-                <p className="font-bold text-fg">Water Utility Service</p>
-                <p className="text-[11px] text-muted">Fixed monthly rate</p>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="font-bold text-fg tabular-nums">
-                {formatCurrency(invoice.water)}
-              </span>
-              <p className="text-[10px] text-muted font-medium">Fixed Rate</p>
-            </div>
-          </div>
-
-          {/* Excess Charges (Incidental / Garbage / Maintenance) */}
-          {excessCharges.map((charge) => (
-            <div
-              key={charge.id}
-              className="flex items-start justify-between rounded-xl border border-edge/60 bg-hover/30 p-2.5"
-            >
-              <div className="flex items-start gap-2.5 min-w-0">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-bold text-fg">{charge.title}</p>
-                  <p className="text-[11px] text-muted truncate">
-                    {charge.description || "Incidental charge"}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="font-bold text-fg tabular-nums">
-                  {formatCurrency(charge.amount)}
-                </span>
-                <p className="text-[10px] text-muted font-medium">Itemized</p>
-              </div>
+              <span className="tabular-nums text-fg">{formatCurrency(p.amount)}</span>
             </div>
           ))}
-
-          {/* Late Surcharge (if applied) */}
-          {invoice.late_fee > 0 && (
-            <div className="flex items-start justify-between rounded-xl border border-danger-border bg-danger-bg/25 p-2.5 text-danger-fg">
-              <div className="flex items-start gap-2.5 min-w-0">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-bg text-danger-fg">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-bold">Late Fee Surcharge</p>
-                  <p className="text-[11px] opacity-80">
-                    Penalty for overdue payment
-                  </p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="font-bold tabular-nums">
-                  +{formatCurrency(invoice.late_fee)}
-                </span>
-                <p className="text-[10px] opacity-80 font-medium">Penalty</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ================= 4. Totals Calculation Box ================= */}
-      <div className="rounded-2xl border border-edge bg-inset/50 p-3.5 space-y-2 text-xs">
-        <div className="flex justify-between text-muted">
-          <span>Subtotal</span>
-          <span className="font-semibold text-fg tabular-nums">
-            {formatCurrency(invoice.total_amount)}
-          </span>
-        </div>
-
-        {paid > 0 && (
-          <div className="flex justify-between text-success-fg font-medium">
-            <span>Less: Payments Received</span>
-            <span className="tabular-nums font-bold">
-              −{formatCurrency(paid)}
-            </span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center border-t border-edge/80 pt-2 text-sm font-black text-fg">
-          <span>{isPaid ? "Total Settled" : "Outstanding Payable"}</span>
-          <span
-            className={`text-base tabular-nums ${
-              isPaid ? "text-success-fg" : "text-accent"
-            }`}
-          >
-            {formatCurrency(isPaid ? invoice.total_amount : remaining)}
-          </span>
-        </div>
-      </div>
-
-      {/* ================= 5. Paid Receipt Stamp (When Settled) ================= */}
-      {isPaid && (
-        <div className="rounded-2xl border-2 border-dashed border-success-border bg-success-bg/40 p-3.5 text-xs text-success-fg space-y-1.5 print:border-gray-800 print:bg-transparent print:text-black">
-          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-success-fg print:hidden" />
-            <span>Payment Acknowledged & Settled</span>
-          </div>
-          {invoice.payments && invoice.payments.length > 0 ? (
-            <div className="text-[11px] space-y-1 pt-1 border-t border-success-border/50 text-success-fg/90 print:border-gray-300 print:text-gray-700">
-              {invoice.payments.map((p) => (
-                <div key={p.id} className="flex justify-between">
-                  <span>
-                    {p.payment_method?.toUpperCase()} Ref: #{p.transaction_reference}
-                  </span>
-                  <span className="font-bold tabular-nums">
-                    {formatCurrency(p.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[11px] text-success-fg/80 print:text-gray-600">
-              Settled on {formatDate(invoice.payment_date || invoice.due_date)}.
-            </p>
-          )}
         </div>
       )}
 
-      {/* ================= 6. Sub-Meter Photographic Proof ================= */}
-      {invoice.readings && invoice.readings.some((r) => r.meter_photo_url) && (
-        <div className="rounded-2xl border border-edge bg-card p-3 space-y-2 text-xs print:border-gray-300 print:bg-white">
-          <p className="flex items-center gap-1.5 font-bold text-fg uppercase tracking-wider text-[11px] print:text-black">
-            <Camera className="h-3.5 w-3.5 text-accent print:hidden" /> Sub-Meter Proof
-          </p>
+      {/* Meter proof */}
+      {meterPhotos.length > 0 && (
+        <div className="rc-section mt-4 border-t border-edge pt-3">
+          <p className="rc-label mb-2 text-xs font-medium text-muted">Meter reading photo</p>
           <div className="grid grid-cols-2 gap-2">
-            {invoice.readings
-              .filter((r) => r.meter_photo_url)
-              .map((reading) => (
-                <div
-                  key={reading.id}
-                  className="rounded-lg border border-edge overflow-hidden bg-card print:border-gray-300"
-                >
-                  <img
-                    src={reading.meter_photo_url || ""}
-                    alt="Meter proof"
-                    className="h-20 w-full object-cover"
-                  />
-                  <p className="p-1 text-[10px] text-muted text-center print:text-gray-700">
-                    {reading.type || "Electric"}: {reading.usage_kwh} kWh
-                  </p>
-                </div>
-              ))}
+            {meterPhotos.map((reading) => (
+              <div key={reading.id}>
+                <img
+                  src={reading.meter_photo_url || ""}
+                  alt="Meter reading"
+                  className="h-20 w-full rounded border border-edge object-cover"
+                />
+                <p className="rc-muted mt-1 text-[11px] text-muted">
+                  {formatUsage(reading.usage_kwh)}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ================= 7. Receipt Bottom Sign-off ================= */}
-      <div className="text-center pt-2 border-t border-dashed border-edge text-[11px] text-muted print:border-gray-300 print:text-gray-600 space-y-0.5">
-        <p className="font-medium text-fg print:text-black">
-          Thank you for being a valued resident of AriRent!
-        </p>
-        <p className="text-[10px] text-faint print:text-gray-500">
-          Official electronic statement generated by AriRent Property Management System.
-        </p>
-      </div>
+      {/* Footer */}
+      <p className="rc-footer mt-5 border-t border-edge pt-3 text-center text-[11px] text-muted">
+        AriRent Property Management
+      </p>
     </div>
   );
 }
