@@ -71,7 +71,7 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
   return (
     <div
       onClick={() => onView(bill)}
-      className="group relative cursor-pointer rounded-2xl border border-edge bg-card p-3.5 sm:p-4 shadow-card transition-all duration-150 hover:border-edge-strong hover:shadow-soft active:scale-[0.99]"
+      className="group relative cursor-pointer rounded-3xl border border-edge bg-card p-4 shadow-card transition-all duration-150 hover:border-edge-strong hover:shadow-soft active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -84,14 +84,14 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
     >
       <div className="flex items-center gap-3.5">
         {/* Left: Month / Year Badge */}
-        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-inset border border-edge text-fg leading-none shadow-soft">
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-accent-soft/70 border border-accent-border/60 text-accent leading-none">
           <span className="text-xs uppercase font-extrabold tracking-tight">{month}</span>
           <span className="text-[10px] font-semibold text-muted mt-0.5">{year}</span>
         </div>
 
         {/* Center: Invoice ID & Subtitle */}
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-sm text-fg tracking-tight truncate">
+          <p className="font-mono font-semibold text-sm text-fg tracking-tight truncate">
             #{invoiceNo}
           </p>
           <p className="text-xs text-muted truncate mt-0.5">
@@ -108,14 +108,14 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
           </p>
           <span
             className={cn(
-              "inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+              "inline-block mt-0.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide border",
               statusMeta.tone === "success"
-                ? "bg-success-bg text-success-fg"
+                ? "bg-success-bg text-success-fg border-success-border"
                 : statusMeta.tone === "danger"
-                ? "bg-danger-bg text-danger-fg"
+                ? "bg-danger-bg text-danger-fg border-danger-border"
                 : statusMeta.tone === "info"
-                ? "bg-info-bg text-info-fg"
-                : "bg-warning-bg text-warning-fg"
+                ? "bg-info-bg text-info-fg border-info-border"
+                : "bg-warning-bg text-warning-fg border-warning-border"
             )}
           >
             {statusMeta.label}
@@ -127,23 +127,23 @@ export function TenantBillCard({ bill, onView, onPay }: TenantBillCardProps) {
 
       {/* Reject Notice if payment was rejected */}
       {bill.status === "unpaid" && bill.reject_reason && (
-        <div className="mt-2.5 flex items-start gap-1.5 rounded-lg bg-danger-bg px-2.5 py-1.5 text-[11px] font-semibold text-danger-fg">
+        <div className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-danger-bg px-3 py-2 text-[11px] font-semibold text-danger-fg">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <span className="truncate">Payment rejected: {bill.reject_reason}</span>
         </div>
       )}
 
-      {/* Quick Pay GCash Button for payable bills */}
+      {/* Quick Pay Online Button for payable bills */}
       {canPay && onPay && (
-        <div className="mt-3 pt-2.5 border-t border-dashed border-edge flex items-center justify-between">
-          <span className="text-[11px] text-muted font-medium">Settle outstanding balance</span>
+        <div className="mt-3.5 pt-3 border-t border-edge/80 flex items-center justify-between">
+          <span className="text-xs text-muted font-medium">Settle outstanding balance</span>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onPay(bill);
             }}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3.5 py-1.5 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong active:scale-95 transition-all cursor-pointer"
           >
             Pay Online
           </button>

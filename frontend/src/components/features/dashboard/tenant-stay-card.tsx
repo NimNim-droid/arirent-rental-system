@@ -23,52 +23,53 @@ export function TenantStayCard({ unit, loading }: TenantStayCardProps) {
   return (
     <section
       aria-label="Your unit"
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#121c32] via-[#1a2846] to-[#0f182c] p-5 sm:p-6 text-white shadow-card"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#152238] via-[#1B2C4A] to-[#101A2E] p-5 sm:p-6 text-white shadow-card ring-1 ring-white/10"
     >
       {/* Decorative building silhouette */}
       <Building2
         aria-hidden="true"
-        className="pointer-events-none absolute -right-4 -bottom-3 h-36 w-36 text-white/5"
+        className="pointer-events-none absolute -right-3 -bottom-3 h-36 w-36 text-white/[0.04]"
         strokeWidth={1.25}
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-[#C8A04A]/15 blur-2xl"
+        className="pointer-events-none absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-[#C9A24B]/12 blur-3xl"
       />
 
       <div className="relative z-10 space-y-4">
         {/* Top: Property Name & Status Badge */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-[#B9C5DD] tracking-wide truncate">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-slate-300/90 tracking-wide truncate">
             {unit?.property_name || "AriRent Residences"}
           </p>
-          <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200 border border-emerald-400/25">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
             Active Tenant
           </span>
         </div>
 
-        {/* Center: Large Room Number with Gold Accent & Location */}
+        {/* Center: Large Room Number with Warm Champagne Gold Accent & Location */}
         <div>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
             {unit?.room ? (
               <>
-                Room <span className="text-[#C8A04A]">{unit.room}</span>
+                Room <span className="text-[#DFB966]">{unit.room}</span>
               </>
             ) : (
               "Unit Pending"
             )}
           </h2>
-          <p className="mt-0.5 text-xs text-[#B9C5DD] truncate">
+          <p className="mt-1 text-xs text-slate-300/80 truncate">
             {location || "AriRent Managed Property"}
           </p>
         </div>
 
-        {/* Bottom: Room Rate / Stay Info (No complex lease countdown) */}
+        {/* Bottom: Room Rate / Stay Info */}
         {unit?.rent ? (
-          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-[#D3DCEE]">
-            <span className="text-[#B9C5DD]">Monthly Room Rent</span>
-            <span className="font-bold text-white tabular-nums">
-              {formatCurrency(unit.rent)} / mo
+          <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+            <span className="text-slate-300/80 font-medium">Monthly Room Rent</span>
+            <span className="font-bold text-white tabular-nums tracking-tight text-[13px]">
+              {formatCurrency(unit.rent)} <span className="text-slate-300/75 font-normal">/ mo</span>
             </span>
           </div>
         ) : null}

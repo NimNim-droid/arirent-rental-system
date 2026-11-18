@@ -113,7 +113,7 @@ export default function TenantDocuments() {
         </div>
 
         {/* Horizontal Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat;
             const count =
@@ -128,15 +128,15 @@ export default function TenantDocuments() {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 ${
+                className={`inline-flex shrink-0 items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 ${
                   isSelected
-                    ? "bg-accent text-white shadow-soft"
-                    : "bg-card border border-edge text-muted hover:text-fg hover:bg-hover"
+                    ? "bg-brand-navy text-white shadow-soft"
+                    : "bg-card border border-edge text-muted hover:text-fg hover:bg-hover shadow-soft"
                 }`}
               >
                 <span>{cat}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${
                     isSelected
                       ? "bg-white/20 text-white"
                       : "bg-inset text-muted border border-edge/60"
