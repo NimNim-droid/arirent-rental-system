@@ -2,12 +2,12 @@ import { useState, useMemo } from "react";
 import {
   Wrench,
   Sparkles,
-  Phone,
   Plus,
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+import { EmergencyHotlineBanner } from "@/components/common/emergency-hotline-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -142,25 +142,7 @@ export default function TenantMaintenance() {
         </div>
 
         {/* Emergency Hotline (24/7) Banner */}
-        <div className="flex items-center justify-between rounded-2xl border border-[#fedf89] bg-[#fffaeb] dark:border-[#78350f] dark:bg-[#451a03]/40 p-3 sm:p-3.5 shadow-soft">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef08a] dark:bg-[#78350f] text-[#b45309] font-bold">
-              <Phone className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-fg">Emergency Hotline (24/7)</p>
-              <p className="text-xs font-extrabold text-[#b45309] dark:text-[#fef08a] tracking-tight">
-                0917-222-3333
-              </p>
-            </div>
-          </div>
-          <a
-            href="tel:09172223333"
-            className="shrink-0 rounded-xl bg-[#fef08a] dark:bg-[#78350f] px-3.5 py-1.5 text-xs font-bold text-[#b45309] dark:text-[#fef08a] hover:opacity-90 active:scale-95 transition-all shadow-soft"
-          >
-            Call
-          </a>
-        </div>
+        <EmergencyHotlineBanner />
       </section>
 
       {/* ================= 2. Segmented Tabs ================= */}

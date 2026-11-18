@@ -5,8 +5,8 @@ import {
   Calendar,
   CreditCard,
   BadgeCheck,
-  Phone,
 } from "lucide-react";
+import { EmergencyHotlineBanner } from "@/components/common/emergency-hotline-banner";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,21 +144,7 @@ export function TenantUnitDetailModal({
         </div>
 
         {/* 24/7 Hotline callout */}
-        <div className="flex items-center justify-between rounded-2xl border border-[#fedf89] bg-[#fffaeb] dark:border-[#78350f] dark:bg-[#451a03]/40 p-3 text-xs shadow-soft">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Phone className="h-4 w-4 text-[#b45309] shrink-0" />
-            <div className="min-w-0">
-              <p className="font-bold text-fg">Emergency Hotline (24/7)</p>
-              <p className="text-[11px] font-semibold text-warning-fg">0917-222-3333</p>
-            </div>
-          </div>
-          <a
-            href="tel:09172223333"
-            className="shrink-0 rounded-xl bg-[#fef08a] dark:bg-[#78350f] px-3 py-1 text-xs font-bold text-[#b45309] dark:text-[#fef08a]"
-          >
-            Call
-          </a>
-        </div>
+        <EmergencyHotlineBanner compact />
 
         <div className="flex justify-end pt-2 border-t border-edge">
           <Button type="button" onClick={onClose} size="sm">

@@ -25,11 +25,11 @@ export default function TenantLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-app">
+    <div className="flex min-h-screen min-h-dvh bg-app">
       <Sidebar role="tenant" open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 min-w-0 flex flex-col">
         <MobileHeader title="Tenant Portal" role="tenant" onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-8 max-w-7xl mx-auto w-full">
           <div key={location.pathname} className="animate-fade-in">
             <Suspense fallback={<PageShellSkeleton />}>
               <Outlet />
