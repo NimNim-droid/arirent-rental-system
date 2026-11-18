@@ -38,7 +38,6 @@ export default function AdminTenants() {
     loading,
     isSearching,
     error,
-    clearError,
     busyId,
     refreshAll,
     handleApprove,
@@ -212,18 +211,10 @@ export default function AdminTenants() {
           loading={loading}
           isSearching={isSearching}
           busyId={busyId}
-          onSelectTenant={(t) => {
-            clearError();
-            setSelectedTenant(t);
-          }}
+          onSelectTenant={setSelectedTenant}
           onEditTenant={setEditingTenant}
-          onDeleteTenant={(t) => {
-            clearError();
-            setSuccessMessage("");
-            setDeletingTenant(t);
-          }}
+          onDeleteTenant={(t) => setDeletingTenant(t)}
           onApproveTenant={async (t) => {
-            setSuccessMessage("");
             const ok = await handleApprove(t);
             if (ok) {
               setSuccessMessage(`Tenant reservation for ${t.name} approved.`);
@@ -243,27 +234,19 @@ export default function AdminTenants() {
       <TenantDetailModal
         tenant={selectedTenant}
         isBusy={busyId === selectedTenant?.id}
-        error={error}
         onVacate={async (t) => {
-          setSuccessMessage("");
           const ok = await handleVacate(t);
           if (ok) {
             setSuccessMessage(`Lease ended for ${t.name}. Room ${t.room} is now vacant.`);
           }
-          return ok;
         }}
         onDelete={async (t) => {
-          setSuccessMessage("");
           const ok = await handleDelete(t);
           if (ok) {
             setSuccessMessage(`Resident record for ${t.name} deleted.`);
           }
-          return ok;
         }}
-        onClose={() => {
-          clearError();
-          setSelectedTenant(null);
-        }}
+        onClose={() => setSelectedTenant(null)}
       />
 
       {/* Edit Tenant Info Modal (Screenshot 1 style) */}
@@ -296,7 +279,6 @@ export default function AdminTenants() {
         onConfirm={async () => {
           if (!deletingTenant) return;
           setIsDeleting(true);
-          setSuccessMessage("");
           try {
             const ok = await handleDelete(deletingTenant);
             if (ok) {
@@ -316,10 +298,8 @@ export default function AdminTenants() {
           deletingTenant ? (
             <span>
               Are you sure you want to delete resident{" "}
-              <strong className="text-fg font-semibold">"{deletingTenant.name}"</strong> (Room {deletingTenant.room})?{" "}
-              {deletingTenant.status === "inactive"
-                ? "This will permanently remove their inactive record and any past billing, utility, or maintenance history."
-                : "This will release their room assignment and remove their record from the active tenant directory."}
+              <strong className="text-fg font-semibold">"{deletingTenant.name}"</strong> (Room {deletingTenant.room})?
+              This will release their room assignment and remove their record from the active tenant directory.
             </span>
           ) : null
         }

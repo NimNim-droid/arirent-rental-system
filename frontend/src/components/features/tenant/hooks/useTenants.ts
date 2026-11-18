@@ -78,23 +78,17 @@ export function useTenants() {
   const handleReject = (app: Tenant) =>
     runAction(app.id, () => tenantsService.rejectTenant(app.id));
 
-  const handleVacate = async (tenant: Tenant): Promise<boolean> => {
-    const ok = await runAction(tenant.id, () => tenantsService.vacateTenant(tenant.id));
-    if (ok) {
+  const handleVacate = (tenant: Tenant) =>
+    runAction(tenant.id, () => tenantsService.vacateTenant(tenant.id)).then((ok) => {
       setSelectedTenant(null);
-    }
-    return ok;
-  };
+      return ok;
+    });
 
-  const handleDelete = async (tenant: Tenant): Promise<boolean> => {
-    const ok = await runAction(tenant.id, () => tenantsService.deleteTenant(tenant.id));
-    if (ok) {
+  const handleDelete = (tenant: Tenant) =>
+    runAction(tenant.id, () => tenantsService.deleteTenant(tenant.id)).then((ok) => {
       setSelectedTenant(null);
-    }
-    return ok;
-  };
-
-  const clearError = useCallback(() => setError(""), []);
+      return ok;
+    });
 
   const refreshAll = useCallback(() => {
     void loadTenants(searchTerm || undefined);
@@ -113,7 +107,6 @@ export function useTenants() {
     loading,
     isSearching,
     error,
-    clearError,
     busyId,
     loadTenants,
     loadProperties,

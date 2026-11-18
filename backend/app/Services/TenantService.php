@@ -9,7 +9,6 @@ use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
-use App\Support\PrivateFile;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
@@ -218,8 +217,7 @@ class TenantService
     }
 
     /**
-     * Delete a tenant record, release room if active/pending, and clean up linked user & files.
-     * Active/pending tenants with billing or service history must be vacated first.
+     * Delete a tenant record, release room, and clean up linked user.
      */
     public function deleteTenant(int $id): bool
     {
@@ -232,23 +230,13 @@ class TenantService
             throw new \InvalidArgumentException('This tenant has billing or service history and cannot be deleted. Vacate the tenant instead.');
         }
 
-        $filesToDelete = [];
-
-        $deleted = DB::transaction(function () use ($tenant, &$filesToDelete) {
+        return DB::transaction(function () use ($tenant) {
             if ($tenant->status !== 'inactive') {
                 $room = $this->roomRepo->findByPropertyAndNumber($tenant->property_id, $tenant->room);
                 if ($room && in_array($room->status, ['reserved', 'occupied'])) {
                     $this->roomRepo->update($room->id, ['status' => 'vacant']);
                 }
             } else {
-                // Collect private proofs/receipts and purge child records in safe FK order before deleting.
-                $filesToDelete = array_filter([
-                    ...$tenant->bills()->pluck('receipt_url')->all(),
-                    ...$tenant->payments()->pluck('receipt_url')->all(),
-                    ...$tenant->utilityReadings()->pluck('meter_photo_url')->all(),
-                    ...$tenant->maintenanceTickets()->pluck('photo_url')->all(),
-                ]);
-
                 $tenant->payments()->delete();
                 $tenant->excessCharges()->delete();
                 $tenant->utilityReadings()->delete();
@@ -264,16 +252,9 @@ class TenantService
 
             Cache::forget('all_properties_with_counts');
             Cache::forget('admin_stats_all');
-            Cache::forget("admin_stats_{$tenant->property_id}");
             Cache::forget("tenant_dashboard_{$tenant->id}");
 
             return $deleted;
         });
-
-        foreach ($filesToDelete as $filePath) {
-            PrivateFile::delete($filePath);
-        }
-
-        return $deleted;
     }
 }

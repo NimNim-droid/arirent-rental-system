@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   User,
   Building,
@@ -22,8 +22,8 @@ interface TenantDetailModalProps {
   tenant: Tenant | null;
   isBusy: boolean;
   error?: string;
-  onVacate: (tenant: Tenant) => void | Promise<boolean>;
-  onDelete?: (tenant: Tenant) => void | Promise<boolean>;
+  onVacate: (tenant: Tenant) => void;
+  onDelete?: (tenant: Tenant) => void;
   onClose: () => void;
 }
 
@@ -37,10 +37,6 @@ export function TenantDetailModal({
 }: TenantDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
 
-  useEffect(() => {
-    setConfirmDelete(false);
-  }, [tenant?.id]);
-
   if (!tenant) return null;
 
   const handleClose = () => {
@@ -48,11 +44,9 @@ export function TenantDetailModal({
     onClose();
   };
 
-  const handleDelete = async () => {
-    if (!onDelete) return;
-    const ok = await onDelete(tenant);
-    if (ok === false) {
-      setConfirmDelete(false);
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(tenant);
     }
   };
 
@@ -116,10 +110,7 @@ export function TenantDetailModal({
               <span>Confirm Permanent Deletion</span>
             </div>
             <p className="leading-relaxed">
-              Are you sure you want to permanently delete resident <strong>{tenant.name}</strong>?{" "}
-              {tenant.status === "inactive"
-                ? "This will remove their inactive record, login credentials, and any past billing, utility, or maintenance history."
-                : "This will release their room assignment and remove their login credentials."}
+              Are you sure you want to permanently delete resident <strong>{tenant.name}</strong>? This will release their room assignment and remove their login credentials.
             </p>
             <div className="flex items-center gap-2 pt-1">
               <Button
