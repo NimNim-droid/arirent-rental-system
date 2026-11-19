@@ -61,6 +61,8 @@ class DashboardService
                 'total_revenue' => $totalRevenue,
                 'occupancy_rate' => $occupancyRate,
                 'occupied_rooms' => $occupiedRooms,
+                'vacant_rooms' => $roomStats['vacant'] ?? max(0, $totalRooms - $occupiedRooms),
+                'reserved_rooms' => $roomStats['reserved'] ?? 0,
                 'total_rooms' => $totalRooms,
                 'pending_applications' => $pendingApplications,
                 'pending_payments' => $pendingPayments,

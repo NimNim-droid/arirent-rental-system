@@ -16,6 +16,8 @@ interface TenantRepositoryInterface
 
     public function findActiveInRoom(int $propertyId, string $room, ?int $excludeTenantId = null): ?Tenant;
 
+    public function findOccupyingInRoom(int $propertyId, string $room, ?int $excludeTenantId = null): ?Tenant;
+
     public function incrementBalance(int $tenantId, float $amount): bool;
 
     public function decrementBalance(int $tenantId, float $amount): bool;

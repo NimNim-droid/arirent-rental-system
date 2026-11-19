@@ -140,7 +140,7 @@ class DatabaseSeeder extends Seeder
             'property_id' => $qc->id,
             'room_number' => '301',
             'rent' => 11000.00,
-            'status' => 'occupied',
+            'status' => 'vacant',
         ]);
 
         // 5. Tenant Users & Tenant Profiles
@@ -265,6 +265,8 @@ class DatabaseSeeder extends Seeder
             'water' => 500.00,
             'late_fee' => 0.00,
             'total_amount' => 13950.00,
+            'paid_amount' => 13950.00,
+            'remaining_balance' => 0.00,
             'date' => '2026-09-01',
             'due_date' => '2026-09-15',
             'status' => 'paid',

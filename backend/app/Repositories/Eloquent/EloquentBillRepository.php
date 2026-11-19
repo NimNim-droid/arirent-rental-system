@@ -117,13 +117,15 @@ class EloquentBillRepository implements BillRepositoryInterface
 
     public function sumPaidRevenue(?int $propertyId = null): float
     {
-        $query = Bill::where('status', 'paid');
+        $query = Bill::where('status', '!=', 'voided');
 
         if ($propertyId) {
             $query->whereHas('tenant', fn ($q) => $q->where('property_id', $propertyId));
         }
 
-        return (float) $query->sum('total_amount');
+        return (float) $query->selectRaw(
+            "COALESCE(SUM(CASE WHEN status = 'paid' AND paid_amount <= 0 THEN total_amount ELSE paid_amount END), 0) as total"
+        )->value('total');
     }
 
     public function countPendingVerification(?int $propertyId = null): int

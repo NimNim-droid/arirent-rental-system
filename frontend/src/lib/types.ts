@@ -265,6 +265,8 @@ export interface DashboardStats {
   total_revenue: number;
   occupancy_rate: number;
   occupied_rooms: number;
+  vacant_rooms?: number;
+  reserved_rooms?: number;
   total_rooms: number;
   pending_applications: number;
   pending_payments: number;

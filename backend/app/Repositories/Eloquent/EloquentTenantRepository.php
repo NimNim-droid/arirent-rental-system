@@ -63,6 +63,19 @@ class EloquentTenantRepository implements TenantRepositoryInterface
         return $query->first();
     }
 
+    public function findOccupyingInRoom(int $propertyId, string $room, ?int $excludeTenantId = null): ?Tenant
+    {
+        $query = Tenant::where('property_id', $propertyId)
+            ->where('room', $room)
+            ->whereIn('status', ['active', 'pending_approval']);
+
+        if ($excludeTenantId) {
+            $query->where('id', '!=', $excludeTenantId);
+        }
+
+        return $query->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->first();
+    }
+
     public function incrementBalance(int $tenantId, float $amount): bool
     {
         return (bool) Tenant::where('id', $tenantId)->increment('balance', $amount);

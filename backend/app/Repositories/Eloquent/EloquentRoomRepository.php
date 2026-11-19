@@ -73,12 +73,14 @@ class EloquentRoomRepository implements RoomRepositoryInterface
         }
 
         $stats = $query
-            ->selectRaw("count(*) as total, count(case when status = 'occupied' then 1 end) as occupied")
+            ->selectRaw("count(*) as total, count(case when status = 'occupied' then 1 end) as occupied, count(case when status = 'vacant' then 1 end) as vacant, count(case when status = 'reserved' then 1 end) as reserved")
             ->first();
 
         return [
             'total' => (int) ($stats->total ?? 0),
             'occupied' => (int) ($stats->occupied ?? 0),
+            'vacant' => (int) ($stats->vacant ?? 0),
+            'reserved' => (int) ($stats->reserved ?? 0),
         ];
     }
 

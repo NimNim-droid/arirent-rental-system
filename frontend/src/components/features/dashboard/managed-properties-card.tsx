@@ -89,7 +89,7 @@ export function ManagedPropertiesCard({
                 )}
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Total collected this billing cycle
+                Total confirmed collections
               </p>
 
               <div className="mt-4 space-y-2 border-t border-edge pt-3">
