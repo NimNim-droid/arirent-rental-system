@@ -61,7 +61,7 @@ export function AdminStatsGrid({
                 } units occupied`
           }
           icon={<Home className="h-4 w-4" />}
-          onClick={() => navigate("/admin/tenants")}
+          onClick={() => navigate("/admin/properties")}
         />
         <StatsCard
           title="Available Units"
