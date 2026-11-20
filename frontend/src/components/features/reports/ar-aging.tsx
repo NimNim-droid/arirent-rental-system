@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Hourglass } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,49 +13,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/formatters";
+import { cn } from "@/lib/cn";
 import type { ArAging as ArAgingData, ArAgingBucketKey } from "@/lib/services/reports";
 
 const COLLAPSED_ROWS = 8;
 
-interface BucketStyle {
-  tile: string;
-  text: string;
-  bar: string;
-  badge: "neutral" | "warning" | "danger";
-}
-
-/** Colour deepens as money gets later; red is reserved for 61+ days. */
-const BUCKET_STYLES: Record<ArAgingBucketKey, BucketStyle> = {
-  current: {
-    tile: "bg-success-bg/40 border-success-border/60",
-    text: "text-success-fg",
-    bar: "bg-success-fg/60",
-    badge: "neutral",
-  },
-  "1_30": {
-    tile: "bg-warning-bg/40 border-warning-border/60",
-    text: "text-warning-fg",
-    bar: "bg-warning-fg/60",
-    badge: "warning",
-  },
-  "31_60": {
-    tile: "bg-warning-bg/70 border-warning-border",
-    text: "text-warning-fg",
-    bar: "bg-warning-fg",
-    badge: "warning",
-  },
-  "61_90": {
-    tile: "bg-danger-bg/40 border-danger-border/60",
-    text: "text-danger-fg",
-    bar: "bg-danger-fg/70",
-    badge: "danger",
-  },
-  over_90: {
-    tile: "bg-danger-bg/70 border-danger-border",
-    text: "text-danger-fg",
-    bar: "bg-danger-fg",
-    badge: "danger",
-  },
+const BUCKET_META: Record<
+  ArAgingBucketKey,
+  { accent: string; labelColor: string; badge: "neutral" | "warning" | "danger" }
+> = {
+  current: { accent: "bg-success-fg", labelColor: "text-success-fg", badge: "neutral" },
+  "1_30": { accent: "bg-warning-fg", labelColor: "text-warning-fg", badge: "warning" },
+  "31_60": { accent: "bg-warning-fg", labelColor: "text-warning-fg", badge: "warning" },
+  "61_90": { accent: "bg-danger-fg", labelColor: "text-danger-fg", badge: "danger" },
+  over_90: { accent: "bg-danger-fg", labelColor: "text-danger-fg", badge: "danger" },
 };
 
 interface ArAgingProps {
@@ -72,109 +43,116 @@ export function ArAging({ aging, loading }: ArAgingProps) {
   const hiddenCount = items.length - COLLAPSED_ROWS;
 
   return (
-    <Card className="p-5 border-edge shadow-sm bg-card space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-2 pb-2 border-b border-edge">
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge px-5 py-4">
         <div>
-          <h3 className="text-sm font-bold text-fg flex items-center gap-2">
-            <Hourglass className="h-4 w-4 text-accent" />
+          <h2 className="text-sm font-semibold tracking-tight text-fg">
             Accounts Receivable Aging
-          </h3>
-          <p className="text-xs text-muted mt-0.5">
-            Unpaid balances by how late they are{aging ? `, as of ${formatDate(aging.as_of)}` : ""}.
-            The Month filter does not apply here; the Property filter does. Invoices with a payment
-            awaiting review are not included.
+          </h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Unpaid balances by days past due{aging ? ` as of ${formatDate(aging.as_of)}` : ""} ·
+            Excludes payments awaiting review
           </p>
         </div>
         {!loading && (
-          <Badge variant="neutral" className="font-mono text-xs">
-            {formatCurrency(total)} owed
-          </Badge>
+          <span className="text-xs font-semibold tabular-nums text-fg">
+            {formatCurrency(total)}{" "}
+            <span className="font-normal text-muted">total owed</span>
+          </span>
         )}
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-20 w-full" />
+        <div className="p-5 space-y-3">
+          <Skeleton className="h-16 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 divide-y divide-edge border-b border-edge bg-inset/25 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0 lg:divide-x">
             {(aging?.buckets ?? []).map((bucket) => {
-              const style = BUCKET_STYLES[bucket.key];
+              const meta = BUCKET_META[bucket.key];
+              const hasBalance = bucket.amount > 0;
               const share = total > 0 ? Math.round((bucket.amount / total) * 100) : 0;
+
               return (
-                <div
-                  key={bucket.key}
-                  className={`p-3 rounded-xl border space-y-1.5 ${style.tile}`}
-                >
-                  <span className={`text-[11px] font-semibold ${style.text}`}>{bucket.label}</span>
-                  <p
-                    className={`text-base font-bold font-mono ${
-                      bucket.amount > 0 ? "text-fg" : "text-muted"
-                    }`}
-                  >
-                    {formatCurrency(bucket.amount)}
-                  </p>
-                  <p className="text-[10px] text-muted">
-                    {bucket.bill_count} invoice{bucket.bill_count !== 1 ? "s" : ""} · {share}%
-                  </p>
-                  <div className="w-full bg-inset rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className={`${style.bar} h-1.5 rounded-full transition-all duration-500`}
-                      style={{ width: `${share}%` }}
+                <div key={bucket.key} className="relative px-4 py-3.5">
+                  {hasBalance && (
+                    <span
+                      aria-hidden="true"
+                      className={cn("absolute inset-x-0 top-0 h-0.5", meta.accent)}
                     />
-                  </div>
+                  )}
+                  <p
+                    className={cn(
+                      "text-[11px] font-medium",
+                      hasBalance ? meta.labelColor : "text-muted"
+                    )}
+                  >
+                    {bucket.label}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-1 text-base font-semibold tabular-nums",
+                      hasBalance ? "text-fg" : "text-muted/60"
+                    )}
+                  >
+                    {hasBalance ? formatCurrency(bucket.amount) : "—"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted tabular-nums">
+                    {bucket.bill_count} invoice{bucket.bill_count !== 1 ? "s" : ""}
+                    {hasBalance ? ` · ${share}%` : ""}
+                  </p>
                 </div>
               );
             })}
           </div>
 
           {items.length === 0 ? (
-            <p className="text-xs text-muted py-4 text-center">
-              Nothing owed right now. Every invoice is paid or awaiting review.
+            <p className="px-5 py-8 text-center text-xs text-muted">
+              No overdue or unpaid balances. All invoices are settled or awaiting verification.
             </p>
           ) : (
-            <div className="rounded-xl border border-edge overflow-hidden">
+            <div>
               <div className="table-scroll-wrap overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-semibold text-xs">Tenant</TableHead>
-                      <TableHead className="font-semibold text-xs">Property / Room</TableHead>
-                      <TableHead className="font-semibold text-xs">Due Date</TableHead>
-                      <TableHead className="font-semibold text-xs text-center">Days Late</TableHead>
-                      <TableHead className="font-semibold text-xs text-right">Balance</TableHead>
+                      <TableHead>Tenant</TableHead>
+                      <TableHead>Property / Unit</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {visibleItems.map((item) => {
-                      const style = BUCKET_STYLES[item.bucket];
+                      const meta = BUCKET_META[item.bucket];
                       return (
-                        <TableRow key={item.bill_id} className="hover:bg-card/50 transition-colors">
+                        <TableRow key={item.bill_id}>
                           <TableCell>
-                            <p className="text-xs font-bold text-fg">{item.tenant_name}</p>
+                            <p className="text-xs font-semibold text-fg">{item.tenant_name}</p>
                             {item.status === "partially_paid" && (
                               <p className="text-[11px] text-muted">Partially paid</p>
                             )}
                           </TableCell>
-                          <TableCell className="text-xs text-fg-soft">
+                          <TableCell className="text-xs text-muted">
                             {item.property_name ?? "—"}
                             {item.room ? ` · Room ${item.room}` : ""}
                           </TableCell>
-                          <TableCell className="text-xs font-mono text-fg-soft">
+                          <TableCell className="text-xs text-muted tabular-nums">
                             {formatDate(item.due_date)}
                           </TableCell>
                           <TableCell className="text-center">
                             {item.bucket === "current" ? (
-                              <span className="text-[11px] text-muted">Not yet due</span>
+                              <span className="text-[11px] text-muted">Current</span>
                             ) : (
-                              <Badge variant={style.badge} className="font-mono text-[11px]">
-                                {item.days_past_due} day{item.days_past_due !== 1 ? "s" : ""}
+                              <Badge variant={meta.badge} className="tabular-nums text-[11px]">
+                                {item.days_past_due}d late
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold text-fg">
+                          <TableCell className="text-right text-xs font-semibold text-fg tabular-nums">
                             {formatCurrency(item.remaining_balance)}
                           </TableCell>
                         </TableRow>
@@ -183,13 +161,14 @@ export function ArAging({ aging, loading }: ArAgingProps) {
                   </TableBody>
                 </Table>
               </div>
+
               {hiddenCount > 0 && (
-                <div className="flex justify-center border-t border-edge p-2 print:hidden">
+                <div className="flex justify-center border-t border-edge py-2 print:hidden">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setExpanded((v) => !v)}
-                    className="text-xs gap-1 text-muted hover:text-fg"
+                    className="gap-1 text-xs text-muted hover:text-fg"
                   >
                     {expanded ? (
                       <>

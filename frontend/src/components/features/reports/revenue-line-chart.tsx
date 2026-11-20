@@ -13,9 +13,9 @@ interface RevenueLineChartProps {
   series: RevenueLineSeries[];
 }
 
-const WIDTH = 760;
-const HEIGHT = 300;
-const PADDING = { top: 18, right: 18, bottom: 34, left: 82 };
+const WIDTH = 720;
+const HEIGHT = 250;
+const PADDING = { top: 20, right: 16, bottom: 32, left: 74 };
 
 export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -36,7 +36,7 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
     <div className="overflow-x-auto">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-auto w-full min-w-[620px]"
+        className="h-auto w-full min-w-[440px]"
         role="img"
         aria-label="Revenue overview by month"
       >
@@ -50,7 +50,7 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
               x2="0"
               y2="1"
             >
-              <stop offset="0%" stopColor={item.color} stopOpacity="0.16" />
+              <stop offset="0%" stopColor={item.color} stopOpacity="0.12" />
               <stop offset="100%" stopColor={item.color} stopOpacity="0" />
             </linearGradient>
           ))}
@@ -68,11 +68,11 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
                 y1={gridY}
                 y2={gridY}
                 stroke="var(--edge)"
-                strokeDasharray={index === 4 ? undefined : "3 5"}
+                strokeDasharray={index === 4 ? undefined : "2 4"}
               />
               <text
-                x={PADDING.left - 12}
-                y={gridY + 4}
+                x={PADDING.left - 10}
+                y={gridY + 3.5}
                 textAnchor="end"
                 fontSize="10"
                 fill="var(--muted)"
@@ -97,6 +97,11 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
         ))}
 
         {series.map((item) => {
+          // Skip flat zero series so they don't clutter the x-axis baseline.
+          if (item.values.every((value) => value <= 0)) {
+            return null;
+          }
+
           const points = item.values
             .map((value, index) => `${x(index)},${y(value)}`)
             .join(" ");
@@ -113,7 +118,7 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
                 points={points}
                 fill="none"
                 stroke={item.color}
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -124,7 +129,7 @@ export function RevenueLineChart({ labels, series }: RevenueLineChartProps) {
                       key={index}
                       cx={x(index)}
                       cy={y(value)}
-                      r="3"
+                      r="3.5"
                       fill="var(--card)"
                       stroke={item.color}
                       strokeWidth="2"
