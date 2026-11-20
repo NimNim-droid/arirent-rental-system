@@ -29,7 +29,6 @@ import {
   RevenueBarChart,
   RevenueLineChart,
   ReportSkeleton,
-  ArAging,
   PropertyPerformance,
   type RevenueLineSeries,
 } from "@/components/features/reports";
@@ -567,11 +566,6 @@ export default function AdminReports() {
               </div>
             </Card>
           </div>
-
-          {/* Accounts Receivable Aging Analysis */}
-          {data.ar_aging && (
-            <ArAging aging={data.ar_aging} loading={loading} />
-          )}
 
           {/* Building & Property Financial Performance */}
           {data.property_performance && data.property_performance.length > 0 && (
