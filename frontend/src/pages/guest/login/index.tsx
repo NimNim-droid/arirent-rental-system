@@ -66,9 +66,9 @@ export default function LoginPage() {
 
               <Input
                 id="email"
-                label="Email Address"
+                label="Email"
                 type="email"
-                placeholder="e.g. admin@arirent.com"
+                placeholder="you@example.com"
                 autoComplete="email"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 id="password"
                 label="Password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
