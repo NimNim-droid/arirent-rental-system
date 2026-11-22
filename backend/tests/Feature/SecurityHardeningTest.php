@@ -300,6 +300,61 @@ class SecurityHardeningTest extends TestCase
         $this->assertSame('Real Lease.pdf', $stored[0]['name']);
     }
 
+    public function test_uploaded_documents_survive_ephemeral_container_disk_reset(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::create([
+            'name' => 'Admin Doc',
+            'email' => 'admin-doc@example.com',
+            'password' => Hash::make('secret'),
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $uploadRes = $this->post(
+            '/api/documents',
+            [
+                'name' => 'Building House Rules',
+                'category' => 'House Rules & Regulations',
+                'file' => UploadedFile::fake()->createWithContent('house-rules.pdf', '%PDF-1.4 AriRent Rules'),
+            ],
+            ['Accept' => 'application/json']
+        )->assertStatus(201);
+
+        $docId = $uploadRes->json('data.id');
+        $storagePath = $uploadRes->json('data.storage_path');
+        $this->assertNotEmpty($storagePath);
+
+        // Simulate Render ephemeral container restart wiping local storage
+        Storage::disk('local')->delete('documents.json');
+        Storage::disk('local')->deleteDirectory('documents');
+        $this->assertFalse(Storage::disk('local')->exists('documents.json'));
+        $this->assertFalse(Storage::disk('local')->exists($storagePath));
+
+        Sanctum::actingAs($this->tenantUser);
+
+        $listRes = $this->getJson('/api/documents')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->assertSame('Building House Rules.pdf', $listRes->json('data.0.name'));
+
+        $url = $listRes->json('data.0.url');
+        $path = parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        $this->get($path.'?'.$query)->assertOk();
+        Storage::disk('local')->assertExists($storagePath);
+
+        Sanctum::actingAs($admin);
+        $this->deleteJson("/api/documents/{$docId}")->assertOk();
+        $this->assertDatabaseMissing('cache', [
+            'key' => 'arirent_storage:file:'.$storagePath,
+        ]);
+    }
+
     public function test_legacy_public_files_can_be_migrated_to_private_storage(): void
     {
         Storage::fake('local');

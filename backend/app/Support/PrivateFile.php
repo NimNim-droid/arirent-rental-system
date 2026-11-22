@@ -3,20 +3,44 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class PrivateFile
 {
     public const DISK = 'local';
+
+    private const DB_KEY_PREFIX = 'arirent_storage:file:';
+
+    private const DB_EXPIRATION = 2147483647;
 
     /**
      * Store an upload on the private disk and return its relative path.
      */
     public static function store(UploadedFile $file, string $directory): string
     {
-        return $file->store($directory, self::DISK);
+        $path = $file->store($directory, self::DISK);
+
+        try {
+            $contents = Storage::disk(self::DISK)->get($path);
+
+            if ($contents !== null) {
+                DB::table('cache')->updateOrInsert(
+                    ['key' => self::DB_KEY_PREFIX.$path],
+                    [
+                        'value' => base64_encode($contents),
+                        'expiration' => self::DB_EXPIRATION,
+                    ]
+                );
+            }
+        } catch (Throwable) {
+            // Keep upload working even if cache table is unavailable in minimal test contexts.
+        }
+
+        return $path;
     }
 
     /**
@@ -96,6 +120,12 @@ class PrivateFile
         if (Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+
+        try {
+            DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->delete();
+        } catch (Throwable) {
+            // Ignore when DB backup entry or table is absent.
+        }
     }
 
     /**
@@ -108,7 +138,25 @@ class PrivateFile
         $disk = Storage::disk(self::DISK);
 
         if (! $disk->exists($path)) {
-            $disk = Storage::disk('public');
+            $publicDisk = Storage::disk('public');
+
+            if ($publicDisk->exists($path)) {
+                $disk = $publicDisk;
+            } else {
+                try {
+                    $encoded = DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->value('value');
+
+                    if (is_string($encoded) && $encoded !== '') {
+                        $decoded = base64_decode($encoded, true);
+
+                        if ($decoded !== false) {
+                            $disk->put($path, $decoded);
+                        }
+                    }
+                } catch (Throwable) {
+                    // Fall through to 404 below if backup cannot be read.
+                }
+            }
         }
 
         abort_unless($disk->exists($path), 404);

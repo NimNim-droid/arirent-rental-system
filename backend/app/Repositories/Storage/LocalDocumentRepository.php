@@ -5,11 +5,17 @@ namespace App\Repositories\Storage;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
 use App\Support\PrivateFile;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class LocalDocumentRepository implements DocumentRepositoryInterface
 {
     private string $storageFile = 'documents.json';
+
+    private const DB_INDEX_KEY = 'arirent_storage:documents.json';
+
+    private const DB_EXPIRATION = 2147483647;
 
     /**
      * Read documents from local storage. Legacy placeholder entries (url '#')
@@ -19,6 +25,18 @@ class LocalDocumentRepository implements DocumentRepositoryInterface
      */
     public function all(): array
     {
+        if (! Storage::disk('local')->exists($this->storageFile)) {
+            try {
+                $backedUp = DB::table('cache')->where('key', self::DB_INDEX_KEY)->value('value');
+
+                if (is_string($backedUp) && $backedUp !== '') {
+                    Storage::disk('local')->put($this->storageFile, $backedUp);
+                }
+            } catch (Throwable) {
+                // Continue with empty fallback if database backup cannot be read.
+            }
+        }
+
         if (! Storage::disk('local')->exists($this->storageFile)) {
             return [];
         }
@@ -49,10 +67,24 @@ class LocalDocumentRepository implements DocumentRepositoryInterface
      */
     public function saveAll(array $documents): void
     {
-        Storage::disk('local')->put(
-            $this->storageFile,
-            json_encode(array_values($documents), JSON_PRETTY_PRINT)
-        );
+        $json = json_encode(array_values($documents), JSON_PRETTY_PRINT);
+        if ($json === false) {
+            return;
+        }
+
+        Storage::disk('local')->put($this->storageFile, $json);
+
+        try {
+            DB::table('cache')->updateOrInsert(
+                ['key' => self::DB_INDEX_KEY],
+                [
+                    'value' => $json,
+                    'expiration' => self::DB_EXPIRATION,
+                ]
+            );
+        } catch (Throwable) {
+            // Local file write succeeded; ignore DB backup failure if table is absent.
+        }
     }
 
     public function storeFile(UploadedFile $file): string
