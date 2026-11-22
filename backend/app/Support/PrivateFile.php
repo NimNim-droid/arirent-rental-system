@@ -23,24 +23,31 @@ class PrivateFile
     public static function store(UploadedFile $file, string $directory): string
     {
         $path = $file->store($directory, self::DISK);
+        $contents = Storage::disk(self::DISK)->get($path);
 
-        try {
-            $contents = Storage::disk(self::DISK)->get($path);
-
-            if ($contents !== null) {
-                DB::table('cache')->updateOrInsert(
-                    ['key' => self::DB_KEY_PREFIX.$path],
-                    [
-                        'value' => base64_encode($contents),
-                        'expiration' => self::DB_EXPIRATION,
-                    ]
-                );
-            }
-        } catch (Throwable) {
-            // Keep upload working even if cache table is unavailable in minimal test contexts.
+        if ($contents !== null) {
+            self::backupBytes($path, $contents);
         }
 
         return $path;
+    }
+
+    /**
+     * Persist raw file bytes into the database cache table as an ephemeral-disk backup.
+     */
+    public static function backupBytes(string $path, string $contents): void
+    {
+        try {
+            DB::table('cache')->updateOrInsert(
+                ['key' => self::DB_KEY_PREFIX.$path],
+                [
+                    'value' => base64_encode($contents),
+                    'expiration' => self::DB_EXPIRATION,
+                ]
+            );
+        } catch (Throwable) {
+            // Keep upload working even if cache table is unavailable in minimal test contexts.
+        }
     }
 
     /**
@@ -142,19 +149,14 @@ class PrivateFile
 
             if ($publicDisk->exists($path)) {
                 $disk = $publicDisk;
-            } else {
-                try {
-                    $encoded = DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->value('value');
+            } elseif (! self::restoreFromDatabase($path, $disk) && str_starts_with($path, 'documents/')) {
+                $bundled = base_path('resources/documents/'.basename($path));
 
-                    if (is_string($encoded) && $encoded !== '') {
-                        $decoded = base64_decode($encoded, true);
-
-                        if ($decoded !== false) {
-                            $disk->put($path, $decoded);
-                        }
+                if (is_file($bundled)) {
+                    $bytes = @file_get_contents($bundled);
+                    if ($bytes !== false) {
+                        $disk->put($path, $bytes);
                     }
-                } catch (Throwable) {
-                    // Fall through to 404 below if backup cannot be read.
                 }
             }
         }
@@ -170,5 +172,29 @@ class PrivateFile
             'Content-Security-Policy' => "default-src 'none'; sandbox",
             'Cache-Control' => 'private, max-age=60',
         ], $disposition);
+    }
+
+    /**
+     * Restore a file from the database backup onto the local disk if available.
+     */
+    private static function restoreFromDatabase(string $path, \Illuminate\Contracts\Filesystem\Filesystem $disk): bool
+    {
+        try {
+            $encoded = DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->value('value');
+
+            if (is_string($encoded) && $encoded !== '') {
+                $decoded = base64_decode($encoded, true);
+
+                if ($decoded !== false) {
+                    $disk->put($path, $decoded);
+
+                    return true;
+                }
+            }
+        } catch (Throwable) {
+            // Fall through if backup cannot be read.
+        }
+
+        return false;
     }
 }
