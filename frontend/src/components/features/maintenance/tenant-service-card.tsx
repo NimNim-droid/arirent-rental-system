@@ -22,7 +22,7 @@ const TYPE_NAMES: Record<MaintenanceTicket["type"], string> = {
   plumbing: "Plumbing Repair",
   electrical: "Electrical Repair",
   appliances: "Appliance Repair",
-  general: "Housekeeping / General",
+  general: "General Maintenance",
 };
 
 /**

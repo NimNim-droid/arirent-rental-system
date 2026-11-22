@@ -64,22 +64,13 @@ export default function TenantDashboard() {
   } = useTenantDashboard();
 
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
-  const [serviceCategory, setServiceCategory] = useState<"repairs" | "housekeeping">("repairs");
   const [hotlineOpen, setHotlineOpen] = useState(false);
 
   const firstName = user?.name?.split(" ")[0] || "there";
   const billNeedsAction =
     !!openBill && ["unpaid", "partially_paid", "overdue"].includes(openBill.status);
 
-  const handleReport = () => {
-    setServiceCategory("repairs");
-    setServiceModalOpen(true);
-  };
-
-  const handleCleaning = () => {
-    setServiceCategory("housekeeping");
-    setServiceModalOpen(true);
-  };
+  const handleReport = () => setServiceModalOpen(true);
 
   const handlePay = () => {
     if (openBill) {
@@ -101,11 +92,10 @@ export default function TenantDashboard() {
       {/* Hero Stay Card with Room gold highlight & lease progress */}
       <TenantStayCard unit={unit} loading={loading} />
 
-      {/* Quick Actions (Report, Pay, Cleaning, Hotline) */}
+      {/* Quick Actions (Report, Pay, Hotline) */}
       <TenantQuickActions
         onReport={handleReport}
         onPay={handlePay}
-        onCleaning={handleCleaning}
         onHotline={() => setHotlineOpen(true)}
       />
 
@@ -149,7 +139,6 @@ export default function TenantDashboard() {
       <TenantServiceModal
         open={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
-        serviceCategory={serviceCategory}
         onSuccess={loadData}
       />
 

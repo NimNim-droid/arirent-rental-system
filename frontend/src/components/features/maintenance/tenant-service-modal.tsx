@@ -9,21 +9,15 @@ import type { MaintenanceTicket } from "@/lib/types";
 interface TenantServiceModalProps {
   open: boolean;
   onClose: () => void;
-  serviceCategory: "repairs" | "housekeeping";
   onSuccess: () => void | Promise<void>;
 }
 
 export function TenantServiceModal({
   open,
   onClose,
-  serviceCategory,
   onSuccess,
 }: TenantServiceModalProps) {
-  const isRepairs = serviceCategory === "repairs";
-
-  const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>(
-    isRepairs ? "plumbing" : "general"
-  );
+  const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>("plumbing");
   const [description, setDescription] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -33,13 +27,13 @@ export function TenantServiceModal({
 
   useEffect(() => {
     if (open) {
-      setIssueType(isRepairs ? "plumbing" : "general");
+      setIssueType("plumbing");
       setDescription("");
       setPhotoFile(null);
       setPhotoPreview(null);
       setError("");
     }
-  }, [open, isRepairs]);
+  }, [open]);
 
   // Clean up object URL on unmount or photo change
   useEffect(() => {
@@ -92,7 +86,7 @@ export function TenantServiceModal({
 
     try {
       const formData = new FormData();
-      formData.append("type", isRepairs ? issueType : "general");
+      formData.append("type", issueType);
       formData.append("priority", "normal");
       formData.append("description", description.trim());
       if (photoFile) {
@@ -120,12 +114,10 @@ export function TenantServiceModal({
         {/* Header */}
         <div className="space-y-0.5">
           <h2 className="text-lg font-bold tracking-tight text-fg">
-            {isRepairs ? "Report a problem" : "Request Housekeeping"}
+            Report a problem
           </h2>
           <p className="text-xs text-muted">
-            {isRepairs
-              ? "Tell us what's wrong in your unit."
-              : "Book a cleaning or general assistance."}
+            Tell us what&apos;s wrong in your unit.
           </p>
         </div>
 
@@ -137,29 +129,27 @@ export function TenantServiceModal({
         )}
 
         {/* Quick Category Chips */}
-        {isRepairs && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {[
-              { value: "plumbing", label: "Plumbing" },
-              { value: "electrical", label: "Electrical" },
-              { value: "appliances", label: "Aircon" },
-              { value: "general", label: "Other" },
-            ].map((chip) => (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => setIssueType(chip.value as MaintenanceTicket["type"])}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
-                  issueType === chip.value
-                    ? "bg-[#C8A04A] border-[#C8A04A] text-[#2A2008] shadow-soft"
-                    : "bg-card border-edge text-muted hover:text-fg hover:bg-hover"
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {[
+            { value: "plumbing", label: "Plumbing" },
+            { value: "electrical", label: "Electrical" },
+            { value: "appliances", label: "Aircon" },
+            { value: "general", label: "Other" },
+          ].map((chip) => (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => setIssueType(chip.value as MaintenanceTicket["type"])}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
+                issueType === chip.value
+                  ? "bg-[#C8A04A] border-[#C8A04A] text-[#2A2008] shadow-soft"
+                  : "bg-card border-edge text-muted hover:text-fg hover:bg-hover"
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
 
         {/* What's happening textarea */}
         <div>
