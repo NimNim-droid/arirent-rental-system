@@ -137,10 +137,7 @@ class XenditService
 
         DB::transaction(function () use ($bill, $amount, $invoiceId, $externalId) {
             // Mark any previous unfinished online checkout attempts on this bill as failed
-            Payment::where('bill_id', $bill->id)
-                ->where('status', 'pending')
-                ->where('notes', 'like', 'XENDIT:%')
-                ->update(['status' => 'failed']);
+            $this->paymentRepo->markPendingXenditFailedForBill($bill->id);
 
             $this->paymentRepo->create([
                 'bill_id' => $bill->id,
@@ -173,18 +170,7 @@ class XenditService
         }
 
         // Find the most recent Xendit payment record for this bill
-        $paymentQuery = Payment::where('bill_id', $billId)
-            ->where('notes', 'like', 'XENDIT:%')
-            ->latest('id');
-
-        if ($invoiceId) {
-            $paymentQuery->where(function ($q) use ($invoiceId) {
-                $q->where('transaction_reference', $invoiceId)
-                    ->orWhere('notes', "XENDIT:{$invoiceId}");
-            });
-        }
-
-        $payment = $paymentQuery->first();
+        $payment = $this->paymentRepo->findLatestXenditForBill($billId, $invoiceId);
 
         if (! $payment) {
             if ($bill->status === 'paid') {
@@ -251,14 +237,7 @@ class XenditService
             throw new InvalidArgumentException('Missing invoice identifier in webhook payload.');
         }
 
-        $payment = Payment::where(function ($query) use ($invoiceId, $externalId) {
-            if ($invoiceId !== '') {
-                $query->where('transaction_reference', $invoiceId);
-            }
-            if ($externalId !== '') {
-                $query->orWhere('notes', "XENDIT:{$externalId}");
-            }
-        })->latest('id')->first();
+        $payment = $this->paymentRepo->findLatestXenditByIdentifiers($invoiceId, $externalId);
 
         if (! $payment) {
             return null;
@@ -291,7 +270,7 @@ class XenditService
     {
         return DB::transaction(function () use ($paymentId, $paidAmount, $resolvedMethod, $channelLabel) {
             /** @var Payment|null $payment */
-            $payment = Payment::where('id', $paymentId)->lockForUpdate()->first();
+            $payment = $this->paymentRepo->findForUpdate($paymentId);
             if (! $payment) {
                 throw new ModelNotFoundException('Payment record not found.');
             }

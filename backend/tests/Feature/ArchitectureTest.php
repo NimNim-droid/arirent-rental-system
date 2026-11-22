@@ -38,6 +38,7 @@ use App\Services\ReportService;
 use App\Services\SettingsService;
 use App\Services\TenantService;
 use App\Services\UtilityService;
+use App\Services\XenditService;
 use Tests\TestCase;
 
 class ArchitectureTest extends TestCase
@@ -72,6 +73,7 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(ReportService::class, app(ReportService::class));
         $this->assertInstanceOf(DocumentService::class, app(DocumentService::class));
         $this->assertInstanceOf(ExcessChargeService::class, app(ExcessChargeService::class));
+        $this->assertInstanceOf(XenditService::class, app(XenditService::class));
     }
 
     public function test_controllers_do_not_bypass_services_to_access_models_or_repositories(): void
@@ -97,6 +99,11 @@ class ArchitectureTest extends TestCase
                 '/\b(DB|Storage)::/',
                 $source,
                 "Controller {$name} must not access DB or Storage facades directly."
+            );
+            $this->assertDoesNotMatchRegularExpression(
+                '/->validate\s*\(/',
+                $source,
+                "Controller {$name} must use Form Request classes instead of inline \$request->validate()."
             );
         }
     }

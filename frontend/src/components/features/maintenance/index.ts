@@ -1,7 +1,5 @@
 export { useAdminMaintenance, type TicketUpdateInput } from "./hooks/useAdminMaintenance";
 export { useTenantMaintenance, ISSUE_TYPES } from "./hooks/useTenantMaintenance";
-export { TicketForm } from "./ticket-form";
-export { TenantTicketList } from "./tenant-ticket-list";
 export { TicketDetailModal } from "./ticket-detail-modal";
 export { MaintenanceStats } from "./maintenance-stats";
 export { TicketToolbar } from "./ticket-toolbar";

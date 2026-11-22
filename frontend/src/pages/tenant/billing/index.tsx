@@ -1,28 +1,22 @@
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router";
+import { useState, useMemo } from "react";
 import {
-  CreditCard,
   QrCode,
   CheckCircle2,
   AlertTriangle,
   Receipt,
   Clock,
-  Sparkles,
 } from "lucide-react";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatters";
-import { billingService } from "@/lib/services/billing";
-import { getErrorMessage } from "@/lib/errors";
 import {
   useTenantBilling,
   TenantBillCard,
   GCashPaymentModal,
   TenantStatementModal,
 } from "@/components/features/billing";
-import type { Bill } from "@/lib/types";
 
 type BillFilterTab = "all" | "unpaid" | "paid";
 
@@ -35,6 +29,7 @@ export default function TenantBilling() {
     selectedInvoice,
     showPaymentModal,
     showStatementModal,
+    xenditFeedback,
     loading,
     error,
     unpaidBills,
@@ -47,60 +42,6 @@ export default function TenantBilling() {
   } = useTenantBilling();
 
   const [activeTab, setActiveTab] = useState<BillFilterTab>("unpaid");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [xenditFeedback, setXenditFeedback] = useState<{
-    tone: "success" | "warning" | "danger";
-    message: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const xenditStatus = searchParams.get("xendit_status");
-    const billId = searchParams.get("bill_id");
-    const externalId = searchParams.get("external_id") ?? undefined;
-
-    if (!xenditStatus || !billId) return;
-
-    // Clean query params immediately so page refreshes do not re-run verification
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("xendit_status");
-    nextParams.delete("bill_id");
-    nextParams.delete("external_id");
-    setSearchParams(nextParams, { replace: true });
-
-    if (xenditStatus === "cancelled") {
-      setXenditFeedback({
-        tone: "warning",
-        message: "Online checkout was cancelled. You can retry anytime before the due date.",
-      });
-      return;
-    }
-
-    if (xenditStatus === "success") {
-      let active = true;
-      (async () => {
-        try {
-          const res = await billingService.verifyXenditPayment(billId, {
-            external_id: externalId,
-          });
-          if (!active) return;
-          setXenditFeedback({
-            tone: "success",
-            message: res.message || "Online payment confirmed via Xendit!",
-          });
-          await loadBills();
-        } catch (err) {
-          if (!active) return;
-          setXenditFeedback({
-            tone: "danger",
-            message: getErrorMessage(err, "Unable to verify Xendit payment status yet."),
-          });
-        }
-      })();
-      return () => {
-        active = false;
-      };
-    }
-  }, [searchParams, setSearchParams, loadBills]);
 
   const paidBills = useMemo(
     () => bills.filter((b) => b.status === "paid" || b.status === "voided"),

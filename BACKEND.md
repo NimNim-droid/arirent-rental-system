@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The AriRent backend is a **Laravel 11 REST API** built with strict **Layered Architecture**. It serves as the data and business logic engine for the Rental & Property Management System, handling properties, tenants, billing, utilities, maintenance, and settings.
+The AriRent backend is a **Laravel 12 REST API** built with strict **Layered Architecture**. It serves as the data and business logic engine for the Rental & Property Management System, handling properties, tenants, billing, online payments (Xendit + manual verification), utilities, maintenance, documents, financial reports, and settings.
 
 ```
 HTTP REQUEST
@@ -51,10 +51,11 @@ API ROUTE
 
 | Component | Technology |
 |-----------|-----------|
-| Framework | Laravel 11 |
+| Framework | Laravel 12 |
 | PHP Version | 8.2+ |
-| Database | MySQL 8.0 |
+| Database | MySQL 8.0 / PostgreSQL (SQLite in-memory for tests) |
 | Authentication | Laravel Sanctum |
+| Payment Gateway | Xendit Invoices API (with built-in sandbox simulator fallback) |
 | Containerization | Docker + Docker Compose |
 | Web Server | Nginx (via Docker) |
 | PHP Runtime | PHP-FPM |
@@ -109,7 +110,9 @@ backend/
 │   │   │   │   ├── ProcessPaymentRequest.php
 │   │   │   │   ├── StoreBillRequest.php
 │   │   │   │   ├── UpdateBillRequest.php
-│   │   │   │   └── VerifyPaymentRequest.php
+│   │   │   │   ├── VerifyPaymentRequest.php
+│   │   │   │   ├── XenditCheckoutRequest.php
+│   │   │   │   └── XenditVerifyRequest.php
 │   │   │   ├── Document/
 │   │   │   │   └── StoreDocumentRequest.php
 │   │   │   ├── ExcessCharge/
@@ -202,7 +205,8 @@ backend/
 │   │   ├── ReportService.php
 │   │   ├── SettingsService.php
 │   │   ├── TenantService.php
-│   │   └── UtilityService.php
+│   │   ├── UtilityService.php
+│   │   └── XenditService.php
 │   │
 │   └── Support/
 │       └── PrivateFile.php
@@ -210,6 +214,8 @@ backend/
 ├── bootstrap/
 ├── config/
 ├── database/
+│   ├── factories/
+│   │   └── UserFactory.php
 │   ├── migrations/
 │   └── seeders/
 │       └── DatabaseSeeder.php
@@ -217,12 +223,12 @@ backend/
 ├── docker/
 │   ├── nginx/
 │   │   └── default.conf
-│   └── php/
-│       ├── local.ini
-│       └── zz-docker.conf
+│   ├── php/
+│   │   ├── local.ini
+│   │   └── zz-docker.conf
+│   └── render-start.sh
 │
 ├── public/
-├── resources/
 ├── routes/
 │   ├── api.php
 │   ├── console.php
@@ -241,26 +247,23 @@ backend/
 │   │   ├── SecurityHardeningTest.php
 │   │   ├── SecurityTest.php
 │   │   ├── TenantDashboardDataTest.php
-│   │   └── UtilityReadingTest.php
-│   └── Unit/
-│       └── TestCase.php
-```
-│
+│   │   ├── UtilityReadingTest.php
+│   │   └── XenditPaymentTest.php
+│   └── TestCase.php
 ├── .dockerignore
 ├── .editorconfig
 ├── .env.example
 ├── .gitattributes
 ├── .gitignore
 ├── Dockerfile
+├── Dockerfile.render
 ├── README.md
 ├── artisan
 ├── composer.json
 ├── composer.lock
 ├── docker-compose.yaml
-├── docker-compose.prod.yaml
-├── package.json
 ├── phpunit.xml
-└── vite.config.js
+└── run-local.bat
 ```
 
 ---

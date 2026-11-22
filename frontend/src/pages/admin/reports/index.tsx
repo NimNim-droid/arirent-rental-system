@@ -31,8 +31,8 @@ import {
   ReportSkeleton,
   PropertyPerformance,
   type RevenueLineSeries,
+  type RevenuePeriod,
 } from "@/components/features/reports";
-import type { RevenuePeriod } from "@/lib/services/reports";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/cn";
 
