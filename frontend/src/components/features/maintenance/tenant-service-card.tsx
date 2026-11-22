@@ -67,6 +67,14 @@ export function TenantServiceCard({ ticket, onSelect }: TenantServiceCardProps) 
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {ticket.priority === "urgent" && (
+            <Badge
+              variant="danger"
+              className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
+            >
+              Urgent
+            </Badge>
+          )}
           <Badge
             variant={statusMeta.variant}
             className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase"

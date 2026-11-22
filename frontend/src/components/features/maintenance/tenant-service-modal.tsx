@@ -18,6 +18,7 @@ export function TenantServiceModal({
   onSuccess,
 }: TenantServiceModalProps) {
   const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>("plumbing");
+  const [priority, setPriority] = useState<MaintenanceTicket["priority"]>("normal");
   const [description, setDescription] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function TenantServiceModal({
   useEffect(() => {
     if (open) {
       setIssueType("plumbing");
+      setPriority("normal");
       setDescription("");
       setPhotoFile(null);
       setPhotoPreview(null);
@@ -87,7 +89,7 @@ export function TenantServiceModal({
     try {
       const formData = new FormData();
       formData.append("type", issueType);
-      formData.append("priority", "normal");
+      formData.append("priority", priority);
       formData.append("description", description.trim());
       if (photoFile) {
         formData.append("photo", photoFile);
@@ -149,6 +151,35 @@ export function TenantServiceModal({
               {chip.label}
             </button>
           ))}
+        </div>
+
+        {/* Priority Selector (Normal / Urgent) */}
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-edge bg-inset p-1.5">
+          <span className="pl-2.5 text-xs font-semibold text-muted">Priority</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPriority("normal")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                priority === "normal"
+                  ? "bg-card text-fg shadow-soft border border-edge"
+                  : "text-muted hover:text-fg"
+              }`}
+            >
+              Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setPriority("urgent")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                priority === "urgent"
+                  ? "bg-danger-bg text-danger-fg border border-danger-border shadow-soft"
+                  : "text-muted hover:text-fg"
+              }`}
+            >
+              Urgent
+            </button>
+          </div>
         </div>
 
         {/* What's happening textarea */}
