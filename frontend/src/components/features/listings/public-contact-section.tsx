@@ -43,16 +43,12 @@ export function PublicContactSection({
 
   return (
     <section id="contact" aria-label="Contact leasing office" className="scroll-mt-20 space-y-6">
-      <div className="space-y-1 max-w-xl">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
-          Contact &amp; Viewing Inquiries
-        </p>
-        <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-fg">
-          Talk to Property Management
+      <div className="space-y-2 max-w-xl">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
+          Talk to the leasing office
         </h2>
-        <p className="text-xs sm:text-sm text-muted">
-          Reach our leasing office directly or select a building below to schedule an in-person
-          unit inspection.
+        <p className="text-sm sm:text-base text-muted">
+          Call or message us, or pick a building below to request a viewing.
         </p>
       </div>
 

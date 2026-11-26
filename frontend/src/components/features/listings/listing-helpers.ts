@@ -205,6 +205,20 @@ export function computeListingTotals(
 }
 
 /**
+ * Lowest monthly rent among currently available rooms, or null when none are open.
+ */
+export function computeLowestRent(properties: PublicProperty[]): number | null {
+  let lowest: number | null = null;
+  for (const property of properties) {
+    for (const room of property.rooms) {
+      if (!room.is_available || typeof room.rent !== "number") continue;
+      if (lowest === null || room.rent < lowest) lowest = room.rent;
+    }
+  }
+  return lowest;
+}
+
+/**
  * Picks the primary public management contact configured across published buildings.
  */
 export function extractPrimaryLandlordContact(

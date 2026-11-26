@@ -17,14 +17,11 @@ export function FeaturedUnitsSection({ rooms, loading }: FeaturedUnitsSectionPro
     <section id="featured-units" aria-label="Available rooms" className="scroll-mt-20 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
-            Available Units
-          </p>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
-            Vacant Rooms Ready to View
+            Rooms open now
           </h2>
-          <p className="text-xs sm:text-sm text-muted">
-            Inspect full room specs, inclusions, and move-in terms before booking a visit.
+          <p className="text-sm text-muted">
+            Check size, what is included, and move-in costs, then book a viewing.
           </p>
         </div>
 
@@ -85,7 +82,7 @@ export function FeaturedUnitsSection({ rooms, loading }: FeaturedUnitsSectionPro
                     to={`/rooms/${room.id}`}
                     className="block text-base font-bold tracking-tight text-fg hover:text-accent transition-colors line-clamp-1"
                   >
-                    Room {room.room_number} &mdash; {item.propertyName}
+                    Room {room.room_number} · {item.propertyName}
                   </Link>
 
                   <p className="flex items-center gap-1 text-xs text-muted">

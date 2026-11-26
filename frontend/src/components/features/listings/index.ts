@@ -39,6 +39,7 @@ export {
   filterPropertiesByQuickMode,
   extractFeaturedVacantRooms,
   computeListingTotals,
+  computeLowestRent,
   extractPrimaryLandlordContact,
   type ListingQuickMode,
   type PublicCatalogTab,

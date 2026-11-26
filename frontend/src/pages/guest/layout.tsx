@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { ArrowRight, Building2, LogIn, Menu, Phone, X } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
@@ -25,10 +25,50 @@ const NAV_LINKS: PublicNavLink[] = [
   { label: "Contact", to: "/#contact", isHashLink: true, matchHash: "#contact" },
 ];
 
+/** Smooth-scrolls to an in-page section, retrying while a lazy page is still mounting. */
+function scrollToHashTarget(id: string, attempts = 12) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (attempts > 0) {
+    window.setTimeout(() => scrollToHashTarget(id, attempts - 1), 100);
+  }
+}
+
 export default function PublicLayout() {
   const { user } = useAuth();
   const { pathname, hash, search } = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Scroll to #section after in-app navigation (e.g. from /properties to /#contact)
+  useEffect(() => {
+    if (pathname !== "/" || !hash) return;
+    const timer = window.setTimeout(() => scrollToHashTarget(hash.slice(1)), 60);
+    return () => window.clearTimeout(timer);
+  }, [pathname, hash]);
+
+  // Turn "/#section" anchors into client-side navigation instead of full page reloads
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      const anchor = (e.target as HTMLElement | null)?.closest?.("a");
+      const href = anchor?.getAttribute("href");
+      if (!href || !href.startsWith("/#")) return;
+      e.preventDefault();
+      if (pathname === "/" && hash === href.slice(1)) {
+        scrollToHashTarget(href.slice(2));
+      } else {
+        navigate(href);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [pathname, hash, navigate]);
 
   const portalPath = user?.role === "admin" ? "/admin/dashboard" : "/tenant/dashboard";
   const portalLabel = user?.role === "admin" ? "Manager Portal" : "Tenant Portal";
@@ -148,7 +188,7 @@ export default function PublicLayout() {
                 <a href="/#contact" className="hidden md:inline-flex">
                   <Button size="md" variant="primary" className="h-9 rounded-xl font-semibold">
                     <Phone className="h-3.5 w-3.5" />
-                    <span>Get in Touch</span>
+                    <span>Book a Viewing</span>
                   </Button>
                 </a>
               </>

@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { ArrowRight, Building2, CheckCircle2, Phone } from "lucide-react";
+import { Link } from "react-router";
+import { ArrowRight, CalendarCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/formatters";
 
 interface PublicHeroSectionProps {
   totalBuildings: number;
   totalVacant: number;
+  lowestRent?: number | null;
   loading: boolean;
   onExploreClick: () => void;
 }
@@ -12,96 +15,102 @@ interface PublicHeroSectionProps {
 export function PublicHeroSection({
   totalBuildings,
   totalVacant,
+  lowestRent = null,
   loading,
   onExploreClick,
 }: PublicHeroSectionProps) {
   const [imageError, setImageError] = useState(false);
+  const showFacts = !loading && totalBuildings > 0;
 
   return (
-    <section className="relative overflow-hidden bg-[#eef3fa] dark:bg-[#0d1424] border-b border-edge">
-      {/* Architectural residence photography positioned on the right, fading smoothly left */}
+    <section className="relative overflow-hidden border-b border-edge bg-app">
+      {/* Photo on the right, fading into the page background so text stays readable */}
       {!imageError && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 select-none"
-        >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none">
           <img
             src="/images/hero-residence.jpg"
             alt=""
+            fetchPriority="high"
+            decoding="async"
             onError={() => setImageError(true)}
-            className="h-full w-full object-cover object-right lg:object-[72%_center] opacity-90 dark:opacity-35"
+            className="h-full w-full object-cover object-[72%_center] opacity-90 dark:opacity-40"
           />
-          {/* Light mode directional readability fade */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#f4f7fb] via-[#f4f7fb]/92 via-45% to-[#f4f7fb]/15 dark:hidden" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f4f7fb] via-transparent to-[#f4f7fb]/30 lg:hidden dark:hidden" />
-          {/* Dark mode directional readability fade */}
-          <div className="hidden dark:block absolute inset-0 bg-gradient-to-r from-[#0b0f17] via-[#0b0f17]/90 via-50% to-[#0b0f17]/35" />
-          <div className="hidden dark:block absolute inset-0 bg-gradient-to-t from-[#0b0f17] via-transparent to-[#0b0f17]/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-app via-app/90 via-45% to-app/10" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-app to-transparent" />
         </div>
       )}
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-20 sm:pt-14 sm:pb-24 lg:pt-16 lg:pb-28">
-        <div className="max-w-xl space-y-5">
-          {/* Eyebrow pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-edge bg-card/95 px-3.5 py-1.5 text-xs font-semibold text-fg-soft shadow-soft backdrop-blur-sm">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-soft text-accent">
-              <Building2 className="h-3 w-3" />
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-20 pb-32">
+        <div className="max-w-2xl space-y-7">
+          {!loading && totalVacant > 0 && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-success-border bg-success-bg px-3.5 py-1.5 text-xs font-semibold text-success-fg">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-fg opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success-fg" />
+              </span>
+              {totalVacant} {totalVacant === 1 ? "room" : "rooms"} open now
             </span>
-            <span>Direct Landlord-Managed Residential Units</span>
-          </div>
+          )}
 
-          {/* Editorial headline */}
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-fg leading-[1.12]">
-              Find a Verified Room Ready to Move In
+          <div className="space-y-4">
+            <h1 className="text-5xl font-extrabold tracking-tight text-fg leading-[1.08]">
+              Rooms for rent, with the real price up front.
             </h1>
-            <p className="text-sm sm:text-base text-fg-soft leading-relaxed max-w-lg">
-              Compare real monthly rates and move-in terms upfront, inspect rooms in person
-              with the property manager, and apply online with no broker fees.
+            <p className="max-w-lg text-lg text-fg-soft leading-relaxed">
+              See the monthly rent, advance and deposit before you ask. Visit in person, then
+              apply online when you are ready.
             </p>
           </div>
 
-          {/* Primary CTAs */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               size="lg"
               onClick={onExploreClick}
-              className="h-11 rounded-xl px-5 text-sm font-semibold w-full sm:w-auto"
+              className="h-12 rounded-xl px-6 text-sm font-semibold"
             >
-              <span>Explore Properties</span>
+              <span>Browse available rooms</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
 
-            <a href="#contact" className="w-full sm:w-auto">
+            <a href="/#contact">
               <Button
                 type="button"
                 variant="secondary"
                 size="lg"
-                className="h-11 rounded-xl px-5 text-sm font-semibold w-full bg-card/95 backdrop-blur-sm"
+                className="h-12 rounded-xl px-6 text-sm font-semibold"
               >
-                <Phone className="h-4 w-4 text-accent" />
-                <span>Inquire or Visit</span>
+                <CalendarCheck2 className="h-4 w-4 text-accent" />
+                <span>Book a viewing</span>
               </Button>
             </a>
+
+            <Link
+              to="/login"
+              className="px-2 text-sm font-semibold text-fg-soft underline-offset-4 hover:text-accent hover:underline"
+            >
+              Tenant sign in
+            </Link>
           </div>
 
-          {/* Grounded live inventory indicator */}
-          {!loading && totalBuildings > 0 && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs font-medium text-fg-soft">
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-success-fg" />
-                <strong className="text-fg tabular-nums">{totalVacant}</strong> vacant{" "}
-                {totalVacant === 1 ? "unit" : "units"} open now
-              </span>
-              <span className="text-edge-strong" aria-hidden="true">
-                &bull;
-              </span>
-              <span>
-                Across <strong className="text-fg tabular-nums">{totalBuildings}</strong> managed{" "}
-                {totalBuildings === 1 ? "building" : "buildings"}
-              </span>
-            </div>
+          {showFacts && (
+            <dl className="flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-edge pt-6">
+              <div className="flex flex-col-reverse">
+                <dt className="text-xs text-muted">
+                  {totalBuildings === 1 ? "managed building" : "managed buildings"}
+                </dt>
+                <dd className="text-2xl font-extrabold tabular-nums text-fg">{totalBuildings}</dd>
+              </div>
+              {lowestRent != null && (
+                <div className="flex flex-col-reverse">
+                  <dt className="text-xs text-muted">lowest open room</dt>
+                  <dd className="text-2xl font-extrabold tabular-nums text-fg">
+                    {formatCurrency(lowestRent)}
+                    <span className="text-sm font-medium text-muted"> /mo</span>
+                  </dd>
+                </div>
+              )}
+            </dl>
           )}
         </div>
       </div>

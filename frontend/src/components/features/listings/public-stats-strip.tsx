@@ -1,59 +1,48 @@
-import { Building2, DoorOpen, MapPin, ShieldCheck } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 import type { PublicListingTotals } from "./listing-helpers";
 
 interface PublicStatsStripProps {
   totals: PublicListingTotals;
   loading: boolean;
+  lowestRent?: number | null;
 }
 
-export function PublicStatsStrip({ totals, loading }: PublicStatsStripProps) {
+/**
+ * Real availability numbers only: buildings, open rooms, and the lowest open rent.
+ */
+export function PublicStatsStrip({ totals, loading, lowestRent = null }: PublicStatsStripProps) {
+  if (!loading && totals.totalBuildings === 0) return null;
+
   const items = [
     {
-      icon: Building2,
       value: loading ? "—" : String(totals.totalBuildings),
-      label: totals.totalBuildings === 1 ? "Managed Building" : "Managed Buildings",
+      label: totals.totalBuildings === 1 ? "Managed building" : "Managed buildings",
     },
     {
-      icon: DoorOpen,
       value: loading ? "—" : String(totals.totalVacant),
-      label: totals.totalVacant === 1 ? "Vacant Unit Open" : "Vacant Units Open",
+      label: totals.totalVacant === 1 ? "Room open now" : "Rooms open now",
     },
     {
-      icon: MapPin,
-      value: loading ? "—" : String(totals.totalListedRooms),
-      label: "Published Units",
-    },
-    {
-      icon: ShieldCheck,
-      value: "0%",
-      label: "Broker Fees",
+      value: loading || lowestRent == null ? "—" : formatCurrency(lowestRent),
+      label: "Lowest monthly rent",
     },
   ];
 
   return (
-    <section aria-label="AriRent leasing summary">
-      <div className="rounded-2xl bg-[#1d4ed8] dark:bg-[#17284c] px-4 py-5 sm:px-8 sm:py-7 text-white shadow-card ring-1 ring-white/10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className="flex items-center gap-3.5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/14 text-white ring-1 ring-white/15">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xl sm:text-2xl font-extrabold tracking-tight tabular-nums leading-none">
-                    {item.value}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-blue-100/90 truncate">
-                    {item.label}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <section aria-label="Availability at a glance">
+      <dl className="grid grid-cols-3 divide-x divide-edge rounded-2xl border border-edge bg-card shadow-card">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="flex flex-col-reverse gap-1 px-3 py-4 text-center sm:px-8 sm:py-6 sm:text-left"
+          >
+            <dt className="text-xs text-muted sm:text-sm">{item.label}</dt>
+            <dd className="text-xl font-extrabold tracking-tight tabular-nums text-fg sm:text-3xl">
+              {item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

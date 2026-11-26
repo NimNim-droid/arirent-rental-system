@@ -61,7 +61,7 @@ export function PublicMobileBottomNav() {
           </div>
           <span
             className={cn(
-              "text-[10px] tracking-tight leading-tight mt-0.5 truncate",
+              "text-[11px] tracking-tight leading-tight mt-0.5 truncate",
               isHomeActive ? "font-bold text-accent" : "font-medium text-muted"
             )}
           >
@@ -80,7 +80,7 @@ export function PublicMobileBottomNav() {
           </div>
           <span
             className={cn(
-              "text-[10px] tracking-tight leading-tight mt-0.5 truncate",
+              "text-[11px] tracking-tight leading-tight mt-0.5 truncate",
               isPropertiesActive ? "font-bold text-accent" : "font-medium text-muted"
             )}
           >
@@ -99,7 +99,7 @@ export function PublicMobileBottomNav() {
           </div>
           <span
             className={cn(
-              "text-[10px] tracking-tight leading-tight mt-0.5 truncate",
+              "text-[11px] tracking-tight leading-tight mt-0.5 truncate",
               isContactActive ? "font-bold text-accent" : "font-medium text-muted"
             )}
           >
@@ -115,7 +115,7 @@ export function PublicMobileBottomNav() {
               <LogIn className="h-[19px] w-[19px] stroke-[1.75]" />
             )}
           </div>
-          <span className="text-[10px] font-medium tracking-tight leading-tight mt-0.5 truncate text-muted">
+          <span className="text-[11px] font-medium tracking-tight leading-tight mt-0.5 truncate text-muted">
             {user ? "Portal" : "Sign In"}
           </span>
         </Link>

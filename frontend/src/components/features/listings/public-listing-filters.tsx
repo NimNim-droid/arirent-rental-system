@@ -29,8 +29,8 @@ const QUICK_TABS: Array<{
 ];
 
 interface PublicListingFiltersProps {
-  quickMode: ListingQuickMode;
-  onQuickModeChange: (mode: ListingQuickMode) => void;
+  quickMode?: ListingQuickMode;
+  onQuickModeChange?: (mode: ListingQuickMode) => void;
   searchInput: string;
   onSearchChange: (value: string) => void;
   city: string;
@@ -70,6 +70,8 @@ export function PublicListingFilters({
     onSubmitSearch?.();
   };
 
+  const showTabs = Boolean(quickMode && onQuickModeChange);
+
   return (
     <div
       className={cn(
@@ -77,9 +79,10 @@ export function PublicListingFilters({
         floating && "mx-auto max-w-6xl px-4 sm:px-6 -mt-12 sm:-mt-14"
       )}
     >
-      {/* Attached Quick-Mode Tab Strip */}
+      {/* Optional quick-mode toggle group (only shown when a page wires it up) */}
+      {showTabs && (
       <div
-        role="tablist"
+        role="group"
         aria-label="Filter listings by unit availability"
         className="inline-flex max-w-full overflow-x-auto no-scrollbar rounded-t-xl border border-b-0 border-edge bg-inset/95 backdrop-blur-sm p-1 shadow-soft"
       >
@@ -90,9 +93,8 @@ export function PublicListingFilters({
             <button
               key={tab.id}
               type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => onQuickModeChange(tab.id)}
+              aria-pressed={active}
+              onClick={() => onQuickModeChange?.(tab.id)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap",
                 active
@@ -106,18 +108,22 @@ export function PublicListingFilters({
           );
         })}
       </div>
+      )}
 
-      {/* Elevated Floating Search Form Card */}
+      {/* Floating Search Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-b-2xl rounded-tr-2xl border border-edge bg-card p-4 sm:p-5 shadow-pop"
+        className={cn(
+          "border border-edge bg-card p-4 sm:p-5 shadow-pop",
+          showTabs ? "rounded-b-2xl rounded-tr-2xl" : "rounded-2xl"
+        )}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-3.5 items-end">
           {/* Search query */}
           <div className="sm:col-span-2 lg:col-span-4 space-y-1.5">
             <label
               htmlFor="listingSearch"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-muted"
+              className="block text-xs font-medium text-muted"
             >
               Location or Building
             </label>
@@ -138,7 +144,7 @@ export function PublicListingFilters({
           <div className="lg:col-span-2 space-y-1.5">
             <label
               htmlFor="listingCity"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-muted"
+              className="block text-xs font-medium text-muted"
             >
               City
             </label>
@@ -146,7 +152,7 @@ export function PublicListingFilters({
               id="listingCity"
               value={city}
               onChange={(e) => onCityChange(e.target.value)}
-              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem] [background-position:right_0.65rem_center] bg-no-repeat"
+              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors select-chevron"
             >
               <option value="all">All locations</option>
               {cities.map((c) => (
@@ -161,7 +167,7 @@ export function PublicListingFilters({
           <div className="lg:col-span-2 space-y-1.5">
             <label
               htmlFor="listingBudget"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-muted"
+              className="block text-xs font-medium text-muted"
             >
               Monthly Rent
             </label>
@@ -169,7 +175,7 @@ export function PublicListingFilters({
               id="listingBudget"
               value={maxRent}
               onChange={(e) => onMaxRentChange(e.target.value)}
-              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem] [background-position:right_0.65rem_center] bg-no-repeat"
+              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors select-chevron"
             >
               {RENT_BUDGET_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -183,7 +189,7 @@ export function PublicListingFilters({
           <div className="lg:col-span-2 space-y-1.5">
             <label
               htmlFor="listingCapacity"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-muted"
+              className="block text-xs font-medium text-muted"
             >
               Occupants
             </label>
@@ -191,7 +197,7 @@ export function PublicListingFilters({
               id="listingCapacity"
               value={capacity}
               onChange={(e) => onCapacityChange(e.target.value)}
-              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem] [background-position:right_0.65rem_center] bg-no-repeat"
+              className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors select-chevron"
             >
               {OCCUPANCY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>

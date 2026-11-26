@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
   Building2,
-  CheckCircle2,
   DoorOpen,
+  FileText,
   MapPin,
   RotateCcw,
   Search,
@@ -18,21 +18,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/formatters";
 import type { PublicProperty } from "@/lib/types";
-import {
-  buildPropertiesCatalogUrl,
-  type FeaturedPublicRoom,
-  type ListingQuickMode,
-} from "./listing-helpers";
+import { buildPropertiesCatalogUrl, type FeaturedPublicRoom } from "./listing-helpers";
 
 const SHORTCUTS: Array<{
-  mode: ListingQuickMode;
+  to: string;
   label: string;
   icon: typeof Building2;
 }> = [
-  { mode: "all", label: "All Units", icon: Building2 },
-  { mode: "vacant", label: "Vacant", icon: CheckCircle2 },
-  { mode: "solo", label: "Solo", icon: User },
-  { mode: "shared", label: "2+ Pax", icon: Users },
+  { to: buildPropertiesCatalogUrl({ mode: "vacant", tab: "rooms" }), label: "Open rooms", icon: DoorOpen },
+  { to: buildPropertiesCatalogUrl({ mode: "solo", tab: "rooms" }), label: "1 person", icon: User },
+  { to: buildPropertiesCatalogUrl({ mode: "shared", tab: "rooms" }), label: "2+ people", icon: Users },
+  { to: "/register", label: "Apply", icon: FileText },
 ];
 
 interface PublicMobileHomeProps {
@@ -40,6 +36,7 @@ interface PublicMobileHomeProps {
   featuredRooms: FeaturedPublicRoom[];
   loading: boolean;
   totalVacant: number;
+  lowestRent?: number | null;
   searchInput: string;
   onSearchChange: (value: string) => void;
   activeFilterCount: number;
@@ -61,6 +58,7 @@ export function PublicMobileHome({
   featuredRooms,
   loading,
   totalVacant,
+  lowestRent = null,
   searchInput,
   onSearchChange,
   activeFilterCount,
@@ -72,7 +70,6 @@ export function PublicMobileHome({
   capacity,
 }: PublicMobileHomeProps) {
   const navigate = useNavigate();
-  const [heroImgError, setHeroImgError] = useState(false);
 
   const catalogUrl = buildPropertiesCatalogUrl({
     q: searchInput,
@@ -144,61 +141,82 @@ export function PublicMobileHome({
               to={catalogUrl}
               className="inline-flex shrink-0 items-center gap-1 font-bold text-accent hover:text-accent-strong"
             >
-              <span>Open list</span>
+              <span>See all</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         )}
       </div>
 
-      {/* 2. Compact Architectural Hero Banner Card */}
-      <section className="relative overflow-hidden rounded-2xl bg-[#1d4ed8] dark:bg-[#17284c] p-5 sm:p-6 text-white shadow-card ring-1 ring-white/10">
-        {!heroImgError && (
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none">
-            <img
-              src="/images/hero-residence.jpg"
-              alt=""
-              onError={() => setHeroImgError(true)}
-              className="h-full w-full object-cover object-right opacity-45"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#1d4ed8] via-[#1d4ed8]/90 via-55% to-[#1d4ed8]/20 dark:from-[#17284c] dark:via-[#17284c]/92 dark:to-[#17284c]/25" />
-          </div>
-        )}
+      {/* 2. Hero */}
+      <section className="relative overflow-hidden rounded-3xl bg-brand-navy p-6 sm:p-8 text-white shadow-card ring-1 ring-white/10">
+        <Building2
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -right-8 h-44 w-44 text-white/5"
+        />
 
-        <div className="relative z-10 max-w-[235px] sm:max-w-xs space-y-3">
-          <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
-              Find Your Next Verified Room
+        <div className="relative max-w-md space-y-4">
+          {!loading && totalVacant > 0 && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-brand-gold">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-gold opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-gold" />
+              </span>
+              {totalVacant} {totalVacant === 1 ? "room" : "rooms"} open now
+            </span>
+          )}
+
+          <div className="space-y-2">
+            <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight leading-[1.1]">
+              Rooms for rent, with the real price up front.
             </h1>
-            <p className="text-xs text-blue-100/95 leading-relaxed">
-              Direct landlord-managed rentals with transparent monthly rates and move-in terms.
+            <p className="text-sm sm:text-base text-white/75 leading-relaxed">
+              See rent, advance and deposit before you ask. Visit in person, then apply online.
+              {!loading && lowestRent != null && (
+                <>
+                  {" "}
+                  Rooms from{" "}
+                  <strong className="font-bold text-white tabular-nums">
+                    {formatCurrency(lowestRent)}
+                  </strong>
+                  /mo.
+                </>
+              )}
             </p>
           </div>
 
-          <Link
-            to="/properties"
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-xs font-bold text-[#1d4ed8] shadow-soft hover:bg-blue-50 active:scale-95 transition-all"
-          >
-            <span>Explore Properties</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            <Link
+              to={buildPropertiesCatalogUrl({ mode: "vacant", tab: "rooms" })}
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-brand-navy transition-transform active:scale-95"
+            >
+              <span>Browse rooms</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/register"
+              className="inline-flex h-11 items-center rounded-xl border border-white/25 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10 active:scale-95"
+            >
+              Apply
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* 3. Quick Category Icon Shortcuts */}
-      <nav aria-label="Quick property filters" className="grid grid-cols-4 gap-2">
+      {/* 3. Quick Shortcuts */}
+      <nav aria-label="Quick links" className="grid grid-cols-4 gap-2">
         {SHORTCUTS.map((item) => {
           const Icon = item.icon;
           return (
             <Link
-              key={item.mode}
-              to={buildPropertiesCatalogUrl({ mode: item.mode })}
-              className="group flex flex-col items-center gap-1.5 py-1 active:scale-95 transition-transform"
+              key={item.label}
+              to={item.to}
+              className="group flex flex-col items-center gap-2 py-1 active:scale-95 transition-transform"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-edge bg-card text-accent shadow-card group-hover:border-accent-border group-hover:bg-accent-soft transition-colors">
-                <Icon className="h-5 w-5" />
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-edge bg-card text-accent shadow-card group-hover:border-accent-border group-hover:bg-accent-soft transition-colors">
+                <Icon className="h-6 w-6" />
               </span>
-              <span className="text-xs font-semibold text-fg-soft truncate max-w-full">
+              <span className="text-[13px] font-medium text-fg-soft truncate max-w-full">
                 {item.label}
               </span>
             </Link>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowRight, Building2, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMediaQuery } from "@/lib/use-media-query";
 import {
   FeaturedUnitsSection,
   LeasingStepsSection,
@@ -19,6 +20,7 @@ import {
   PublicStatsStrip,
   ScheduleVisitModal,
   buildPropertiesCatalogUrl,
+  computeLowestRent,
   usePublicListings,
 } from "@/components/features/listings";
 
@@ -60,52 +62,59 @@ export default function PublicListingsPage() {
     setVisitProperty,
   } = usePublicListings();
 
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const lowestRent = useMemo(() => computeLowestRent(listings), [listings]);
+
   return (
     <div>
-      {/* ================= Mobile Phone App-Style Home (< lg) ================= */}
-      <PublicMobileHome
-        listings={visibleListings}
-        featuredRooms={featuredRooms}
-        loading={loading}
-        totalVacant={totals.totalVacant}
-        searchInput={searchInput}
-        onSearchChange={setSearchInput}
-        activeFilterCount={activeFilterCount}
-        hasActiveFilters={hasActiveFilters}
-        onClearFilters={clearFilters}
-        onOpenFilterSheet={() => setFilterSheetOpen(true)}
-        city={city}
-        maxRent={maxRent}
-        capacity={capacity}
-      />
-
-      {/* ================= Desktop Architectural Hero & Floating Search (>= lg) ================= */}
-      <div className="hidden lg:block">
-        <PublicHeroSection
-          totalBuildings={totals.totalBuildings}
-          totalVacant={totals.totalVacant}
+      {/* Mobile and tablet: app-style home. Only one hero is ever mounted. */}
+      {!isDesktop && (
+        <PublicMobileHome
+          listings={visibleListings}
+          featuredRooms={featuredRooms}
           loading={loading}
-          onExploreClick={() => scrollToSection("properties")}
-        />
-
-        <PublicListingFilters
-          quickMode={quickMode}
-          onQuickModeChange={setQuickMode}
+          totalVacant={totals.totalVacant}
+          lowestRent={lowestRent}
           searchInput={searchInput}
           onSearchChange={setSearchInput}
-          city={city}
-          onCityChange={setCity}
-          cities={cities}
-          maxRent={maxRent}
-          onMaxRentChange={setMaxRent}
-          capacity={capacity}
-          onCapacityChange={setCapacity}
+          activeFilterCount={activeFilterCount}
           hasActiveFilters={hasActiveFilters}
-          resultCount={visibleListings.length}
           onClearFilters={clearFilters}
-          onSubmitSearch={() => scrollToSection("properties")}
+          onOpenFilterSheet={() => setFilterSheetOpen(true)}
+          city={city}
+          maxRent={maxRent}
+          capacity={capacity}
         />
-      </div>
+      )}
+
+      {/* Desktop: hero with floating search */}
+      {isDesktop && (
+        <>
+          <PublicHeroSection
+            totalBuildings={totals.totalBuildings}
+            totalVacant={totals.totalVacant}
+            lowestRent={lowestRent}
+            loading={loading}
+            onExploreClick={() => scrollToSection("properties")}
+          />
+
+          <PublicListingFilters
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            city={city}
+            onCityChange={setCity}
+            cities={cities}
+            maxRent={maxRent}
+            onMaxRentChange={setMaxRent}
+            capacity={capacity}
+            onCapacityChange={setCapacity}
+            hasActiveFilters={hasActiveFilters}
+            resultCount={visibleListings.length}
+            onClearFilters={clearFilters}
+            onSubmitSearch={() => scrollToSection("properties")}
+          />
+        </>
+      )}
 
       {/* Main Content Container */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8 lg:pt-16 space-y-12 lg:space-y-20">
@@ -117,14 +126,11 @@ export default function PublicListingsPage() {
         >
           <div className="flex items-end justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
-                Browse by Property
-              </p>
               <h2 className="text-3xl font-extrabold tracking-tight text-fg">
-                Explore Managed Buildings
+                Buildings with open rooms
               </h2>
               <p className="text-sm text-muted">
-                Inspect verified locations, amenities, and open units directly managed by AriRent.
+                Locations, amenities and open units, managed directly by AriRent.
               </p>
             </div>
 
@@ -217,7 +223,7 @@ export default function PublicListingsPage() {
         </div>
 
         {/* Shared Across Mobile & Desktop: Live Metrics Strip */}
-        <PublicStatsStrip totals={totals} loading={loading} />
+        <PublicStatsStrip totals={totals} loading={loading} lowestRent={lowestRent} />
 
         {/* Step-by-Step Leasing Process */}
         <LeasingStepsSection />
