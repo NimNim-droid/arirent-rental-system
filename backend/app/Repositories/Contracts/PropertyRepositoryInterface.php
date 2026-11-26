@@ -18,4 +18,18 @@ interface PropertyRepositoryInterface
     public function update(int $id, array $attributes): Property;
 
     public function delete(int $id): bool;
+
+    /**
+     * Properties that have at least one published room, with the number of
+     * available rooms and the lowest available rent matching the filters.
+     *
+     * @param  array{q?: string, city?: string, min_rent?: float, max_rent?: float, capacity?: int}  $filters
+     */
+    public function getPublicListings(array $filters = []): Collection;
+
+    /**
+     * A single property as shown to the public: building photos plus its
+     * published rooms (any status) with their photos.
+     */
+    public function findPublicListing(int $id): ?Property;
 }

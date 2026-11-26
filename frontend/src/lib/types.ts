@@ -34,8 +34,10 @@ export interface RegisterPayload {
   phone: string;
   password: string;
   password_confirmation: string;
-  property_id: string;
-  room_number: string;
+  property_id?: string;
+  room_number?: string;
+  room_id?: string;
+  inquiry_id?: string;
 }
 
 export interface RegisterResponse {
@@ -50,13 +52,34 @@ export interface RegisterResponse {
   };
 }
 
+export interface ListingPhoto {
+  id: string;
+  property_id: string;
+  room_id?: string | null;
+  url: string | null;
+  sort_order: number;
+  is_cover: boolean;
+}
+
 export interface Property {
   id: string;
   name: string;
   city: string;
   address: string;
+  description?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  messenger_url?: string | null;
+  house_rules?: string | null;
+  amenities?: string[];
   rooms_count?: number;
   occupied_count?: number;
+  listed_rooms_count?: number;
+  available_rooms_count?: number;
+  cover_photo_url?: string | null;
+  photos?: ListingPhoto[];
+  rooms?: Room[];
 }
 
 export interface Room {
@@ -65,9 +88,127 @@ export interface Room {
   room_number: string;
   rent: number;
   status: "vacant" | "reserved" | "occupied";
+  description?: string | null;
+  capacity?: number;
+  floor_area?: number | null;
+  amenities?: string[];
+  advance_months?: number;
+  deposit_months?: number;
+  is_listed?: boolean;
+  cover_photo_url?: string | null;
+  photos?: ListingPhoto[];
   property?: Property;
   rooms_count?: number;
   occupied_count?: number;
+}
+
+export interface PublicSiblingRoom {
+  id: string;
+  room_number: string;
+  rent: number;
+  capacity: number;
+  floor_area?: number | null;
+  cover_photo_url?: string | null;
+}
+
+export interface PublicRoom {
+  id: string;
+  property_id: string;
+  room_number: string;
+  rent: number;
+  status: "vacant" | "reserved" | "occupied";
+  is_available: boolean;
+  description?: string | null;
+  capacity: number;
+  floor_area?: number | null;
+  amenities: string[];
+  advance_months: number;
+  deposit_months: number;
+  move_in_total: number;
+  cover_photo_url?: string | null;
+  photos: ListingPhoto[];
+  property?: {
+    id: string;
+    name: string;
+    city: string;
+    address: string;
+    description?: string | null;
+    contact_name?: string | null;
+    contact_phone?: string | null;
+    contact_email?: string | null;
+    messenger_url?: string | null;
+    house_rules?: string | null;
+    amenities: string[];
+    cover_photo_url?: string | null;
+    photos: ListingPhoto[];
+    other_available_rooms: PublicSiblingRoom[];
+  };
+}
+
+export interface PublicProperty {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  description?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  messenger_url?: string | null;
+  house_rules?: string | null;
+  amenities: string[];
+  listed_rooms_count: number;
+  available_rooms_count: number;
+  starting_rent?: number | null;
+  cover_photo_url?: string | null;
+  photos: ListingPhoto[];
+  rooms: PublicRoom[];
+}
+
+export type InquiryStatus = "new" | "scheduled" | "visited" | "converted" | "cancelled";
+export type PreferredVisitTime = "morning" | "afternoon" | "evening";
+
+export interface Inquiry {
+  id: string;
+  property_id: string;
+  room_id?: string | null;
+  tenant_id?: string | null;
+  name: string;
+  phone: string;
+  email?: string | null;
+  preferred_date?: string | null;
+  preferred_time?: PreferredVisitTime | null;
+  message?: string | null;
+  status: InquiryStatus;
+  scheduled_at?: string | null;
+  admin_notes?: string | null;
+  created_at?: string;
+  property?: {
+    id: string;
+    name: string;
+    city: string;
+    address: string;
+  } | null;
+  room?: {
+    id: string;
+    room_number: string;
+    rent: number;
+    status: string;
+  } | null;
+  tenant?: {
+    id: string;
+    name: string;
+    status: string;
+    room: string;
+  } | null;
+}
+
+export interface InquiryStatusCounts {
+  new: number;
+  scheduled: number;
+  visited: number;
+  converted: number;
+  cancelled: number;
 }
 
 export interface Tenant {
@@ -270,6 +411,7 @@ export interface DashboardStats {
   total_rooms: number;
   pending_applications: number;
   pending_payments: number;
+  pending_inquiries?: number;
   recent_maintenance: MaintenanceTicket[];
 }
 

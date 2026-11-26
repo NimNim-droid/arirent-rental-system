@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\Property;
 use App\Models\Room;
+use App\Repositories\Contracts\ListingPhotoRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PublicFile;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +19,8 @@ class PropertyService
     public function __construct(
         protected PropertyRepositoryInterface $propertyRepo,
         protected RoomRepositoryInterface $roomRepo,
-        protected TenantRepositoryInterface $tenantRepo
+        protected TenantRepositoryInterface $tenantRepo,
+        protected ListingPhotoRepositoryInterface $photoRepo
     ) {}
 
     /**
@@ -31,11 +34,11 @@ class PropertyService
     }
 
     /**
-     * Get property by ID with rooms.
+     * Get property by ID with rooms and photos.
      */
     public function getProperty(int $id): ?Property
     {
-        return $this->propertyRepo->find($id, ['rooms']);
+        return $this->propertyRepo->find($id, ['photos', 'rooms.photos']);
     }
 
     /**
@@ -60,7 +63,7 @@ class PropertyService
 
         $this->forgetPropertyCaches($id);
 
-        return $property;
+        return $property->load('photos');
     }
 
     /**
@@ -79,6 +82,11 @@ class PropertyService
 
         if ($property->occupied_rooms > 0) {
             throw new \RuntimeException('Cannot delete property with occupied rooms. Please vacate or reassign tenants first.');
+        }
+
+        $photos = $this->photoRepo->getByProperty($id);
+        foreach ($photos as $photo) {
+            PublicFile::delete($photo->path);
         }
 
         $this->roomRepo->deleteByPropertyId($id);
@@ -112,7 +120,7 @@ class PropertyService
 
         $this->forgetPropertyCaches((int) $room->property_id);
 
-        return $room;
+        return $room->load('photos');
     }
 
     /**
@@ -169,7 +177,7 @@ class PropertyService
      */
     public function deleteRoom(int $id): bool
     {
-        $room = $this->roomRepo->find($id);
+        $room = $this->roomRepo->find($id, ['photos']);
         if (! $room) {
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Room not found.');
         }
@@ -179,6 +187,10 @@ class PropertyService
         }
 
         $propertyId = (int) $room->property_id;
+        foreach ($room->photos as $photo) {
+            PublicFile::delete($photo->path);
+        }
+
         $deleted = $this->roomRepo->delete($id);
 
         $this->forgetPropertyCaches($propertyId);

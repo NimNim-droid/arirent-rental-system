@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
 use App\Repositories\Contracts\ExcessChargeRepositoryInterface;
+use App\Repositories\Contracts\InquiryRepositoryInterface;
+use App\Repositories\Contracts\ListingPhotoRepositoryInterface;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
@@ -16,6 +18,8 @@ use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentBillRepository;
 use App\Repositories\Eloquent\EloquentExcessChargeRepository;
+use App\Repositories\Eloquent\EloquentInquiryRepository;
+use App\Repositories\Eloquent\EloquentListingPhotoRepository;
 use App\Repositories\Eloquent\EloquentMaintenanceRepository;
 use App\Repositories\Eloquent\EloquentPaymentRepository;
 use App\Repositories\Eloquent\EloquentPropertyRepository;
@@ -44,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ReadingRepositoryInterface::class, EloquentReadingRepository::class);
         $this->app->bind(PropertyRepositoryInterface::class, EloquentPropertyRepository::class);
         $this->app->bind(RoomRepositoryInterface::class, EloquentRoomRepository::class);
+        $this->app->bind(ListingPhotoRepositoryInterface::class, EloquentListingPhotoRepository::class);
+        $this->app->bind(InquiryRepositoryInterface::class, EloquentInquiryRepository::class);
         $this->app->bind(MaintenanceRepositoryInterface::class, EloquentMaintenanceRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, EloquentSettingsRepository::class);
         $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
@@ -72,6 +78,13 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(3)->by($request->ip()),
                 Limit::perHour(10)->by($request->ip()),
+            ];
+        });
+
+        RateLimiter::for('inquiries', function (Request $request) {
+            return [
+                Limit::perMinute(5)->by($request->ip()),
+                Limit::perHour(20)->by($request->ip()),
             ];
         });
     }

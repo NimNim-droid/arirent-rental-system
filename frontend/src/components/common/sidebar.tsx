@@ -9,6 +9,7 @@ import {
   FolderClosed,
   LogOut,
   Building2,
+  CalendarClock,
   PanelLeftClose,
   PanelLeftOpen,
   ReceiptText,
@@ -53,6 +54,7 @@ const ADMIN_GROUPS: NavGroup[] = [
     section: "Portfolio",
     items: [
       { to: "/admin/properties", label: "Properties & Units", icon: Building2 },
+      { to: "/admin/inquiries", label: "Visit Inquiries", icon: CalendarClock },
       { to: "/admin/tenants", label: "Tenants", icon: Users },
     ],
   },

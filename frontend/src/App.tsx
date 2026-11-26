@@ -4,16 +4,22 @@ import { PageLoading } from "@/components/common/page-loading";
 import { useAuth } from "@/lib/auth-context";
 
 // Layouts (loaded statically so shell renders without chunk delay)
+import PublicLayout from "@/pages/guest/layout";
 import AdminLayout from "@/pages/admin/layout";
 import TenantLayout from "@/pages/tenant/layout";
 
-// Lazy-loaded guest pages
+// Lazy-loaded public listing & guest pages
+const PublicListingsPage = lazy(() => import("@/pages/guest/listings"));
+const PublicPropertyDetailPage = lazy(() => import("@/pages/guest/property-detail"));
+const PublicRoomDetailPage = lazy(() => import("@/pages/guest/room-detail"));
 const LoginPage = lazy(() => import("@/pages/guest/login"));
 const RegisterPage = lazy(() => import("@/pages/guest/register"));
 
 // Lazy-loaded admin portal pages
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminProperties = lazy(() => import("@/pages/admin/properties"));
+const AdminPropertyListing = lazy(() => import("@/pages/admin/property-listing"));
+const AdminInquiries = lazy(() => import("@/pages/admin/inquiries"));
 const AdminTenants = lazy(() => import("@/pages/admin/tenants"));
 const AdminUtilities = lazy(() => import("@/pages/admin/utilities"));
 const AdminBilling = lazy(() => import("@/pages/admin/billing"));
@@ -50,7 +56,14 @@ export default function App() {
       <ScrollToTop />
       <Suspense fallback={<PageLoading />}>
         <Routes>
-          {/* Public Routes */}
+          {/* Public Property Showcase & Viewing Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<PublicListingsPage />} />
+            <Route path="/properties/:id" element={<PublicPropertyDetailPage />} />
+            <Route path="/rooms/:id" element={<PublicRoomDetailPage />} />
+          </Route>
+
+          {/* Guest Auth & Room Application Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -59,6 +72,8 @@ export default function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="properties" element={<AdminProperties />} />
+            <Route path="properties/:id/listing" element={<AdminPropertyListing />} />
+            <Route path="inquiries" element={<AdminInquiries />} />
             <Route path="tenants" element={<AdminTenants />} />
             <Route path="utilities" element={<AdminUtilities />} />
             <Route path="billing" element={<AdminBilling />} />
@@ -79,7 +94,7 @@ export default function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

@@ -5,12 +5,20 @@ import type { Property, Room } from "@/lib/types";
 interface RoomQuery {
   property_id?: string;
   status?: string;
+  is_listed?: boolean;
 }
 
 export interface CreatePropertyData {
   name: string;
   city: string;
   address: string;
+  description?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  messenger_url?: string | null;
+  house_rules?: string | null;
+  amenities?: string[];
 }
 
 export interface CreateRoomData {
@@ -18,6 +26,22 @@ export interface CreateRoomData {
   room_number: string;
   rent: number;
   status?: "vacant" | "reserved" | "occupied";
+  description?: string | null;
+  capacity?: number;
+  floor_area?: number | null;
+  amenities?: string[];
+  advance_months?: number;
+  deposit_months?: number;
+  is_listed?: boolean;
+}
+
+export type UpdateRoomData = Partial<Omit<CreateRoomData, "property_id">>;
+
+function invalidatePropertyCaches(): void {
+  clientCache.invalidate("properties");
+  clientCache.invalidate("rooms");
+  clientCache.invalidate("listings");
+  clientCache.invalidate("dashboard");
 }
 
 export const propertiesService = {
@@ -30,25 +54,19 @@ export const propertiesService = {
 
   async createProperty(data: CreatePropertyData): Promise<Property> {
     const res = await api.post<{ message: string; data: Property }>("/properties", data);
-    clientCache.invalidate("properties");
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
     return res.data.data;
   },
 
   async updateProperty(id: string, data: Partial<CreatePropertyData>): Promise<Property> {
     const res = await api.put<{ message: string; data: Property }>(`/properties/${id}`, data);
-    clientCache.invalidate("properties");
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
     return res.data.data;
   },
 
   async deleteProperty(id: string): Promise<void> {
     await api.delete(`/properties/${id}`);
-    clientCache.invalidate("properties");
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
   },
 
   async getRooms(params?: RoomQuery): Promise<Room[]> {
@@ -61,24 +79,18 @@ export const propertiesService = {
 
   async createRoom(data: CreateRoomData): Promise<Room> {
     const res = await api.post<{ message: string; data: Room }>("/rooms", data);
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("properties");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
     return res.data.data;
   },
 
-  async updateRoom(id: string, data: Partial<{ room_number: string; rent: number; status: string }>): Promise<Room> {
+  async updateRoom(id: string, data: UpdateRoomData): Promise<Room> {
     const res = await api.put<{ message: string; data: Room }>(`/rooms/${id}`, data);
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("properties");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
     return res.data.data;
   },
 
   async deleteRoom(id: string): Promise<void> {
     await api.delete(`/rooms/${id}`);
-    clientCache.invalidate("rooms");
-    clientCache.invalidate("properties");
-    clientCache.invalidate("dashboard");
+    invalidatePropertyCaches();
   },
 };
