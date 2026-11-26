@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router";
 import {
   ArrowLeft,
-  ArrowRight,
   Check,
   DoorOpen,
   MapPin,
@@ -16,8 +15,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   ContactLandlordCard,
+  MoveInTermsCard,
   PhotoGallery,
   ScheduleVisitModal,
+  SiblingRoomsGrid,
   usePublicRoomDetail,
 } from "@/components/features/listings";
 import { formatCurrency } from "@/lib/formatters";
@@ -65,12 +66,9 @@ export default function PublicRoomDetailPage() {
   }
 
   const building = room.property;
-  const advanceTotal = room.rent * room.advance_months;
-  const depositTotal = room.rent * room.deposit_months;
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-8">
-      {/* Breadcrumb */}
       <div className="flex items-center justify-between gap-3 text-xs text-muted">
         <div className="flex items-center gap-1.5 min-w-0">
           <Link to="/" className="hover:text-fg transition-colors shrink-0">
@@ -98,7 +96,6 @@ export default function PublicRoomDetailPage() {
         )}
       </div>
 
-      {/* Title & Rate Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-fg">
@@ -123,17 +120,14 @@ export default function PublicRoomDetailPage() {
         </div>
       </div>
 
-      {/* Gallery */}
       <PhotoGallery
         photos={combinedPhotos}
         title={`Room ${room.room_number} — ${building.name}`}
         kind="room"
       />
 
-      {/* Two-Column Body */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-8 space-y-6">
-          {/* Quick Specs Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Card className="p-3.5">
               <p className="text-[11px] text-muted">Unit Number</p>
@@ -168,7 +162,6 @@ export default function PublicRoomDetailPage() {
             </Card>
           </div>
 
-          {/* Unit Description & Amenities */}
           <Card className="p-5 sm:p-6 space-y-5">
             <div className="space-y-2">
               <h2 className="text-sm font-semibold text-fg">Unit Description</h2>
@@ -211,53 +204,13 @@ export default function PublicRoomDetailPage() {
             )}
           </Card>
 
-          {/* Transparent Move-In Cost Summary */}
-          <Card className="p-5 sm:p-6 space-y-3.5">
-            <div>
-              <h2 className="text-sm font-semibold text-fg">Estimated Move-In Terms</h2>
-              <p className="text-xs text-muted mt-0.5">
-                Payable only after the landlord approves your application
-              </p>
-            </div>
+          <MoveInTermsCard
+            rent={room.rent}
+            advanceMonths={room.advance_months}
+            depositMonths={room.deposit_months}
+            moveInTotal={room.move_in_total}
+          />
 
-            <div className="divide-y divide-edge rounded-lg border border-edge bg-inset text-xs">
-              <div className="flex items-center justify-between px-3.5 py-2.5">
-                <span className="text-fg-soft">Monthly Base Rent</span>
-                <span className="font-medium text-fg tabular-nums">
-                  {formatCurrency(room.rent)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-3.5 py-2.5">
-                <span className="text-fg-soft">
-                  Advance Rent ({room.advance_months}{" "}
-                  {room.advance_months === 1 ? "month" : "months"})
-                </span>
-                <span className="font-medium text-fg tabular-nums">
-                  {formatCurrency(advanceTotal)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-3.5 py-2.5">
-                <span className="text-fg-soft">
-                  Security Deposit ({room.deposit_months}{" "}
-                  {room.deposit_months === 1 ? "month" : "months"})
-                </span>
-                <span className="font-medium text-fg tabular-nums">
-                  {formatCurrency(depositTotal)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-3.5 py-3 bg-card font-semibold text-fg">
-                <span>Estimated Initial Move-In Total</span>
-                <span className="text-sm tabular-nums">{formatCurrency(room.move_in_total)}</span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-muted leading-relaxed">
-              Electricity and water charges are billed monthly based on actual sub-meter readings and
-              building utility rates once your lease starts.
-            </p>
-          </Card>
-
-          {/* House Rules */}
           {building.house_rules && (
             <Card className="p-5 sm:p-6 space-y-2.5">
               <div className="flex items-center gap-2">
@@ -270,49 +223,13 @@ export default function PublicRoomDetailPage() {
             </Card>
           )}
 
-          {/* Other Vacant Units in Same Building */}
-          {building.other_available_rooms.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-fg">
-                  Other Vacant Units in {building.name}
-                </h2>
-                <Link
-                  to={`/properties/${building.id}`}
-                  className="text-xs font-medium text-accent hover:text-accent-strong"
-                >
-                  View building &rarr;
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {building.other_available_rooms.slice(0, 4).map((sibling) => (
-                  <Link key={sibling.id} to={`/rooms/${sibling.id}`}>
-                    <Card className="p-3.5 flex items-center justify-between gap-3 hover:border-edge-strong transition-colors">
-                      <div>
-                        <p className="text-sm font-semibold text-fg">
-                          Room {sibling.room_number}
-                        </p>
-                        <p className="text-xs text-muted">
-                          Up to {sibling.capacity}{" "}
-                          {sibling.capacity === 1 ? "person" : "persons"}
-                          {sibling.floor_area != null ? ` · ${sibling.floor_area} sqm` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-fg tabular-nums">
-                          {formatCurrency(sibling.rent)}
-                        </span>
-                        <ArrowRight className="h-3.5 w-3.5 text-muted" />
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          <SiblingRoomsGrid
+            buildingId={building.id}
+            buildingName={building.name}
+            rooms={building.other_available_rooms}
+          />
         </div>
 
-        {/* Sticky Right Column */}
         <aside className="lg:col-span-4 lg:sticky lg:top-20 space-y-4">
           <ContactLandlordCard
             property={building}

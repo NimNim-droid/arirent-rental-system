@@ -1,23 +1,12 @@
 import { Link, useNavigate } from "react-router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  CheckCircle2,
-  DoorOpen,
-  MapPin,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, DoorOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { ListingMediaPlaceholder } from "@/components/features/listings";
-import { useRegister } from "@/components/features/auth";
+import { SelectedRoomBanner, useRegister } from "@/components/features/auth";
 import { formatCurrency } from "@/lib/formatters";
 
 export default function RegisterPage() {
@@ -87,7 +76,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-app flex flex-col">
-      {/* Top bar */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-edge bg-card">
         <Link to="/">
           <Logo variant="full" size="sm" subtitle="Residential Leasing" />
@@ -103,7 +91,6 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {/* Main content */}
       <div className="flex flex-1 items-start justify-center p-4 py-8 overflow-y-auto">
         <div className="w-full max-w-lg space-y-5 animate-fade-in">
           <div className="space-y-1">
@@ -113,78 +100,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Selected Unit Summary Banner (when arriving from /rooms/:id) */}
-          {loadingSelectedRoom ? (
-            <Card className="p-4 space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-12 w-full" />
-            </Card>
-          ) : selectedPublicRoom ? (
-            <Card className="overflow-hidden">
-              <div className="flex items-center gap-3.5 p-3.5">
-                <div className="h-16 w-20 shrink-0 overflow-hidden rounded-md border border-edge bg-inset">
-                  {selectedPublicRoom.cover_photo_url ? (
-                    <img
-                      src={selectedPublicRoom.cover_photo_url}
-                      alt={`Room ${selectedPublicRoom.room_number}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <ListingMediaPlaceholder kind="room" label="Unit" className="h-full w-full" />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-fg truncate">
-                      Room {selectedPublicRoom.room_number} &mdash;{" "}
-                      {selectedPublicRoom.property?.name}
-                    </span>
-                    <Badge variant={selectedPublicRoom.is_available ? "success" : "warning"}>
-                      {selectedPublicRoom.is_available ? "Vacant" : selectedPublicRoom.status}
-                    </Badge>
-                  </div>
-                  {selectedPublicRoom.property && (
-                    <p className="flex items-center gap-1 text-xs text-muted truncate">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      {selectedPublicRoom.property.address}, {selectedPublicRoom.property.city}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-xs">
-                    <span className="font-semibold text-fg tabular-nums">
-                      {formatCurrency(selectedPublicRoom.rent)}/mo &middot;{" "}
-                      <span className="font-normal text-muted">
-                        <Users className="inline h-3 w-3 mr-0.5" />
-                        Up to {selectedPublicRoom.capacity}
-                      </span>
-                    </span>
-                    <Link
-                      to={`/rooms/${selectedPublicRoom.id}`}
-                      className="font-medium text-accent hover:underline"
-                    >
-                      View unit details
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            /* Helpful prompt when user opened /register without viewing listings first */
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-edge bg-card p-3.5 text-xs">
-              <div className="min-w-0">
-                <p className="font-semibold text-fg">Haven&apos;t inspected a unit yet?</p>
-                <p className="text-muted mt-0.5">
-                  View room photos, rates, and book a visit with the landlord first.
-                </p>
-              </div>
-              <Link to="/" className="shrink-0">
-                <Button variant="secondary" size="sm">
-                  Browse Units
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-          )}
+          <SelectedRoomBanner room={selectedPublicRoom} loading={loadingSelectedRoom} />
 
           <Card className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -224,7 +140,6 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {/* Show building/room dropdowns only when not pre-locked to a specific listing room */}
               {!selectedPublicRoom && !loadingSelectedRoom && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
