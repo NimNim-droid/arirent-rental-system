@@ -124,7 +124,7 @@ export function PublicUnitList({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p className="text-base font-bold text-fg tabular-nums">
+                      <p className="text-base font-extrabold text-accent tabular-nums">
                         {formatCurrency(room.rent)}
                       </p>
                       <p className="text-[11px] text-muted">per month</p>

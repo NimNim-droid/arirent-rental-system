@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Menu, LogOut } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { Building2, KeyRound, Menu, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { ChangePasswordModal } from "@/components/common/change-password-modal";
 import { useAuth } from "@/lib/auth-context";
 
 interface MobileHeaderProps {
@@ -30,6 +31,7 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
   const location = useLocation();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const name = user?.name || "";
@@ -81,8 +83,29 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
           </span>
         </div>
       </div>
-      <div className="pt-2">
+      <div className="pt-2 space-y-0.5">
+        <Link
+          to="/"
+          onClick={() => setProfileOpen(false)}
+          className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-medium text-fg-soft hover:bg-hover hover:text-fg rounded-md transition-colors"
+        >
+          <Building2 className="h-4 w-4 text-muted" />
+          <span>Public Property Listings</span>
+        </Link>
         <button
+          type="button"
+          onClick={() => {
+            setProfileOpen(false);
+            setPasswordOpen(true);
+          }}
+          className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-medium text-fg-soft hover:bg-hover hover:text-fg rounded-md transition-colors cursor-pointer"
+        >
+          <KeyRound className="h-4 w-4 text-muted" />
+          <span>Change password</span>
+        </button>
+        <div className="my-1 border-t border-edge" />
+        <button
+          type="button"
           onClick={handleLogout}
           className="flex w-full items-center gap-2 px-2.5 py-2 text-xs font-medium text-danger-fg hover:bg-danger-bg rounded-md transition-colors cursor-pointer"
         >
@@ -96,72 +119,78 @@ export function MobileHeader({ title, role = "admin", onMenuClick }: MobileHeade
   // Tenant header: avatar on left, centered brand, theme toggle on right matching mobile redesign
   if (isTenant) {
     return (
-      <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-card/85 px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top,0px))] backdrop-blur-xl border-b border-edge/80">
-        <div className="relative flex min-w-0 items-center gap-2.5" ref={profileRef}>
-          <button
-            onClick={() => setProfileOpen((o) => !o)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy text-xs font-bold text-white ring-2 ring-brand-gold/25 shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            title={name}
-            aria-label={`Account menu for ${name}`}
-            aria-expanded={profileOpen}
-          >
-            {initials}
-          </button>
-          {isTenantHome && (
-            <div className="min-w-0 leading-tight">
-              <p className="text-[11px] text-muted font-medium">Hello,</p>
-              <p className="truncate text-xs font-bold text-fg tracking-tight">{firstName}!</p>
-            </div>
-          )}
-          {profileOpen && accountMenu}
-        </div>
-        <Logo size="sm" />
-        <div className="flex justify-end">
-          <ThemeToggle compact />
-        </div>
-      </header>
+      <>
+        <header className="lg:hidden sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-card/85 px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top,0px))] backdrop-blur-xl border-b border-edge/80">
+          <div className="relative flex min-w-0 items-center gap-2.5" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((o) => !o)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-navy text-xs font-bold text-white ring-2 ring-brand-gold/25 shadow-soft cursor-pointer transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              title={name}
+              aria-label={`Account menu for ${name}`}
+              aria-expanded={profileOpen}
+            >
+              {initials}
+            </button>
+            {isTenantHome && (
+              <div className="min-w-0 leading-tight">
+                <p className="text-[11px] text-muted font-medium">Hello,</p>
+                <p className="truncate text-xs font-bold text-fg tracking-tight">{firstName}!</p>
+              </div>
+            )}
+            {profileOpen && accountMenu}
+          </div>
+          <Logo size="sm" />
+          <div className="flex justify-end">
+            <ThemeToggle compact />
+          </div>
+        </header>
+        <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      </>
     );
   }
 
   return (
-    <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
-      <div className="flex items-center gap-3 min-w-0">
-        {!isTenant && onMenuClick && (
-          <button
-            onClick={onMenuClick}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-edge bg-card text-fg-soft hover:bg-hover hover:text-fg transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            aria-label="Open menu"
-            title="Open menu"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-        )}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Logo variant="mark" size="sm" />
-          <div className="flex flex-col min-w-0">
-            <span className="font-semibold text-[13px] text-fg truncate leading-tight">{pageTitle}</span>
-            {isTenant && (
-              <span className="text-[10px] text-muted font-medium">AriRent Tenant</span>
-            )}
+    <>
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-edge bg-card px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
+        <div className="flex items-center gap-3 min-w-0">
+          {!isTenant && onMenuClick && (
+            <button
+              onClick={onMenuClick}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-edge bg-card text-fg-soft hover:bg-hover hover:text-fg transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          )}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Logo variant="mark" size="sm" />
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-[13px] text-fg truncate leading-tight">{pageTitle}</span>
+              {isTenant && (
+                <span className="text-[10px] text-muted font-medium">AriRent Tenant</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <ThemeToggle compact />
-        <div className="relative" ref={profileRef}>
-          <button
-            onClick={() => setProfileOpen((o) => !o)}
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            title={name}
-            aria-label={`Account menu for ${name}`}
-            aria-expanded={profileOpen}
-          >
-            {initials}
-          </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle compact />
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((o) => !o)}
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              title={name}
+              aria-label={`Account menu for ${name}`}
+              aria-expanded={profileOpen}
+            >
+              {initials}
+            </button>
 
-          {profileOpen && accountMenu}
+            {profileOpen && accountMenu}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+    </>
   );
 }

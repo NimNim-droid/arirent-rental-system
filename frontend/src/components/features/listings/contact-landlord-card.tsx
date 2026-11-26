@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { normalizeExternalUrl, sanitizePhoneHref } from "./listing-helpers";
 
 interface ContactLandlordCardProps {
   property: {
@@ -31,14 +32,6 @@ interface ContactLandlordCardProps {
   onScheduleVisit: () => void;
 }
 
-function normalizeExternalUrl(raw?: string | null): string | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
 export function ContactLandlordCard({
   property,
   applyRoom = null,
@@ -46,7 +39,7 @@ export function ContactLandlordCard({
 }: ContactLandlordCardProps) {
   const [copied, setCopied] = useState(false);
 
-  const dialPhone = property.contact_phone?.replace(/[^0-9+]/g, "") || null;
+  const dialPhone = sanitizePhoneHref(property.contact_phone);
   const messengerHref = normalizeExternalUrl(property.messenger_url);
   const contactPerson = property.contact_name || "Property Management Office";
 

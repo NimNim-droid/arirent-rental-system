@@ -23,11 +23,11 @@
   --muted: #64748b;
   --faint: #94a3b8;
 
-  /* Accent — Harmonized AriRent Slate-Navy (eliminates neon royal blue clash) */
-  --accent: #1e3a5f;
-  --accent-strong: #152945;
-  --accent-soft: #edf2f8;
-  --accent-border: #cdd9e9;
+  /* Accent — Authoritative architectural cobalt-blue for primary actions, prices & active states */
+  --accent: #1d4ed8;
+  --accent-strong: #1e40af;
+  --accent-soft: #eff6ff;
+  --accent-border: #bfdbfe;
 
   /* Brand accents (from AriRent crest) */
   --brand-navy: #1b2a4a;
@@ -187,6 +187,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -197,6 +198,7 @@
     from {
       opacity: 0.4;
     }
+
     to {
       opacity: 1;
     }
@@ -207,6 +209,7 @@
       opacity: 0;
       transform: scale(0.99);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -218,6 +221,7 @@
       opacity: 0;
       transform: translateX(-8px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -229,6 +233,7 @@
       opacity: 0;
       transform: translateX(8px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -239,6 +244,7 @@
     0% {
       background-position: -200% 0;
     }
+
     100% {
       background-position: 200% 0;
     }
@@ -320,6 +326,7 @@ select option {
 /* ============ Accessibility: reduced motion ============ */
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -363,6 +370,7 @@ select option {
 
 /* ============ Print Stylesheet ============ */
 @media print {
+
   nav,
   aside,
   header,
@@ -390,6 +398,7 @@ select option {
     transform: translateY(100%);
     opacity: 0.9;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -408,5 +417,3 @@ select option {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-

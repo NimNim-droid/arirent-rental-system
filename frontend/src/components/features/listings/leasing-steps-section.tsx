@@ -1,52 +1,74 @@
-import { CheckCircle2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { CalendarCheck2, DoorOpen, FileCheck2, Smartphone } from "lucide-react";
 
 const STEPS = [
   {
     step: "01",
+    icon: DoorOpen,
     title: "Browse Verified Units",
-    body: "Check room photos, monthly rent, capacity, inclusions, and required advance/deposit.",
+    body: "Review real room photos, monthly rent, capacity, inclusions, and required advance or deposit.",
   },
   {
     step: "02",
-    title: "Contact & Visit in Person",
-    body: "Call, message, or book a viewing schedule to inspect the building and unit with the landlord.",
+    icon: CalendarCheck2,
+    title: "Schedule a Visit",
+    body: "Book a viewing window or contact the property manager directly to inspect the unit in person.",
   },
   {
     step: "03",
-    title: "Apply & Reserve Your Room",
-    body: "Once satisfied with the unit, submit an online application to create your account and hold the room.",
+    icon: FileCheck2,
+    title: "Apply & Reserve Online",
+    body: "Submit your tenant application to hold your chosen room while the landlord reviews and approves it.",
   },
   {
     step: "04",
-    title: "Landlord Approval & Portal",
-    body: "After approval, sign in to your resident portal to view utility readings, statements, and pay online.",
+    icon: Smartphone,
+    title: "Manage via Resident Portal",
+    body: "Track sub-meter electricity readings, view statements, pay online, and log maintenance from your phone.",
   },
 ];
 
 export function LeasingStepsSection() {
   return (
-    <section id="how-leasing-works" className="pt-4 border-t border-edge space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-fg">How Leasing Works</h2>
-        <p className="text-xs text-muted mt-0.5">
-          Transparent step-by-step process from room inspection to moving in
+    <section
+      id="how-leasing-works"
+      aria-label="How leasing works"
+      className="scroll-mt-20 space-y-6"
+    >
+      <div className="space-y-1 max-w-xl">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
+          Simple Leasing Process
+        </p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
+          From Viewing to Move-In, <span className="text-accent">Step by Step</span>
+        </h2>
+        <p className="text-xs sm:text-sm text-muted">
+          No hidden reservations or surprise charges—inspect first, then reserve when ready.
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {STEPS.map((item) => (
-          <Card key={item.step} className="p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-semibold text-accent tabular-nums">
-                STEP {item.step}
-              </span>
-              <CheckCircle2 className="h-3.5 w-3.5 text-faint" />
+        {STEPS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.step}
+              className="rounded-2xl border border-edge bg-card p-5 shadow-card space-y-3.5"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent border border-accent-border/60">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span className="font-mono text-xs font-bold text-muted tabular-nums">
+                  {item.step}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-fg">{item.title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{item.body}</p>
+              </div>
             </div>
-            <h3 className="text-sm font-semibold text-fg">{item.title}</h3>
-            <p className="text-xs text-muted leading-relaxed">{item.body}</p>
-          </Card>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

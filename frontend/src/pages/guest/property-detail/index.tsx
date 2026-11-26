@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   ContactLandlordCard,
+  MobileListingActionBar,
   PhotoGallery,
   PublicUnitList,
   ScheduleVisitModal,
@@ -71,31 +72,35 @@ export default function PublicPropertyDetailPage() {
   const vacantRooms = property.rooms.filter((r) => r.is_available);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 pb-24 sm:pt-8 lg:pb-10 space-y-8">
       <div className="flex items-center justify-between gap-3 text-xs text-muted">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Link to="/" className="hover:text-fg transition-colors inline-flex items-center gap-1 shrink-0">
+          <Link to="/" className="hover:text-accent transition-colors inline-flex items-center gap-1 shrink-0 font-medium">
             <ArrowLeft className="h-3.5 w-3.5" />
             All Properties
           </Link>
           <span>/</span>
           <span className="truncate">{property.city}</span>
           <span>/</span>
-          <span className="font-medium text-fg truncate">{property.name}</span>
+          <span className="font-semibold text-fg truncate">{property.name}</span>
         </div>
 
-        <Badge variant={vacantRooms.length > 0 ? "success" : "neutral"} dot>
+        <Badge
+          variant={vacantRooms.length > 0 ? "success" : "neutral"}
+          dot
+          className="rounded-full px-2.5 py-0.5 shrink-0"
+        >
           {vacantRooms.length} of {property.listed_rooms_count} vacant
         </Badge>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-fg">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
             {property.name}
           </h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-            <MapPin className="h-4 w-4 shrink-0 text-faint" />
+            <MapPin className="h-4 w-4 shrink-0 text-accent" />
             <span>
               {property.address}, {property.city}
             </span>
@@ -104,10 +109,10 @@ export default function PublicPropertyDetailPage() {
 
         {property.starting_rent != null && (
           <div className="sm:text-right">
-            <p className="text-xs text-muted">Monthly rent from</p>
-            <p className="text-xl font-bold text-fg tabular-nums">
+            <p className="text-xs font-medium text-muted">Monthly rent from</p>
+            <p className="text-2xl font-extrabold text-accent tabular-nums">
               {formatCurrency(property.starting_rent)}
-              <span className="text-xs font-normal text-muted"> / month</span>
+              <span className="text-xs font-medium text-muted"> / month</span>
             </p>
           </div>
         )}
@@ -176,6 +181,14 @@ export default function PublicPropertyDetailPage() {
           />
         </aside>
       </div>
+
+      <MobileListingActionBar
+        priceLabel="Starts at"
+        priceAmount={property.starting_rent}
+        onScheduleVisit={() => openVisitForRoom(null)}
+        applyHref={vacantRooms[0] ? `/register?room=${vacantRooms[0].id}` : null}
+        applyLabel="Apply"
+      />
 
       <ScheduleVisitModal
         open={visitOpen}

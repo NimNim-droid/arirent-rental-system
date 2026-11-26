@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   ContactLandlordCard,
+  MobileListingActionBar,
   MoveInTermsCard,
   PhotoGallery,
   ScheduleVisitModal,
@@ -68,41 +69,45 @@ export default function PublicRoomDetailPage() {
   const building = room.property;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 pb-24 sm:pt-8 lg:pb-10 space-y-8">
       <div className="flex items-center justify-between gap-3 text-xs text-muted">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Link to="/" className="hover:text-fg transition-colors shrink-0">
+          <Link to="/" className="hover:text-accent transition-colors shrink-0 font-medium">
             Listings
           </Link>
           <span>/</span>
           <Link
             to={`/properties/${building.id}`}
-            className="hover:text-fg transition-colors truncate"
+            className="hover:text-accent transition-colors truncate"
           >
             {building.name}
           </Link>
           <span>/</span>
-          <span className="font-medium text-fg shrink-0">Room {room.room_number}</span>
+          <span className="font-semibold text-fg shrink-0">Room {room.room_number}</span>
         </div>
 
         {room.is_available ? (
-          <Badge variant="success" dot>
-            Vacant &amp; Open for Application
+          <Badge variant="success" dot className="rounded-full px-2.5 py-0.5 shrink-0">
+            Vacant &amp; Open
           </Badge>
         ) : room.status === "reserved" ? (
-          <Badge variant="warning">Reserved Pending Approval</Badge>
+          <Badge variant="warning" className="rounded-full px-2.5 py-0.5 shrink-0">
+            Reserved
+          </Badge>
         ) : (
-          <Badge variant="neutral">Currently Occupied</Badge>
+          <Badge variant="neutral" className="rounded-full px-2.5 py-0.5 shrink-0">
+            Occupied
+          </Badge>
         )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-fg">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
             Room {room.room_number} &mdash; {building.name}
           </h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-            <MapPin className="h-4 w-4 shrink-0 text-faint" />
+            <MapPin className="h-4 w-4 shrink-0 text-accent" />
             <span>
               {building.address}, {building.city}
             </span>
@@ -110,9 +115,9 @@ export default function PublicRoomDetailPage() {
         </div>
 
         <div className="sm:text-right">
-          <p className="text-2xl font-bold text-fg tabular-nums">
+          <p className="text-2xl sm:text-3xl font-extrabold text-accent tabular-nums">
             {formatCurrency(room.rent)}
-            <span className="text-xs font-normal text-muted"> / month</span>
+            <span className="text-xs font-medium text-muted"> / month</span>
           </p>
           <p className="text-xs text-muted tabular-nums">
             {room.advance_months} mo advance + {room.deposit_months} mo deposit
@@ -242,6 +247,14 @@ export default function PublicRoomDetailPage() {
           />
         </aside>
       </div>
+
+      <MobileListingActionBar
+        priceLabel="Monthly Rent"
+        priceAmount={room.rent}
+        onScheduleVisit={() => setVisitOpen(true)}
+        applyHref={room.is_available ? `/register?room=${room.id}` : null}
+        applyLabel="Apply Now"
+      />
 
       <ScheduleVisitModal
         open={visitOpen}

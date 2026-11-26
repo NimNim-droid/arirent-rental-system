@@ -1,7 +1,5 @@
 import { Link } from "react-router";
-import { ArrowRight, Calendar, DoorOpen, MapPin, Users } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Building2, Calendar, DoorOpen, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListingMediaPlaceholder } from "./listing-media-placeholder";
 import { formatCurrency } from "@/lib/formatters";
@@ -16,46 +14,66 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
   const vacantRooms = property.rooms.filter((r) => r.is_available);
 
   return (
-    <Card className="flex flex-col overflow-hidden hover:border-edge-strong transition-colors">
-      <Link
-        to={`/properties/${property.id}`}
-        className="group relative block h-52 w-full overflow-hidden bg-inset border-b border-edge"
-      >
-        {property.cover_photo_url ? (
-          <img
-            src={property.cover_photo_url}
-            alt={property.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-          />
-        ) : (
-          <ListingMediaPlaceholder
-            kind="property"
-            label="Click to view units & building details"
-            className="h-full w-full"
-          />
-        )}
-
-        <div className="absolute left-3 top-3 flex items-center gap-1.5">
-          {property.available_rooms_count > 0 ? (
-            <Badge variant="success" dot className="shadow-soft bg-card/95 backdrop-blur">
-              {property.available_rooms_count} vacant{" "}
-              {property.available_rooms_count === 1 ? "unit" : "units"}
-            </Badge>
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-edge bg-card shadow-card transition-all duration-200 hover:border-edge-strong hover:shadow-pop">
+      {/* Property Media */}
+      <div className="relative">
+        <Link
+          to={`/properties/${property.id}`}
+          className="relative block h-52 sm:h-56 w-full overflow-hidden bg-inset border-b border-edge"
+        >
+          {property.cover_photo_url ? (
+            <img
+              src={property.cover_photo_url}
+              alt={property.name}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
           ) : (
-            <Badge variant="neutral" className="shadow-soft bg-card/95 backdrop-blur">
-              All listed units leased
-            </Badge>
+            <ListingMediaPlaceholder
+              kind="property"
+              label="Click to view units & building details"
+              className="h-full w-full"
+            />
           )}
-        </div>
-      </Link>
 
-      <div className="flex flex-1 flex-col justify-between p-5 space-y-4">
+          {/* Top-left Status Badge */}
+          <div className="absolute left-3.5 top-3.5 flex items-center gap-1.5">
+            {property.available_rooms_count > 0 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white shadow-soft">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-200" />
+                {property.available_rooms_count} Vacant{" "}
+                {property.available_rooms_count === 1 ? "Unit" : "Units"}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-slate-900/75 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                All Units Leased
+              </span>
+            )}
+          </div>
+
+          {/* Top-right City Pill */}
+          <span className="absolute right-3.5 top-3.5 inline-flex items-center gap-1 rounded-full bg-card/92 px-2.5 py-1 text-[11px] font-semibold text-fg shadow-soft backdrop-blur-sm">
+            <MapPin className="h-3 w-3 text-accent" />
+            {property.city}
+          </span>
+        </Link>
+
+        {/* Architectural Floating Icon Badge on Seam */}
+        <div
+          aria-hidden="true"
+          className="absolute -bottom-5 left-5 flex h-10 w-10 items-center justify-center rounded-full border border-edge bg-card text-accent shadow-card"
+        >
+          <Building2 className="h-4 w-4" />
+        </div>
+      </div>
+
+      {/* Property Details */}
+      <div className="flex flex-1 flex-col justify-between p-5 pt-7 space-y-4">
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <Link
                 to={`/properties/${property.id}`}
-                className="text-base font-semibold text-fg hover:text-accent transition-colors line-clamp-1"
+                className="text-base sm:text-lg font-bold tracking-tight text-fg hover:text-accent transition-colors line-clamp-1"
               >
                 {property.name}
               </Link>
@@ -69,10 +87,10 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
 
             {property.starting_rent != null && (
               <div className="text-right shrink-0">
-                <p className="text-[11px] text-muted">Starts at</p>
-                <p className="text-sm font-bold text-fg tabular-nums">
+                <p className="text-[11px] font-medium text-muted">Starts at</p>
+                <p className="text-base font-extrabold text-accent tabular-nums leading-tight">
                   {formatCurrency(property.starting_rent)}
-                  <span className="text-xs font-normal text-muted">/mo</span>
+                  <span className="text-[11px] font-medium text-muted">/mo</span>
                 </p>
               </div>
             )}
@@ -89,13 +107,13 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
               {property.amenities.slice(0, 4).map((amenity) => (
                 <span
                   key={amenity}
-                  className="inline-flex items-center rounded border border-edge bg-inset px-2 py-0.5 text-[11px] text-fg-soft"
+                  className="inline-flex items-center rounded-full border border-edge bg-inset px-2.5 py-0.5 text-[11px] font-medium text-fg-soft"
                 >
                   {amenity}
                 </span>
               ))}
               {property.amenities.length > 4 && (
-                <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] text-muted">
+                <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium text-muted">
                   +{property.amenities.length - 4} more
                 </span>
               )}
@@ -103,19 +121,23 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
           )}
 
           {vacantRooms.length > 0 && (
-            <div className="rounded-lg border border-edge bg-inset p-2.5 space-y-1.5">
-              <p className="text-[11px] font-medium text-muted">Vacant units ready for viewing:</p>
+            <div className="rounded-xl border border-edge bg-inset/70 p-3 space-y-2">
+              <p className="text-[11px] font-semibold text-muted">
+                Vacant units open for viewing:
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {vacantRooms.slice(0, 3).map((room) => (
                   <Link
                     key={room.id}
                     to={`/rooms/${room.id}`}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-edge bg-card px-2.5 py-1 text-xs font-medium text-fg hover:border-accent hover:text-accent transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-edge bg-card px-2.5 py-1.5 text-xs font-medium text-fg hover:border-accent hover:text-accent transition-colors"
                   >
-                    <DoorOpen className="h-3 w-3 text-muted" />
+                    <DoorOpen className="h-3.5 w-3.5 text-accent" />
                     <span>Room {room.room_number}</span>
-                    <span className="text-muted">&middot;</span>
-                    <span className="tabular-nums font-semibold">{formatCurrency(room.rent)}</span>
+                    <span className="text-edge-strong">&middot;</span>
+                    <span className="tabular-nums font-bold text-accent">
+                      {formatCurrency(room.rent)}
+                    </span>
                     <span className="inline-flex items-center gap-0.5 text-[11px] text-muted">
                       <Users className="h-3 w-3" />
                       {room.capacity}
@@ -125,7 +147,7 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
                 {vacantRooms.length > 3 && (
                   <Link
                     to={`/properties/${property.id}`}
-                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-accent hover:underline"
+                    className="inline-flex items-center px-2 py-1 text-xs font-semibold text-accent hover:underline"
                   >
                     +{vacantRooms.length - 3} more
                   </Link>
@@ -135,25 +157,31 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-edge pt-3.5">
+        {/* Footer Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-edge pt-4">
           <Button
             type="button"
             variant="secondary"
-            size="sm"
+            size="md"
             onClick={() => onScheduleVisit(property)}
+            className="h-9 rounded-xl w-full sm:w-auto justify-center"
           >
-            <Calendar className="h-3.5 w-3.5" />
-            Schedule Visit
+            <Calendar className="h-3.5 w-3.5 text-accent" />
+            <span>Schedule Visit</span>
           </Button>
 
-          <Link to={`/properties/${property.id}`}>
-            <Button size="sm" variant="primary">
-              View Units ({property.listed_rooms_count})
+          <Link to={`/properties/${property.id}`} className="w-full sm:w-auto">
+            <Button
+              size="md"
+              variant="primary"
+              className="h-9 rounded-xl w-full justify-center font-semibold"
+            >
+              <span>View Units ({property.listed_rooms_count})</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
         </div>
       </div>
-    </Card>
+    </article>
   );
 }

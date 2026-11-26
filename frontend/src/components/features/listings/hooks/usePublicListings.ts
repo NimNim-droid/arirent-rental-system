@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listingsService } from "@/lib/services/listings";
 import { getErrorMessage } from "@/lib/errors";
 import type { PublicProperty } from "@/lib/types";
+import {
+  computeListingTotals,
+  extractFeaturedVacantRooms,
+  extractPrimaryLandlordContact,
+  filterPropertiesByQuickMode,
+  type ListingQuickMode,
+} from "../listing-helpers";
 
 export function usePublicListings() {
   const [listings, setListings] = useState<PublicProperty[]>([]);
@@ -9,6 +16,7 @@ export function usePublicListings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [quickMode, setQuickMode] = useState<ListingQuickMode>("all");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [city, setCity] = useState("all");
@@ -45,28 +53,51 @@ export function usePublicListings() {
     fetchListings();
   }, [fetchListings]);
 
-  const hasActiveFilters =
-    debouncedQuery.trim() !== "" || city !== "all" || maxRent !== "" || capacity !== "";
+  const visibleListings = useMemo(
+    () => filterPropertiesByQuickMode(listings, quickMode),
+    [listings, quickMode]
+  );
 
-  const clearFilters = () => {
+  const featuredRooms = useMemo(
+    () => extractFeaturedVacantRooms(visibleListings, 6),
+    [visibleListings]
+  );
+
+  const totals = useMemo(
+    () => computeListingTotals(listings, cities.length),
+    [listings, cities.length]
+  );
+
+  const primaryContact = useMemo(
+    () => extractPrimaryLandlordContact(listings),
+    [listings]
+  );
+
+  const hasActiveFilters =
+    quickMode !== "all" ||
+    debouncedQuery.trim() !== "" ||
+    city !== "all" ||
+    maxRent !== "" ||
+    capacity !== "";
+
+  const clearFilters = useCallback(() => {
+    setQuickMode("all");
     setSearchInput("");
     setDebouncedQuery("");
     setCity("all");
     setMaxRent("");
     setCapacity("");
-  };
-
-  const totals = useMemo(() => {
-    const totalBuildings = listings.length;
-    const totalVacant = listings.reduce((sum, p) => sum + (p.available_rooms_count || 0), 0);
-    return { totalBuildings, totalVacant };
-  }, [listings]);
+  }, []);
 
   return {
     listings,
+    visibleListings,
+    featuredRooms,
     cities,
     loading,
     error,
+    quickMode,
+    setQuickMode,
     searchInput,
     setSearchInput,
     city,
@@ -79,6 +110,7 @@ export function usePublicListings() {
     clearFilters,
     fetchListings,
     totals,
+    primaryContact,
     visitProperty,
     setVisitProperty,
   };
