@@ -255,4 +255,43 @@ class ListingAndInquiryTest extends TestCase
 
         $this->assertSame('vacant', $unlistedRoom->fresh()->status);
     }
+
+    public function test_public_listings_hide_buildings_with_no_vacant_rooms_until_one_becomes_vacant(): void
+    {
+        $fullBuilding = Property::create([
+            'name' => 'Ortigas Heights',
+            'city' => 'Pasig',
+            'address' => '15 Emerald Ave.',
+        ]);
+
+        $occupiedRoom = Room::create([
+            'property_id' => $fullBuilding->id,
+            'room_number' => '501',
+            'rent' => 9500,
+            'status' => 'occupied',
+            'is_listed' => true,
+        ]);
+
+        Room::create([
+            'property_id' => $fullBuilding->id,
+            'room_number' => '502',
+            'rent' => 9500,
+            'status' => 'reserved',
+            'is_listed' => true,
+        ]);
+
+        // Building with 0 vacant rooms must not appear in public catalog
+        $this->getJson('/api/public/listings')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        // Once a room becomes vacant again, the building reappears automatically
+        $occupiedRoom->update(['status' => 'vacant']);
+
+        $this->getJson('/api/public/listings')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Ortigas Heights')
+            ->assertJsonPath('data.0.available_rooms_count', 1);
+    }
 }

@@ -80,7 +80,7 @@ export function usePublicListings(options: UsePublicListingsOptions = {}) {
         max_rent: maxRent ? Number(maxRent) : undefined,
         capacity: capacity ? Number(capacity) : undefined,
       });
-      setListings(res.data);
+      setListings(res.data.filter((property) => property.available_rooms_count > 0));
       setCities(res.meta.cities);
     } catch (err) {
       setError(getErrorMessage(err, "Unable to load property listings."));
@@ -112,7 +112,7 @@ export function usePublicListings(options: UsePublicListingsOptions = {}) {
   const featuredRooms = useMemo(() => allVacantRooms.slice(0, 6), [allVacantRooms]);
 
   const totals = useMemo(
-    () => computeListingTotals(listings, cities.length),
+    () => computeListingTotals(filterPropertiesByQuickMode(listings, "all"), cities.length),
     [listings, cities.length]
   );
 

@@ -288,13 +288,13 @@ export default function PublicPropertiesPage() {
               icon={<Building2 className="h-4 w-4" />}
               title={
                 hasActiveFilters
-                  ? "No buildings match your filters"
-                  : "No published buildings yet"
+                  ? "No vacant buildings match your filters"
+                  : "All units are currently occupied"
               }
               description={
                 hasActiveFilters
                   ? "Try clearing or broadening your search, city, rent budget, or occupant filters."
-                  : "Buildings published by the property manager will appear here."
+                  : "Buildings automatically reappear here as soon as a room becomes vacant."
               }
               action={
                 hasActiveFilters ? (

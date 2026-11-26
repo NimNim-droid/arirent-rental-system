@@ -82,7 +82,8 @@ describe("listing-helpers", () => {
 
     const all = [soloBuilding, sharedBuilding, fullBuilding];
 
-    expect(filterPropertiesByQuickMode(all, "all").map((p) => p.id)).toEqual(["p1", "p2", "p3"]);
+    // Full buildings (0 vacant rooms) are excluded across all public discovery modes
+    expect(filterPropertiesByQuickMode(all, "all").map((p) => p.id)).toEqual(["p1", "p2"]);
     expect(filterPropertiesByQuickMode(all, "vacant").map((p) => p.id)).toEqual(["p1", "p2"]);
     expect(filterPropertiesByQuickMode(all, "solo").map((p) => p.id)).toEqual(["p1"]);
     expect(filterPropertiesByQuickMode(all, "shared").map((p) => p.id)).toEqual(["p2"]);

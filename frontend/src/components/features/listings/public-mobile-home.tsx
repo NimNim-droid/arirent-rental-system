@@ -238,8 +238,8 @@ export function PublicMobileHome({
           <div className="rounded-2xl border border-edge bg-card p-5 text-center space-y-3 shadow-card">
             <p className="text-xs text-muted">
               {hasActiveFilters
-                ? "No properties match your current search or filters."
-                : "No published properties available yet."}
+                ? "No vacant properties match your current search or filters."
+                : "All rooms are currently occupied. Check back soon or contact management below."}
             </p>
             {hasActiveFilters && (
               <Button

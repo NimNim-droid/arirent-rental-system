@@ -77,11 +77,8 @@ class EloquentPropertyRepository implements PropertyRepositoryInterface
             }
         };
 
-        $hasRoomFilters = isset($filters['min_rent']) || isset($filters['max_rent']) || isset($filters['capacity']);
-
         return Property::query()
-            ->whereHas('rooms', fn (Builder $q) => $q->where('is_listed', true))
-            ->when($hasRoomFilters, fn (Builder $q) => $q->whereHas('rooms', $availableRooms))
+            ->whereHas('rooms', $availableRooms)
             ->when(! empty($filters['city']), fn (Builder $q) => $q->where('city', $filters['city']))
             ->when(! empty($filters['q']), function (Builder $q) use ($filters) {
                 $term = '%' . mb_strtolower(trim((string) $filters['q'])) . '%';

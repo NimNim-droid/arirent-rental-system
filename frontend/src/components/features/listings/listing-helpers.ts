@@ -125,24 +125,25 @@ export function sanitizePhoneHref(phone?: string | null): string | null {
 
 /**
  * Applies the quick discovery tab filter on top of API-filtered listings.
+ * Always hides buildings with 0 vacant rooms so public listings only show rentable inventory.
  */
 export function filterPropertiesByQuickMode(
   properties: PublicProperty[],
   mode: ListingQuickMode
 ): PublicProperty[] {
-  if (mode === "all") return properties;
+  const withVacancy = properties.filter((property) => property.available_rooms_count > 0);
 
-  if (mode === "vacant") {
-    return properties.filter((property) => property.available_rooms_count > 0);
+  if (mode === "all" || mode === "vacant") {
+    return withVacancy;
   }
 
   if (mode === "solo") {
-    return properties.filter((property) =>
+    return withVacancy.filter((property) =>
       property.rooms.some((room) => room.is_available && room.capacity === 1)
     );
   }
 
-  return properties.filter((property) =>
+  return withVacancy.filter((property) =>
     property.rooms.some((room) => room.is_available && room.capacity >= 2)
   );
 }
