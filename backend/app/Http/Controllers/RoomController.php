@@ -43,12 +43,16 @@ class RoomController extends Controller
      */
     public function store(StoreRoomRequest $request): JsonResponse
     {
-        $room = $this->propertyService->createRoom($request->validated());
+        try {
+            $room = $this->propertyService->createRoom($request->validated());
 
-        return response()->json([
-            'message' => 'Room created successfully.',
-            'data' => new RoomResource($room),
-        ], 201);
+            return response()->json([
+                'message' => 'Room created successfully.',
+                'data' => new RoomResource($room),
+            ], 201);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     /**
@@ -65,6 +69,8 @@ class RoomController extends Controller
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Room not found.'], 404);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 

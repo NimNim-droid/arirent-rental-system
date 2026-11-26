@@ -72,7 +72,8 @@ export default function AdminDashboard() {
             stats={stats}
             statsLoading={statsLoading}
             propsLoading={propsLoading}
-            properties={properties}
+            properties={visibleProperties}
+            isFiltered={selectedProperty !== "all"}
             occupancyOverall={occupancyOverall}
           />
 

@@ -235,12 +235,16 @@ export default function AdminTenants() {
         tenant={selectedTenant}
         isBusy={busyId === selectedTenant?.id}
         onVacate={async (t) => {
-          await handleVacate(t);
-          setSuccessMessage(`Lease ended for ${t.name}. Room ${t.room} is now vacant.`);
+          const ok = await handleVacate(t);
+          if (ok) {
+            setSuccessMessage(`Lease ended for ${t.name}. Room ${t.room} is now vacant.`);
+          }
         }}
         onDelete={async (t) => {
-          await handleDelete(t);
-          setSuccessMessage(`Resident record for ${t.name} deleted.`);
+          const ok = await handleDelete(t);
+          if (ok) {
+            setSuccessMessage(`Resident record for ${t.name} deleted.`);
+          }
         }}
         onClose={() => setSelectedTenant(null)}
       />
@@ -276,8 +280,10 @@ export default function AdminTenants() {
           if (!deletingTenant) return;
           setIsDeleting(true);
           try {
-            await handleDelete(deletingTenant);
-            setSuccessMessage(`Tenant record for ${deletingTenant.name} removed.`);
+            const ok = await handleDelete(deletingTenant);
+            if (ok) {
+              setSuccessMessage(`Tenant record for ${deletingTenant.name} removed.`);
+            }
             setDeletingTenant(null);
           } finally {
             setIsDeleting(false);

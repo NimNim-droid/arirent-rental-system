@@ -3,20 +3,51 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class PrivateFile
 {
     public const DISK = 'local';
+
+    private const DB_KEY_PREFIX = 'arirent_storage:file:';
+
+    private const DB_EXPIRATION = 2147483647;
 
     /**
      * Store an upload on the private disk and return its relative path.
      */
     public static function store(UploadedFile $file, string $directory): string
     {
-        return $file->store($directory, self::DISK);
+        $path = $file->store($directory, self::DISK);
+        $contents = Storage::disk(self::DISK)->get($path);
+
+        if ($contents !== null) {
+            self::backupBytes($path, $contents);
+        }
+
+        return $path;
+    }
+
+    /**
+     * Persist raw file bytes into the database cache table as an ephemeral-disk backup.
+     */
+    public static function backupBytes(string $path, string $contents): void
+    {
+        try {
+            DB::table('cache')->updateOrInsert(
+                ['key' => self::DB_KEY_PREFIX.$path],
+                [
+                    'value' => base64_encode($contents),
+                    'expiration' => self::DB_EXPIRATION,
+                ]
+            );
+        } catch (Throwable) {
+            // Keep upload working even if cache table is unavailable in minimal test contexts.
+        }
     }
 
     /**
@@ -96,6 +127,12 @@ class PrivateFile
         if (Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+
+        try {
+            DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->delete();
+        } catch (Throwable) {
+            // Ignore when DB backup entry or table is absent.
+        }
     }
 
     /**
@@ -108,7 +145,20 @@ class PrivateFile
         $disk = Storage::disk(self::DISK);
 
         if (! $disk->exists($path)) {
-            $disk = Storage::disk('public');
+            $publicDisk = Storage::disk('public');
+
+            if ($publicDisk->exists($path)) {
+                $disk = $publicDisk;
+            } elseif (! self::restoreFromDatabase($path, $disk) && str_starts_with($path, 'documents/')) {
+                $bundled = base_path('resources/documents/'.basename($path));
+
+                if (is_file($bundled)) {
+                    $bytes = @file_get_contents($bundled);
+                    if ($bytes !== false) {
+                        $disk->put($path, $bytes);
+                    }
+                }
+            }
         }
 
         abort_unless($disk->exists($path), 404);
@@ -122,5 +172,29 @@ class PrivateFile
             'Content-Security-Policy' => "default-src 'none'; sandbox",
             'Cache-Control' => 'private, max-age=60',
         ], $disposition);
+    }
+
+    /**
+     * Restore a file from the database backup onto the local disk if available.
+     */
+    private static function restoreFromDatabase(string $path, \Illuminate\Contracts\Filesystem\Filesystem $disk): bool
+    {
+        try {
+            $encoded = DB::table('cache')->where('key', self::DB_KEY_PREFIX.$path)->value('value');
+
+            if (is_string($encoded) && $encoded !== '') {
+                $decoded = base64_decode($encoded, true);
+
+                if ($decoded !== false) {
+                    $disk->put($path, $decoded);
+
+                    return true;
+                }
+            }
+        } catch (Throwable) {
+            // Fall through if backup cannot be read.
+        }
+
+        return false;
     }
 }

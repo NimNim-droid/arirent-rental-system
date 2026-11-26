@@ -43,9 +43,9 @@ export function ManagedPropertiesCard({
               return (
                 <Link
                   key={property.id}
-                  to="/admin/tenants"
+                  to="/admin/properties"
                   className="group block rounded-xl px-3 py-2 -mx-3 transition-colors duration-150 hover:bg-hover/60"
-                  aria-label={`View tenants at ${property.name}`}
+                  aria-label={`View units at ${property.name}`}
                 >
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="font-semibold text-fg-soft group-hover:text-fg">
@@ -89,7 +89,7 @@ export function ManagedPropertiesCard({
                 )}
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Total collected this billing cycle
+                Total confirmed collections
               </p>
 
               <div className="mt-4 space-y-2 border-t border-edge pt-3">

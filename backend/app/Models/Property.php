@@ -14,7 +14,21 @@ class Property extends Model
         'name',
         'city',
         'address',
+        'description',
+        'contact_name',
+        'contact_phone',
+        'contact_email',
+        'messenger_url',
+        'house_rules',
+        'amenities',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'amenities' => 'array',
+        ];
+    }
 
     public function rooms(): HasMany
     {
@@ -29,5 +43,21 @@ class Property extends Model
     public function maintenanceTickets(): HasMany
     {
         return $this->hasMany(MaintenanceTicket::class);
+    }
+
+    /**
+     * Building photos only (room photos carry a room_id).
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ListingPhoto::class)
+            ->whereNull('room_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    public function inquiries(): HasMany
+    {
+        return $this->hasMany(Inquiry::class);
     }
 }

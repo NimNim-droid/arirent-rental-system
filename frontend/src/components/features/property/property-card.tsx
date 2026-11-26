@@ -1,4 +1,5 @@
-import { Building, MapPin, Plus, Edit2, Trash2 } from "lucide-react";
+import { Link } from "react-router";
+import { Building, Edit2, ExternalLink, ImagePlus, MapPin, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function PropertyCard({
   const occupied = property.occupied_count ?? 0;
   const vacant = Math.max(0, totalUnits - occupied);
   const occPct = totalUnits > 0 ? Math.round((occupied / totalUnits) * 100) : 0;
+  const listedCount = property.listed_rooms_count ?? totalUnits;
 
   return (
     <Card
@@ -37,22 +39,32 @@ export function PropertyCard({
     >
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-edge bg-inset text-faint">
-              <Building className="h-4 w-4" />
-            </div>
-            <div>
-              <h4 className="font-medium text-[13px] text-fg leading-tight hover:text-accent">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {property.cover_photo_url ? (
+              <img
+                src={property.cover_photo_url}
+                alt={property.name}
+                className="h-10 w-10 shrink-0 rounded-md border border-edge object-cover"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-edge bg-inset text-faint">
+                <Building className="h-4 w-4" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h4 className="font-medium text-[13px] text-fg leading-tight hover:text-accent truncate">
                 {property.name}
               </h4>
-              <span className="text-xs text-muted">
-                {property.city}
-              </span>
+              <span className="text-xs text-muted">{property.city}</span>
             </div>
           </div>
 
-          {isSelected && (
+          {isSelected ? (
             <Badge variant="info">Selected</Badge>
+          ) : (
+            <Badge variant={listedCount > 0 ? "neutral" : "warning"}>
+              {listedCount} listed
+            </Badge>
           )}
         </div>
 
@@ -76,9 +88,7 @@ export function PropertyCard({
             />
           </div>
           <div className="flex items-center justify-between text-[11px] text-muted">
-            <span className="text-success-fg font-medium">
-              {vacant} Vacant
-            </span>
+            <span className="text-success-fg font-medium">{vacant} Vacant</span>
             <span className="text-muted">{occupied} Occupied</span>
           </div>
         </div>
@@ -86,38 +96,59 @@ export function PropertyCard({
 
       {/* Actions footer */}
       <div
-        className="flex items-center justify-between gap-2 border-t border-edge pt-3 mt-4"
+        className="space-y-2 border-t border-edge pt-3 mt-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs px-2 h-7 font-semibold text-accent hover:bg-accent-soft"
-          onClick={() => onAddRoom(property.id)}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Unit</span>
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Link to={`/admin/properties/${property.id}/listing`} className="flex-1">
+            <Button variant="secondary" size="sm" className="w-full justify-center text-xs">
+              <ImagePlus className="h-3.5 w-3.5" />
+              <span>Photos &amp; Listing</span>
+            </Button>
+          </Link>
+          <Link
+            to={`/properties/${property.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View public listing page"
+          >
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted hover:text-fg">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 w-7 p-0 text-muted hover:text-fg"
-            title="Edit building"
-            onClick={() => onEdit(property)}
+            className="text-xs px-2 h-7 font-semibold text-accent hover:bg-accent-soft"
+            onClick={() => onAddRoom(property.id)}
           >
-            <Edit2 className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Unit</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-danger-fg hover:bg-danger-bg hover:text-danger-fg"
-            title="Delete building"
-            onClick={() => onDelete(property)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted hover:text-fg"
+              title="Edit building"
+              onClick={() => onEdit(property)}
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-danger-fg hover:bg-danger-bg hover:text-danger-fg"
+              title="Delete building"
+              onClick={() => onDelete(property)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

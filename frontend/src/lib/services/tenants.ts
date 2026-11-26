@@ -22,6 +22,8 @@ export const tenantsService = {
   async updateTenant(id: string, payload: TenantUpdatePayload): Promise<Tenant> {
     const res = await api.put<{ data: Tenant }>(`/tenants/${id}`, payload);
     clientCache.invalidate("tenants");
+    clientCache.invalidate("rooms");
+    clientCache.invalidate("properties");
     clientCache.invalidate("dashboard");
     return res.data.data;
   },

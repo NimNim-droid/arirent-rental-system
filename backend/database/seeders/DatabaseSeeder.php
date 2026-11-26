@@ -77,12 +77,26 @@ class DatabaseSeeder extends Seeder
             'name' => 'AriRent Residences - Makati',
             'city' => 'Makati City',
             'address' => '123 Ayala Avenue, Bel-Air, Makati',
+            'description' => 'Well-maintained 4-storey residential apartment building 5 minutes from Ayala Triangle. Ideal for young professionals seeking quiet, secure city living with individual electric sub-meters.',
+            'contact_name' => 'Engr. Ramon Villanueva',
+            'contact_phone' => '0917-123-4567',
+            'contact_email' => 'leasing@arirent.com',
+            'messenger_url' => 'https://m.me/arirentmakati',
+            'house_rules' => "1. Quiet hours from 10:00 PM to 6:00 AM.\n2. Registered visitors allowed until 10:00 PM.\n3. Strict no-smoking policy inside units and hallways.\n4. Garbage collection daily at 7:00 AM.",
+            'amenities' => ['24/7 CCTV', 'Keycard Entry', 'Fiber WiFi Ready', 'Sub-metered Electricity', 'Fire Alarm & Sprinklers'],
         ]);
 
         $qc = Property::create([
             'name' => 'AriRent Heights - Quezon City',
             'city' => 'Quezon City',
             'address' => '456 Katipunan Avenue, Loyola Heights, QC',
+            'description' => 'Modern studio apartments along Katipunan Avenue, walking distance to Ateneo, Miriam College, and LRT-2 Katipunan Station.',
+            'contact_name' => 'Clarissa Mendoza',
+            'contact_phone' => '0918-765-4321',
+            'contact_email' => 'katipunan@arirent.com',
+            'messenger_url' => 'https://m.me/arirentqc',
+            'house_rules' => "1. Visitors must log in at the lobby guard desk.\n2. Quiet study hours after 9:30 PM.\n3. Small indoor pets subject to prior written approval.",
+            'amenities' => ['Lobby Guard', 'Study Lounge', 'Laundry Area', 'CCTV Security', 'Bicycle Rack'],
         ]);
 
         // 4. Rooms for Makati
@@ -91,6 +105,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '101',
             'rent' => 12000.00,
             'status' => 'occupied',
+            'description' => 'Ground-floor studio with private toilet & bath and kitchenette counter.',
+            'capacity' => 2,
+            'floor_area' => 22.0,
+            'amenities' => ['Private CR', 'Kitchenette', 'Aircon Included'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         $room102 = Room::create([
@@ -98,6 +119,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '102',
             'rent' => 12000.00,
             'status' => 'vacant',
+            'description' => 'Bright studio unit with built-in wardrobe, granite kitchen sink, private bathroom with water heater, and split-type aircon.',
+            'capacity' => 2,
+            'floor_area' => 22.0,
+            'amenities' => ['Private CR', 'Water Heater', 'Split-Type Aircon', 'Kitchen Sink', 'Wardrobe'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         $room105 = Room::create([
@@ -105,6 +133,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '105',
             'rent' => 10000.00,
             'status' => 'reserved',
+            'description' => 'Compact solo studio ideal for professionals working in the CBD.',
+            'capacity' => 1,
+            'floor_area' => 18.0,
+            'amenities' => ['Private CR', 'Aircon Provision', 'Work Desk'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         $room204 = Room::create([
@@ -112,6 +147,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '204',
             'rent' => 14000.00,
             'status' => 'occupied',
+            'description' => 'Corner deluxe unit with balcony and full kitchen counter.',
+            'capacity' => 2,
+            'floor_area' => 26.5,
+            'amenities' => ['Private CR', 'Balcony', 'Split-Type Aircon', 'Kitchenette'],
+            'advance_months' => 1,
+            'deposit_months' => 2,
+            'is_listed' => true,
         ]);
 
         $room205 = Room::create([
@@ -119,6 +161,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '205',
             'rent' => 14000.00,
             'status' => 'vacant',
+            'description' => 'Spacious 2nd-floor corner studio with street-facing balcony, inverter aircon, and own sub-meter.',
+            'capacity' => 3,
+            'floor_area' => 26.5,
+            'amenities' => ['Private CR', 'Balcony', 'Inverter Aircon', 'Kitchenette', 'Bidet'],
+            'advance_months' => 1,
+            'deposit_months' => 2,
+            'is_listed' => true,
         ]);
 
         // Rooms for QC
@@ -127,6 +176,13 @@ class DatabaseSeeder extends Seeder
             'room_number' => '201',
             'rent' => 9500.00,
             'status' => 'reserved',
+            'description' => 'Twin-sharing student unit with study desks and bookshelves.',
+            'capacity' => 2,
+            'floor_area' => 19.5,
+            'amenities' => ['Private CR', 'Study Desk', 'Fiber Port'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         $roomQc202 = Room::create([
@@ -134,13 +190,27 @@ class DatabaseSeeder extends Seeder
             'room_number' => '202',
             'rent' => 9500.00,
             'status' => 'vacant',
+            'description' => 'Quiet courtyard-facing studio designed for 1-2 students, equipped with fiber port, study desk, and private CR.',
+            'capacity' => 2,
+            'floor_area' => 19.5,
+            'amenities' => ['Private CR', 'Study Desk', 'Aircon Included', 'Fiber Port', 'Cabinet'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         $roomQc301 = Room::create([
             'property_id' => $qc->id,
             'room_number' => '301',
             'rent' => 11000.00,
-            'status' => 'occupied',
+            'status' => 'vacant',
+            'description' => '3rd-floor corner unit with panoramic view.',
+            'capacity' => 2,
+            'floor_area' => 23.0,
+            'amenities' => ['Private CR', 'Aircon Included', 'Kitchenette'],
+            'advance_months' => 1,
+            'deposit_months' => 1,
+            'is_listed' => true,
         ]);
 
         // 5. Tenant Users & Tenant Profiles
@@ -265,6 +335,8 @@ class DatabaseSeeder extends Seeder
             'water' => 500.00,
             'late_fee' => 0.00,
             'total_amount' => 13950.00,
+            'paid_amount' => 13950.00,
+            'remaining_balance' => 0.00,
             'date' => '2026-09-01',
             'due_date' => '2026-09-15',
             'status' => 'paid',

@@ -27,7 +27,7 @@ class XenditService
      *
      * @return array{checkout_url: string, invoice_id: string, external_id: string, amount: float, mode: string}
      */
-    public function createCheckoutInvoice(int $billId, float $requestedAmount, string $frontendOrigin): array
+    public function createCheckoutInvoice(int $billId, float $requestedAmount, string $frontendOrigin, ?string $preferredMethod = null): array
     {
         $bill = $this->billRepo->find($billId);
         if (! $bill) {
@@ -95,10 +95,24 @@ class XenditService
                 }
             }
 
+            $xenditMethods = $this->resolveXenditPaymentMethods($preferredMethod);
+            if (! empty($xenditMethods)) {
+                $payload['payment_methods'] = $xenditMethods;
+            }
+
             $response = Http::withBasicAuth($secretKey, '')
                 ->timeout(15)
                 ->acceptJson()
                 ->post('https://api.xendit.co/v2/invoices', $payload);
+
+            // Fallback without payment_methods filter if merchant account doesn't have a specific sub-channel enabled
+            if (! $response->successful() && isset($payload['payment_methods'])) {
+                unset($payload['payment_methods']);
+                $response = Http::withBasicAuth($secretKey, '')
+                    ->timeout(15)
+                    ->acceptJson()
+                    ->post('https://api.xendit.co/v2/invoices', $payload);
+            }
 
             if (! $response->successful()) {
                 $errorMsg = $response->json('message') ?? 'Unable to create Xendit checkout session.';
@@ -123,10 +137,7 @@ class XenditService
 
         DB::transaction(function () use ($bill, $amount, $invoiceId, $externalId) {
             // Mark any previous unfinished online checkout attempts on this bill as failed
-            Payment::where('bill_id', $bill->id)
-                ->where('status', 'pending')
-                ->where('notes', 'like', 'XENDIT:%')
-                ->update(['status' => 'failed']);
+            $this->paymentRepo->markPendingXenditFailedForBill($bill->id);
 
             $this->paymentRepo->create([
                 'bill_id' => $bill->id,
@@ -159,18 +170,7 @@ class XenditService
         }
 
         // Find the most recent Xendit payment record for this bill
-        $paymentQuery = Payment::where('bill_id', $billId)
-            ->where('notes', 'like', 'XENDIT:%')
-            ->latest('id');
-
-        if ($invoiceId) {
-            $paymentQuery->where(function ($q) use ($invoiceId) {
-                $q->where('transaction_reference', $invoiceId)
-                    ->orWhere('notes', "XENDIT:{$invoiceId}");
-            });
-        }
-
-        $payment = $paymentQuery->first();
+        $payment = $this->paymentRepo->findLatestXenditForBill($billId, $invoiceId);
 
         if (! $payment) {
             if ($bill->status === 'paid') {
@@ -237,14 +237,7 @@ class XenditService
             throw new InvalidArgumentException('Missing invoice identifier in webhook payload.');
         }
 
-        $payment = Payment::where(function ($query) use ($invoiceId, $externalId) {
-            if ($invoiceId !== '') {
-                $query->where('transaction_reference', $invoiceId);
-            }
-            if ($externalId !== '') {
-                $query->orWhere('notes', "XENDIT:{$externalId}");
-            }
-        })->latest('id')->first();
+        $payment = $this->paymentRepo->findLatestXenditByIdentifiers($invoiceId, $externalId);
 
         if (! $payment) {
             return null;
@@ -277,7 +270,7 @@ class XenditService
     {
         return DB::transaction(function () use ($paymentId, $paidAmount, $resolvedMethod, $channelLabel) {
             /** @var Payment|null $payment */
-            $payment = Payment::where('id', $paymentId)->lockForUpdate()->first();
+            $payment = $this->paymentRepo->findForUpdate($paymentId);
             if (! $payment) {
                 throw new ModelNotFoundException('Payment record not found.');
             }
@@ -329,6 +322,23 @@ class XenditService
 
             return $bill;
         });
+    }
+
+    /**
+     * Map a tenant's selected payment option in AriRent to Xendit's payment_methods filter.
+     *
+     * @return array<int, string>
+     */
+    protected function resolveXenditPaymentMethods(?string $preferredMethod): array
+    {
+        return match (strtolower((string) $preferredMethod)) {
+            'gcash' => ['GCASH'],
+            'maya', 'paymaya' => ['PAYMAYA'],
+            'qrph' => ['QRPH'],
+            'card' => ['CREDIT_CARD'],
+            'bank_transfer' => ['DD_BPI', 'DD_UBP', 'DD_RCBC', 'DD_CBC', 'BDO', 'BPI'],
+            default => [],
+        };
     }
 
     /**

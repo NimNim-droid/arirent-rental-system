@@ -2,12 +2,14 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import type { Property } from "@/lib/types";
 
 interface RoomFormModalProps {
   open: boolean;
   isEdit: boolean;
   actionLoading: boolean;
+  error?: string;
   properties: Property[];
   formData: {
     property_id: string;
@@ -29,6 +31,7 @@ export function RoomFormModal({
   open,
   isEdit,
   actionLoading,
+  error,
   properties,
   formData,
   onChange,
@@ -63,6 +66,7 @@ export function RoomFormModal({
       }
     >
       <form id="room-form" onSubmit={onSubmit} className="space-y-4">
+        {error && <AlertBanner variant="danger" message={error} />}
         <div>
           <label
             htmlFor="roomProp"

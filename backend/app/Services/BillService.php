@@ -139,8 +139,7 @@ class BillService
 
             $this->tenantRepo->incrementBalance((int) $data['tenant_id'], $total);
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$data['tenant_id']}");
+            $this->forgetBillingCaches((int) $data['tenant_id']);
 
             return $bill;
         });
@@ -267,6 +266,7 @@ class BillService
 
         Cache::forget('admin_stats_all');
         foreach ($activeTenants as $tenant) {
+            Cache::forget("admin_stats_{$tenant->property_id}");
             Cache::forget("tenant_dashboard_{$tenant->id}");
         }
 
@@ -327,8 +327,7 @@ class BillService
                 }
             }
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+            $this->forgetBillingCaches((int) $bill->tenant_id);
 
             return $bill;
         });
@@ -364,8 +363,7 @@ class BillService
 
             $this->tenantRepo->decrementBalance((int) $bill->tenant_id, $oldTotal);
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+            $this->forgetBillingCaches((int) $bill->tenant_id);
 
             return $bill;
         });
@@ -399,11 +397,20 @@ class BillService
                 PrivateFile::delete($receiptUrl);
             }
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$tenantId}");
+            $this->forgetBillingCaches((int) $tenantId);
 
             return $deleted;
         });
+    }
+
+    protected function forgetBillingCaches(int $tenantId): void
+    {
+        Cache::forget('admin_stats_all');
+        Cache::forget("tenant_dashboard_{$tenantId}");
+        $tenant = $this->tenantRepo->find($tenantId);
+        if ($tenant && $tenant->property_id) {
+            Cache::forget("admin_stats_{$tenant->property_id}");
+        }
     }
 
     public function bulkDeleteBills(array $ids): int

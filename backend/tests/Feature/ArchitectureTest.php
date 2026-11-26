@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Repositories\Contracts\BillRepositoryInterface;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
 use App\Repositories\Contracts\ExcessChargeRepositoryInterface;
+use App\Repositories\Contracts\InquiryRepositoryInterface;
+use App\Repositories\Contracts\ListingPhotoRepositoryInterface;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
@@ -16,6 +18,8 @@ use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\EloquentBillRepository;
 use App\Repositories\Eloquent\EloquentExcessChargeRepository;
+use App\Repositories\Eloquent\EloquentInquiryRepository;
+use App\Repositories\Eloquent\EloquentListingPhotoRepository;
 use App\Repositories\Eloquent\EloquentMaintenanceRepository;
 use App\Repositories\Eloquent\EloquentPaymentRepository;
 use App\Repositories\Eloquent\EloquentPropertyRepository;
@@ -31,6 +35,8 @@ use App\Services\BillService;
 use App\Services\DashboardService;
 use App\Services\DocumentService;
 use App\Services\ExcessChargeService;
+use App\Services\InquiryService;
+use App\Services\ListingService;
 use App\Services\MaintenanceService;
 use App\Services\PaymentService;
 use App\Services\PropertyService;
@@ -38,6 +44,7 @@ use App\Services\ReportService;
 use App\Services\SettingsService;
 use App\Services\TenantService;
 use App\Services\UtilityService;
+use App\Services\XenditService;
 use Tests\TestCase;
 
 class ArchitectureTest extends TestCase
@@ -49,6 +56,8 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(EloquentReadingRepository::class, app(ReadingRepositoryInterface::class));
         $this->assertInstanceOf(EloquentPropertyRepository::class, app(PropertyRepositoryInterface::class));
         $this->assertInstanceOf(EloquentRoomRepository::class, app(RoomRepositoryInterface::class));
+        $this->assertInstanceOf(EloquentListingPhotoRepository::class, app(ListingPhotoRepositoryInterface::class));
+        $this->assertInstanceOf(EloquentInquiryRepository::class, app(InquiryRepositoryInterface::class));
         $this->assertInstanceOf(EloquentMaintenanceRepository::class, app(MaintenanceRepositoryInterface::class));
         $this->assertInstanceOf(EloquentSettingsRepository::class, app(SettingsRepositoryInterface::class));
         $this->assertInstanceOf(EloquentUserRepository::class, app(UserRepositoryInterface::class));
@@ -65,6 +74,8 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(PaymentService::class, app(PaymentService::class));
         $this->assertInstanceOf(UtilityService::class, app(UtilityService::class));
         $this->assertInstanceOf(PropertyService::class, app(PropertyService::class));
+        $this->assertInstanceOf(ListingService::class, app(ListingService::class));
+        $this->assertInstanceOf(InquiryService::class, app(InquiryService::class));
         $this->assertInstanceOf(MaintenanceService::class, app(MaintenanceService::class));
         $this->assertInstanceOf(SettingsService::class, app(SettingsService::class));
         $this->assertInstanceOf(DashboardService::class, app(DashboardService::class));
@@ -72,6 +83,7 @@ class ArchitectureTest extends TestCase
         $this->assertInstanceOf(ReportService::class, app(ReportService::class));
         $this->assertInstanceOf(DocumentService::class, app(DocumentService::class));
         $this->assertInstanceOf(ExcessChargeService::class, app(ExcessChargeService::class));
+        $this->assertInstanceOf(XenditService::class, app(XenditService::class));
     }
 
     public function test_controllers_do_not_bypass_services_to_access_models_or_repositories(): void
@@ -98,6 +110,11 @@ class ArchitectureTest extends TestCase
                 $source,
                 "Controller {$name} must not access DB or Storage facades directly."
             );
+            $this->assertDoesNotMatchRegularExpression(
+                '/->validate\s*\(/',
+                $source,
+                "Controller {$name} must use Form Request classes instead of inline \$request->validate()."
+            );
         }
     }
 
@@ -111,7 +128,7 @@ class ArchitectureTest extends TestCase
             $name = basename($file);
 
             $this->assertDoesNotMatchRegularExpression(
-                '/\b(Bill|ExcessCharge|MaintenanceTicket|Payment|Property|Room|Setting|Tenant|User|UtilityReading)::/',
+                '/\b(Bill|ExcessCharge|Inquiry|ListingPhoto|MaintenanceTicket|Payment|Property|Room|Setting|Tenant|User|UtilityReading)::/',
                 $source,
                 "Service {$name} must query persistence via Repository interfaces, not static Model calls."
             );

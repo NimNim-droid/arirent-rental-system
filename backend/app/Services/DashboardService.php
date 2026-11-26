@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\Contracts\BillRepositoryInterface;
+use App\Repositories\Contracts\InquiryRepositoryInterface;
 use App\Repositories\Contracts\MaintenanceRepositoryInterface;
 use App\Repositories\Contracts\ReadingRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
@@ -21,7 +22,8 @@ class DashboardService
         protected BillRepositoryInterface $billRepo,
         protected RoomRepositoryInterface $roomRepo,
         protected ReadingRepositoryInterface $readingRepo,
-        protected MaintenanceRepositoryInterface $maintenanceRepo
+        protected MaintenanceRepositoryInterface $maintenanceRepo,
+        protected InquiryRepositoryInterface $inquiryRepo
     ) {}
 
     /**
@@ -41,6 +43,7 @@ class DashboardService
 
             $pendingApplications = $this->tenantRepo->countPendingApproval($propertyId);
             $pendingPayments = $this->billRepo->countPendingVerification($propertyId);
+            $pendingInquiries = $this->inquiryRepo->countNew($propertyId);
 
             $recentTickets = $this->maintenanceRepo->getRecent($propertyId, 5)->map(fn ($t) => [
                 'id' => (string) $t->id,
@@ -61,9 +64,12 @@ class DashboardService
                 'total_revenue' => $totalRevenue,
                 'occupancy_rate' => $occupancyRate,
                 'occupied_rooms' => $occupiedRooms,
+                'vacant_rooms' => $roomStats['vacant'] ?? max(0, $totalRooms - $occupiedRooms),
+                'reserved_rooms' => $roomStats['reserved'] ?? 0,
                 'total_rooms' => $totalRooms,
                 'pending_applications' => $pendingApplications,
                 'pending_payments' => $pendingPayments,
+                'pending_inquiries' => $pendingInquiries,
                 'recent_maintenance' => $recentTickets,
             ];
         });

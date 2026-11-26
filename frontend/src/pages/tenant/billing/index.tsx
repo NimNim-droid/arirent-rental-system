@@ -1,28 +1,22 @@
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router";
+import { useState, useMemo } from "react";
 import {
-  CreditCard,
   QrCode,
   CheckCircle2,
   AlertTriangle,
   Receipt,
   Clock,
-  Sparkles,
 } from "lucide-react";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatters";
-import { billingService } from "@/lib/services/billing";
-import { getErrorMessage } from "@/lib/errors";
 import {
   useTenantBilling,
   TenantBillCard,
   GCashPaymentModal,
   TenantStatementModal,
 } from "@/components/features/billing";
-import type { Bill } from "@/lib/types";
 
 type BillFilterTab = "all" | "unpaid" | "paid";
 
@@ -35,6 +29,7 @@ export default function TenantBilling() {
     selectedInvoice,
     showPaymentModal,
     showStatementModal,
+    xenditFeedback,
     loading,
     error,
     unpaidBills,
@@ -47,60 +42,6 @@ export default function TenantBilling() {
   } = useTenantBilling();
 
   const [activeTab, setActiveTab] = useState<BillFilterTab>("unpaid");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [xenditFeedback, setXenditFeedback] = useState<{
-    tone: "success" | "warning" | "danger";
-    message: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const xenditStatus = searchParams.get("xendit_status");
-    const billId = searchParams.get("bill_id");
-    const externalId = searchParams.get("external_id") ?? undefined;
-
-    if (!xenditStatus || !billId) return;
-
-    // Clean query params immediately so page refreshes do not re-run verification
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("xendit_status");
-    nextParams.delete("bill_id");
-    nextParams.delete("external_id");
-    setSearchParams(nextParams, { replace: true });
-
-    if (xenditStatus === "cancelled") {
-      setXenditFeedback({
-        tone: "warning",
-        message: "Online checkout was cancelled. You can retry anytime before the due date.",
-      });
-      return;
-    }
-
-    if (xenditStatus === "success") {
-      let active = true;
-      (async () => {
-        try {
-          const res = await billingService.verifyXenditPayment(billId, {
-            external_id: externalId,
-          });
-          if (!active) return;
-          setXenditFeedback({
-            tone: "success",
-            message: res.message || "Online payment confirmed via Xendit!",
-          });
-          await loadBills();
-        } catch (err) {
-          if (!active) return;
-          setXenditFeedback({
-            tone: "danger",
-            message: getErrorMessage(err, "Unable to verify Xendit payment status yet."),
-          });
-        }
-      })();
-      return () => {
-        active = false;
-      };
-    }
-  }, [searchParams, setSearchParams, loadBills]);
 
   const paidBills = useMemo(
     () => bills.filter((b) => b.status === "paid" || b.status === "voided"),
@@ -164,37 +105,45 @@ export default function TenantBilling() {
         />
       )}
 
-      {/* Amount Due Header matching Mockup 3 */}
-      <div className="space-y-1 pt-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Amount due</p>
-        <p className="text-4xl sm:text-5xl font-black text-fg tabular-nums tracking-tight">
+      {/* Amount Due Summary Header */}
+      <div className="rounded-3xl border border-edge bg-card p-5 shadow-card space-y-2.5">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted">Amount due</p>
+        <p className="text-3xl sm:text-4xl font-extrabold text-fg tabular-nums tracking-tight">
           {formatCurrency(unpaidTotal)}
         </p>
         {unpaidTotal === 0 ? (
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold text-success-fg pt-1">
-            <CheckCircle2 className="h-4 w-4" /> Nothing to pay right now
-          </p>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-success-bg border border-success-border px-3 py-1 text-xs font-semibold text-success-fg">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            <span>Nothing to pay right now</span>
+          </div>
         ) : (
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold text-warning-fg pt-1">
-            <AlertTriangle className="h-4 w-4" /> Please pay before the due date to avoid late surcharges
-          </p>
+          <div className="inline-flex items-center gap-1.5 rounded-xl bg-warning-bg border border-warning-border/80 px-3 py-1.5 text-xs font-medium text-warning-fg">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>Please pay before the due date to avoid late surcharges</span>
+          </div>
         )}
       </div>
 
-      {/* Segmented Filter: [ Unpaid | Paid ] matching Mockup 3 */}
+      {/* Segmented Filter: [ Unpaid | Paid ] */}
       <div className="flex rounded-2xl bg-inset p-1 border border-edge">
         <button
           type="button"
           onClick={() => setActiveTab("unpaid")}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === "unpaid"
-              ? "bg-[#14233F] text-white dark:bg-[#1D3560] shadow-soft"
+              ? "bg-brand-navy text-white shadow-soft"
               : "text-muted hover:text-fg"
             }`}
         >
-          Unpaid
+          <span>Unpaid</span>
           {unpaidBills.length > 0 && (
-            <span className="ml-1.5 rounded-full bg-warning-bg px-1.5 py-0.5 text-[10px] font-bold text-warning-fg border border-warning-border">
+            <span
+              className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${
+                activeTab === "unpaid"
+                  ? "bg-[#DFB966] text-[#152238]"
+                  : "bg-warning-bg text-warning-fg border border-warning-border"
+              }`}
+            >
               {unpaidBills.length}
             </span>
           )}
@@ -203,13 +152,13 @@ export default function TenantBilling() {
         <button
           type="button"
           onClick={() => setActiveTab("paid")}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
             activeTab === "paid"
-              ? "bg-[#14233F] text-white dark:bg-[#1D3560] shadow-soft"
+              ? "bg-brand-navy text-white shadow-soft"
               : "text-muted hover:text-fg"
             }`}
         >
-          Paid ({paidBills.length})
+          <span>Paid ({paidBills.length})</span>
         </button>
       </div>
 

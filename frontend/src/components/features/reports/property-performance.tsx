@@ -1,4 +1,3 @@
-import { Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/formatters";
+import { cn } from "@/lib/cn";
 import type { PropertyPerformance as PropertyPerformanceRow } from "@/lib/services/reports";
 
 interface PropertyPerformanceProps {
@@ -20,117 +20,119 @@ interface PropertyPerformanceProps {
 
 function yieldVariant(rate: number): "success" | "warning" | "danger" {
   if (rate >= 90) return "success";
-  if (rate >= 75) return "warning";
+  if (rate >= 70) return "warning";
   return "danger";
 }
 
 export function PropertyPerformance({ rows, loading }: PropertyPerformanceProps) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between px-1">
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge px-5 py-4">
         <div>
-          <h3 className="text-sm font-bold text-fg flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-accent" />
-            Building &amp; Property Financial Performance
-          </h3>
-          <p className="text-xs text-muted">
-            Collection yield and receivables by building. Occupancy is today's figure and does not
-            change with the Month filter.
+          <h2 className="text-sm font-semibold tracking-tight text-fg">
+            Property Financial Performance
+          </h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Billed, collected, and receivables breakdown per building · Occupancy reflects current units
           </p>
         </div>
-        <Badge variant="neutral" className="text-xs font-mono">
-          {rows.length} Building{rows.length !== 1 ? "s" : ""}
-        </Badge>
+        <span className="text-xs font-medium text-muted tabular-nums">
+          {rows.length} {rows.length === 1 ? "building" : "buildings"}
+        </span>
       </div>
 
-      <Card className="p-0 overflow-hidden shadow-sm border-edge">
-        <div className="table-scroll-wrap overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-semibold text-xs">Property / Location</TableHead>
-                <TableHead className="font-semibold text-xs text-center">
-                  Occupancy (today)
-                </TableHead>
-                <TableHead className="font-semibold text-xs text-right">Billed Amount</TableHead>
-                <TableHead className="font-semibold text-xs text-right">
-                  Collected Revenue
-                </TableHead>
-                <TableHead className="font-semibold text-xs text-right">Outstanding Debt</TableHead>
-                <TableHead className="font-semibold text-xs text-center">Collection Yield</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-4 w-36" />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Skeleton className="h-4 w-20 mx-auto" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-4 w-20 ml-auto" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-4 w-20 ml-auto" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-4 w-20 ml-auto" />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Skeleton className="h-5 w-16 mx-auto rounded-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-xs text-muted">
-                    No property performance records found for this period.
+      <div className="table-scroll-wrap overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Property</TableHead>
+              <TableHead className="text-center">Occupancy</TableHead>
+              <TableHead className="text-right">Billed</TableHead>
+              <TableHead className="text-right">Collected</TableHead>
+              <TableHead className="text-right">Outstanding</TableHead>
+              <TableHead className="text-right">Collection Yield</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Skeleton className="mx-auto h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-4 w-20" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-5 w-16 rounded-full" />
                   </TableCell>
                 </TableRow>
-              ) : (
-                rows.map((p) => (
-                  <TableRow key={p.property_id} className="hover:bg-card/50 transition-colors">
-                    <TableCell>
-                      <p className="text-xs font-bold text-fg">{p.property_name}</p>
-                      <p className="text-[11px] text-muted">{p.city}</p>
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-xs">
-                      <span className="font-semibold text-fg">
-                        {p.occupied_units} / {p.total_units}
-                      </span>
-                      <span className="text-[11px] text-muted ml-1">({p.occupancy_rate}%)</span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-semibold text-fg">
-                      {formatCurrency(p.billed_amount)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-bold text-success-fg">
-                      {formatCurrency(p.collected_amount)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-bold text-danger-fg">
-                      {formatCurrency(p.outstanding_amount)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {p.bill_count === 0 ? (
-                        <span className="text-[11px] text-muted">No billing</span>
-                      ) : (
-                        <Badge
-                          variant={yieldVariant(p.collection_rate)}
-                          className="font-mono text-[11px]"
-                        >
-                          {p.collection_rate}%
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-    </div>
+              ))
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-xs text-muted">
+                  No property performance records found for this year.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((p) => (
+                <TableRow key={p.property_id}>
+                  <TableCell>
+                    <p className="text-xs font-semibold text-fg">{p.property_name}</p>
+                    <p className="text-[11px] text-muted">{p.city}</p>
+                  </TableCell>
+                  <TableCell className="text-center text-xs tabular-nums">
+                    <span className="font-semibold text-fg">
+                      {p.occupied_units}/{p.total_units}
+                    </span>
+                    <span className="ml-1 text-muted">({p.occupancy_rate}%)</span>
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-medium text-fg tabular-nums">
+                    {p.billed_amount > 0 ? formatCurrency(p.billed_amount) : "—"}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right text-xs font-semibold tabular-nums",
+                      p.collected_amount > 0 ? "text-success-fg" : "text-muted"
+                    )}
+                  >
+                    {p.collected_amount > 0 ? formatCurrency(p.collected_amount) : "—"}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "text-right text-xs font-semibold tabular-nums",
+                      p.outstanding_amount > 0 ? "text-danger-fg" : "text-muted"
+                    )}
+                  >
+                    {p.outstanding_amount > 0 ? formatCurrency(p.outstanding_amount) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {p.bill_count === 0 ? (
+                      <span className="text-[11px] text-muted">No billing</span>
+                    ) : (
+                      <Badge
+                        variant={yieldVariant(p.collection_rate)}
+                        className="tabular-nums text-[11px]"
+                      >
+                        {p.collection_rate}%
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </Card>
   );
 }

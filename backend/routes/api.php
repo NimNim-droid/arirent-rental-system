@@ -6,6 +6,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExcessChargeController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\ListingController;
+use App\Http\Controllers\ListingPhotoController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReadingController;
@@ -35,9 +38,19 @@ Route::middleware('throttle:register')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
 });
 
-// Public room and property browsing
+// Public Property & Room Listing Showcase + Visit Inquiries
+Route::get('/public/listings', [ListingController::class, 'index']);
+Route::get('/public/listings/{id}', [ListingController::class, 'showProperty'])->whereNumber('id');
+Route::get('/public/rooms/{id}', [ListingController::class, 'showRoom'])->whereNumber('id');
+Route::get('/public/media/{path}', [ListingController::class, 'media'])
+    ->where('path', '.*')
+    ->name('public.media');
+Route::post('/public/inquiries', [InquiryController::class, 'store'])
+    ->middleware('throttle:inquiries');
+
+// Public room and property browsing (legacy compatibility)
 Route::get('/properties', [PropertyController::class, 'index']);
-Route::get('/properties/{id}', [PropertyController::class, 'show']);
+Route::get('/properties/{id}', [PropertyController::class, 'show'])->whereNumber('id');
 Route::get('/rooms', [RoomController::class, 'index']);
 
 // Public Xendit webhook callback
@@ -87,13 +100,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin-Only Routes
     Route::middleware('admin')->group(function () {
-        // Properties & Rooms Management
+        // Properties, Rooms & Listing Showcase Management
+        Route::get('/properties/{id}/listing', [ListingController::class, 'adminShowProperty'])->whereNumber('id');
+        Route::post('/properties/{id}/photos', [ListingPhotoController::class, 'store'])->whereNumber('id');
+        Route::post('/listing-photos/{id}/cover', [ListingPhotoController::class, 'setCover'])->whereNumber('id');
+        Route::delete('/listing-photos/{id}', [ListingPhotoController::class, 'destroy'])->whereNumber('id');
+
         Route::post('/properties', [PropertyController::class, 'store']);
         Route::put('/properties/{id}', [PropertyController::class, 'update']);
         Route::delete('/properties/{id}', [PropertyController::class, 'destroy']);
         Route::post('/rooms', [RoomController::class, 'store']);
         Route::put('/rooms/{id}', [RoomController::class, 'update']);
         Route::delete('/rooms/{id}', [RoomController::class, 'destroy']);
+
+        // Viewing Inquiries Management
+        Route::get('/inquiries', [InquiryController::class, 'index']);
+        Route::get('/inquiries/{id}', [InquiryController::class, 'show'])->whereNumber('id');
+        Route::put('/inquiries/{id}', [InquiryController::class, 'update'])->whereNumber('id');
+        Route::patch('/inquiries/{id}', [InquiryController::class, 'update'])->whereNumber('id');
+        Route::delete('/inquiries/{id}', [InquiryController::class, 'destroy'])->whereNumber('id');
 
         // Tenants Management
         Route::get('/tenants', [TenantController::class, 'index']);

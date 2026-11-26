@@ -189,6 +189,7 @@ export default function AdminProperties() {
         open={isAddRoomOpen}
         isEdit={false}
         actionLoading={actionLoading}
+        error={error}
         properties={properties}
         formData={roomForm}
         onChange={setRoomForm}
@@ -200,6 +201,7 @@ export default function AdminProperties() {
         open={isEditRoomOpen}
         isEdit={true}
         actionLoading={actionLoading}
+        error={error}
         properties={properties}
         formData={roomForm}
         onChange={setRoomForm}

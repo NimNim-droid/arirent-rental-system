@@ -78,17 +78,17 @@ export function useTenants() {
   const handleReject = (app: Tenant) =>
     runAction(app.id, () => tenantsService.rejectTenant(app.id));
 
-  const handleVacate = (tenant: Tenant) => {
-    void runAction(tenant.id, () => tenantsService.vacateTenant(tenant.id)).then(() => {
+  const handleVacate = (tenant: Tenant) =>
+    runAction(tenant.id, () => tenantsService.vacateTenant(tenant.id)).then((ok) => {
       setSelectedTenant(null);
+      return ok;
     });
-  };
 
-  const handleDelete = (tenant: Tenant) => {
-    void runAction(tenant.id, () => tenantsService.deleteTenant(tenant.id)).then(() => {
+  const handleDelete = (tenant: Tenant) =>
+    runAction(tenant.id, () => tenantsService.deleteTenant(tenant.id)).then((ok) => {
       setSelectedTenant(null);
+      return ok;
     });
-  };
 
   const refreshAll = useCallback(() => {
     void loadTenants(searchTerm || undefined);

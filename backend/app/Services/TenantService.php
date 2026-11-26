@@ -96,16 +96,48 @@ class TenantService
     }
 
     /**
-     * Update tenant details.
+     * Update tenant details and synchronize room statuses when reassigned to another room.
+     *
+     * @throws ModelNotFoundException
+     * @throws \RuntimeException
      */
     public function updateTenant(int $id, array $attributes): Tenant
     {
-        $tenant = $this->tenantRepo->update($id, $attributes);
+        $existing = $this->tenantRepo->find($id);
+        if (! $existing) {
+            throw new ModelNotFoundException('Tenant not found.');
+        }
 
-        Cache::forget('admin_stats_all');
-        Cache::forget("tenant_dashboard_{$id}");
+        $newRoomNumber = isset($attributes['room']) ? trim((string) $attributes['room']) : null;
+        $roomChanged = $newRoomNumber !== null && $newRoomNumber !== '' && $newRoomNumber !== (string) $existing->room;
 
-        return $tenant;
+        if ($roomChanged && $existing->status !== 'inactive') {
+            $occupant = $this->tenantRepo->findOccupyingInRoom((int) $existing->property_id, $newRoomNumber, $existing->id);
+            if ($occupant) {
+                throw new \RuntimeException("Room {$newRoomNumber} is already assigned to {$occupant->name}.");
+            }
+        }
+
+        return DB::transaction(function () use ($id, $attributes, $existing, $roomChanged, $newRoomNumber) {
+            $tenant = $this->tenantRepo->update($id, $attributes);
+
+            if ($roomChanged && $existing->status !== 'inactive') {
+                $oldRoom = $this->roomRepo->findByPropertyAndNumber((int) $existing->property_id, (string) $existing->room);
+                if ($oldRoom && ! $this->tenantRepo->findOccupyingInRoom((int) $existing->property_id, (string) $existing->room, $existing->id)) {
+                    $this->roomRepo->update($oldRoom->id, ['status' => 'vacant']);
+                }
+
+                $newRoom = $this->roomRepo->findByPropertyAndNumber((int) $existing->property_id, (string) $newRoomNumber);
+                if ($newRoom) {
+                    $nextStatus = $tenant->status === 'active' ? 'occupied' : 'reserved';
+                    $this->roomRepo->update($newRoom->id, ['status' => $nextStatus]);
+                }
+            }
+
+            $this->forgetPortfolioCaches((int) $existing->property_id, $id);
+
+            return $tenant;
+        });
     }
 
     /**
@@ -147,9 +179,7 @@ class TenantService
 
             $this->roomRepo->update($room->id, ['status' => 'occupied']);
 
-            Cache::forget('all_properties_with_counts');
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$tenant->id}");
+            $this->forgetPortfolioCaches((int) $tenant->property_id, (int) $tenant->id);
 
             return $updatedTenant;
         });
@@ -173,9 +203,7 @@ class TenantService
                 $this->roomRepo->update($room->id, ['status' => 'vacant']);
             }
 
-            Cache::forget('all_properties_with_counts');
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$tenant->id}");
+            $this->forgetPortfolioCaches((int) $tenant->property_id, (int) $tenant->id);
 
             return $updatedTenant;
         });
@@ -208,9 +236,7 @@ class TenantService
                 $this->roomRepo->update($room->id, ['status' => 'vacant']);
             }
 
-            Cache::forget('all_properties_with_counts');
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$tenant->id}");
+            $this->forgetPortfolioCaches((int) $tenant->property_id, (int) $tenant->id);
 
             return $updatedTenant;
         });
@@ -226,14 +252,22 @@ class TenantService
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Tenant not found.');
         }
 
-        if ($this->tenantRepo->hasFinancialOrServiceHistory($id)) {
+        if ($tenant->status !== 'inactive' && $this->tenantRepo->hasFinancialOrServiceHistory($id)) {
             throw new \InvalidArgumentException('This tenant has billing or service history and cannot be deleted. Vacate the tenant instead.');
         }
 
         return DB::transaction(function () use ($tenant) {
-            $room = $this->roomRepo->findByPropertyAndNumber($tenant->property_id, $tenant->room);
-            if ($room && in_array($room->status, ['reserved', 'occupied'])) {
-                $this->roomRepo->update($room->id, ['status' => 'vacant']);
+            if ($tenant->status !== 'inactive') {
+                $room = $this->roomRepo->findByPropertyAndNumber($tenant->property_id, $tenant->room);
+                if ($room && in_array($room->status, ['reserved', 'occupied'])) {
+                    $this->roomRepo->update($room->id, ['status' => 'vacant']);
+                }
+            } else {
+                $tenant->payments()->delete();
+                $tenant->excessCharges()->delete();
+                $tenant->utilityReadings()->delete();
+                $tenant->bills()->delete();
+                $tenant->maintenanceTickets()->delete();
             }
 
             if ($tenant->user_id) {
@@ -242,11 +276,20 @@ class TenantService
 
             $deleted = $this->tenantRepo->delete($tenant->id);
 
-            Cache::forget('all_properties_with_counts');
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$tenant->id}");
+            $this->forgetPortfolioCaches((int) $tenant->property_id, (int) $tenant->id);
 
             return $deleted;
         });
+    }
+
+    /**
+     * Clear cached portfolio, property-scoped admin stats, and tenant dashboard metrics.
+     */
+    protected function forgetPortfolioCaches(int $propertyId, int $tenantId): void
+    {
+        Cache::forget('all_properties_with_counts');
+        Cache::forget('admin_stats_all');
+        Cache::forget("admin_stats_{$propertyId}");
+        Cache::forget("tenant_dashboard_{$tenantId}");
     }
 }

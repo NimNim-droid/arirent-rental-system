@@ -10,9 +10,9 @@ use App\Http\Requests\Bill\ProcessPaymentRequest;
 use App\Http\Requests\Bill\StoreBillRequest;
 use App\Http\Requests\Bill\UpdateBillRequest;
 use App\Http\Requests\Bill\VerifyPaymentRequest;
+use App\Http\Requests\Bill\XenditCheckoutRequest;
+use App\Http\Requests\Bill\XenditVerifyRequest;
 use App\Http\Resources\BillResource;
-use App\Repositories\Contracts\BillRepositoryInterface;
-use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Services\BillService;
 use App\Services\PaymentService;
 use App\Services\XenditService;
@@ -203,24 +203,17 @@ class BillController extends Controller
     /**
      * Create a Xendit online checkout session for a bill (GCash, Maya, Bank Transfer, Card, QR Ph).
      */
-    public function xenditCheckout(Request $request, int $id): JsonResponse
+    public function xenditCheckout(XenditCheckoutRequest $request, int $id): JsonResponse
     {
-        if (! $this->canAccessBill($request, $id)) {
-            return response()->json(['message' => 'This action is unauthorized.'], 403);
-        }
-
-        $validated = $request->validate([
-            'amount' => ['nullable', 'numeric', 'min:1'],
-            'redirect_origin' => ['nullable', 'string', 'max:255'],
-        ]);
-
+        $validated = $request->validated();
         $origin = (string) ($validated['redirect_origin'] ?? $request->header('Origin') ?? config('app.url'));
 
         try {
             $session = $this->xenditService->createCheckoutInvoice(
                 $id,
                 isset($validated['amount']) ? (float) $validated['amount'] : 0.0,
-                $origin
+                $origin,
+                $validated['preferred_method'] ?? null
             );
 
             return response()->json([
@@ -238,18 +231,9 @@ class BillController extends Controller
     /**
      * Verify and confirm a Xendit online payment after redirect back to the app.
      */
-    public function xenditVerify(Request $request, int $id): JsonResponse
+    public function xenditVerify(XenditVerifyRequest $request, int $id): JsonResponse
     {
-        if (! $this->canAccessBill($request, $id)) {
-            return response()->json(['message' => 'This action is unauthorized.'], 403);
-        }
-
-        $validated = $request->validate([
-            'invoice_id' => ['nullable', 'string', 'max:120'],
-            'external_id' => ['nullable', 'string', 'max:120'],
-            'payment_channel' => ['nullable', 'string', 'max:60'],
-        ]);
-
+        $validated = $request->validated();
         $lookupId = $validated['invoice_id'] ?? $validated['external_id'] ?? null;
 
         try {
@@ -289,34 +273,6 @@ class BillController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 401);
         }
-    }
-
-    /**
-     * Check whether the current user is allowed to pay/verify the specified bill.
-     */
-    protected function canAccessBill(Request $request, int $billId): bool
-    {
-        $user = $request->user();
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->role === 'admin') {
-            return true;
-        }
-
-        if ($user->role === 'tenant') {
-            $bill = app(BillRepositoryInterface::class)->find($billId);
-            if (! $bill) {
-                return true; // Let controller return 404
-            }
-
-            $tenant = app(TenantRepositoryInterface::class)->findByUserIdOrEmail($user->id, $user->email);
-
-            return $tenant && (int) $bill->tenant_id === (int) $tenant->id;
-        }
-
-        return false;
     }
 
     /**

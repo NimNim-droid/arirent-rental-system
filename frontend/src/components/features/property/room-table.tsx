@@ -75,6 +75,7 @@ export function RoomTable({
                 <TableHead>Property Building</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Monthly Rent</TableHead>
+                <TableHead>Public Listing</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -129,6 +130,19 @@ export function RoomTable({
                         {formatCurrency(room.rent)}
                       </span>
                       <span className="text-[11px] text-muted"> / mo</span>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={room.is_listed !== false ? "info" : "neutral"}>
+                          {room.is_listed !== false ? "Listed" : "Hidden"}
+                        </Badge>
+                        {(room.photos?.length ?? 0) > 0 && (
+                          <span className="text-[11px] text-muted tabular-nums">
+                            {room.photos!.length} {room.photos!.length === 1 ? "photo" : "photos"}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
 
                     <TableCell>

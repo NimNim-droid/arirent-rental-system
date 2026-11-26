@@ -10,8 +10,7 @@
     "lint": "eslint . --ext ts,tsx",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "theme:restore": "cmd /c restore-theme.bat"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.0",

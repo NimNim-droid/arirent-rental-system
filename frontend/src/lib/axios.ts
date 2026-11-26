@@ -22,15 +22,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 responses (redirect to login only when not already on the login page)
+// Handle 401 responses (redirect to login only on protected portal routes)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      error.response?.status === 401 &&
-      window.location.pathname !== "/login" &&
-      window.location.pathname !== "/register"
-    ) {
+    const path = window.location.pathname;
+    const isProtectedPortal = path.startsWith("/admin") || path.startsWith("/tenant");
+
+    if (error.response?.status === 401 && isProtectedPortal) {
       localStorage.removeItem("arirent_token");
       localStorage.removeItem("arirent_current_user");
       window.location.href = "/login";

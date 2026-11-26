@@ -2,23 +2,27 @@
 
 ## 1. Overview
 
-The AriRent frontend is a **React 19 single-page application** built with **Vite**, **TypeScript**, and **Tailwind CSS v4**. It follows the same structural patterns as the [react-recipe-bsit3b](https://github.com/arielmaestrodev/react-recipe-bsit3b) template — a clean, role-based architecture using React Router for client-side navigation and Axios for API communication.
+The AriRent frontend is a **React 19 single-page application** built with **Vite**, **TypeScript**, and **Tailwind CSS v4**. It uses a **Feature-Based Layered Architecture** with strict separation between route pages, feature components & custom hooks, reusable UI primitives, and the API service layer.
 
-```
-┌────────────────────────────────────────────────┐
-│                  React SPA                      │
-│                                                 │
-│  ┌─────────┐  ┌──────────┐  ┌───────────────┐ │
-│  │  Pages   │  │Components│  │  lib/api.ts   │ │
-│  │ (routes) │  │ (UI/feat)│  │  (axios)      │ │
-│  └────┬─────┘  └────┬─────┘  └───────┬───────┘ │
-│       │              │                │          │
-│       └──────────────┴────────────────┘          │
-│                      │                           │
-└──────────────────────┼───────────────────────────┘
-                       │ HTTP (Axios)
-                       ▼
-              Laravel API (:3001)
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                React SPA                                 │
+│                                                                          │
+│  Pages (src/pages/)                                                      │
+│     │  Thin route views (guest / admin / tenant)                         │
+│     ▼                                                                    │
+│  Feature Components & Custom Hooks (src/components/features/<domain>/)   │
+│     │  Domain UI + state management, filters, form logic                 │
+│     ▼                                                                    │
+│  API Services (src/lib/services/*.ts)                                    │
+│     │  Typed endpoint wrappers + client cache invalidation               │
+│     ▼                                                                    │
+│  Axios Client (src/lib/axios.ts)                                         │
+│     │  Bearer token injection + global 401 session handling              │
+└─────┼────────────────────────────────────────────────────────────────────┘
+      │ HTTP / JSON
+      ▼
+  Laravel 12 REST API
 ```
 
 ---
@@ -28,136 +32,132 @@ The AriRent frontend is a **React 19 single-page application** built with **Vite
 | Component | Technology |
 |-----------|-----------|
 | Framework | React 19 |
-| Build Tool | Vite 8 |
-| Language | TypeScript 6 |
+| Build Tool | Vite 6 |
+| Language | TypeScript 5.7 |
 | Styling | Tailwind CSS v4 |
-| Routing | React Router v8 |
+| Routing | React Router v7 |
 | HTTP Client | Axios |
+| Icons | Lucide React |
 | Class Utilities | clsx + tailwind-merge |
-| Dev Server | Vite HMR |
-| Containerization | Docker |
+| Testing | Vitest |
+| Deployment | Vercel (`vercel.json`) |
 
 ---
 
 ## 3. Project Structure
 
-```
+```text
 frontend/
+├── public/                              # Static PWA icons, favicons & manifest
+│   └── manifest.webmanifest
 ├── src/
-│   ├── assets/                          # Static images
-│   │   └── gcash-qr-sample.svg
-│   │
 │   ├── components/
-│   │   ├── ui/                          # Reusable UI primitives
-│   │   │   ├── button.tsx               # Button with variants
-│   │   │   ├── card.tsx                 # Glass-card container
-│   │   │   ├── input.tsx                # Form input + label
-│   │   │   ├── select.tsx               # Dropdown select
-│   │   │   ├── textarea.tsx             # Multi-line input
-│   │   │   ├── label.tsx                # Form label
-│   │   │   ├── modal.tsx                # Overlay dialog
-│   │   │   ├── badge.tsx                # Status badge
-│   │   │   ├── table.tsx                # Data table wrapper
-│   │   │   ├── toast.tsx                # Toast notifications
-│   │   │   ├── empty-state.tsx          # Empty list/table state
-│   │   │   ├── spinner.tsx              # Loading spinner
-│   │   │   └── pagination.tsx           # Page navigation
+│   │   ├── ui/                          # Reusable design-system primitives
+│   │   │   ├── alert-banner.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── confirm-dialog.tsx
+│   │   │   ├── empty-state.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── modal.tsx
+│   │   │   ├── select.tsx
+│   │   │   ├── skeleton.tsx
+│   │   │   ├── spinner.tsx
+│   │   │   ├── table.tsx
+│   │   │   ├── textarea.tsx
+│   │   │   └── theme.tsx
 │   │   │
-│   │   ├── common/                      # Shared layout components
-│   │   │   ├── page-loading.tsx         # Full-page loader
-│   │   │   ├── sidebar.tsx              # Admin/tenant sidebar
-│   │   │   ├── page-header.tsx          # Title + action button
-│   │   │   ├── stats-card.tsx           # Dashboard stat card
-│   │   │   └── search-filters.tsx       # Search bar + filter dropdowns
+│   │   ├── common/                      # Shared layout & shell components
+│   │   │   ├── change-password-modal.tsx
+│   │   │   ├── emergency-hotline-banner.tsx
+│   │   │   ├── logo.tsx
+│   │   │   ├── mobile-header.tsx
+│   │   │   ├── page-header.tsx
+│   │   │   ├── page-loading.tsx
+│   │   │   ├── search-input.tsx
+│   │   │   ├── section-header.tsx
+│   │   │   ├── sidebar.tsx
+│   │   │   ├── stats-card.tsx
+│   │   │   ├── tenant-bottom-nav.tsx
+│   │   │   └── theme-toggle.tsx
 │   │   │
-│   │   └── features/                    # Domain-specific components
-│   │       ├── auth/
-│   │       │   ├── login-form.tsx
-│   │       │   └── register-form.tsx
-│   │       ├── property/
-│   │       │   ├── property-card.tsx
-│   │       │   └── property-selector.tsx
-│   │       ├── tenant/
-│   │       │   ├── tenant-table.tsx
-│   │       │   ├── tenant-detail-modal.tsx
-│   │       │   ├── tenant-approval-card.tsx
-│   │       │   └── tenant-actions.tsx
-│   │       ├── billing/
-│   │       │   ├── invoice-table.tsx
-│   │       │   ├── invoice-modal.tsx
-│   │       │   ├── gcash-payment-modal.tsx
-│   │       │   ├── payment-verification-card.tsx
-│   │       │   └── billing-stats.tsx
-│   │       ├── maintenance/
-│   │       │   ├── hooks/
-│   │       │   │   ├── useAdminMaintenance.ts
-│   │       │   │   └── useTenantMaintenance.ts
-│   │       │   ├── maintenance-stats.tsx
-│   │       │   ├── ticket-table.tsx
-│   │       │   ├── ticket-toolbar.tsx
-│   │       │   ├── ticket-pagination.tsx
-│   │       │   ├── ticket-badges.tsx
-│   │       │   ├── ticket-detail-panel.tsx
-│   │       │   ├── ticket-form.tsx
-│   │       │   └── tenant-ticket-list.tsx
-│   │       ├── utilities/
-│   │       │   ├── meter-reading-form.tsx
-│   │       │   ├── water-rates-table.tsx
-│   │       │   └── settings-form.tsx
-│   │       └── documents/
-│   │           ├── lease-viewer.tsx
-│   │           └── house-rules-viewer.tsx
+│   │   └── features/                    # Domain-specific modules (UI + hooks)
+│   │       ├── auth/                    # useRegister
+│   │       ├── billing/                 # useBilling, useTenantBilling, invoice & payment modals/tables
+│   │       ├── dashboard/               # useAdminDashboard, useTenantDashboard, dashboard cards
+│   │       ├── documents/               # useDocuments, useUploadDocumentForm, document modals/cards
+│   │       ├── maintenance/             # useAdminMaintenance, useTenantMaintenance, ticket views
+│   │       ├── property/                # useProperties, property cards & room tables/modals
+│   │       ├── reports/                 # useReports, SVG charts & property performance
+│   │       ├── tenant/                  # useTenants, tenant table & add/edit/detail modals
+│   │       └── utilities/               # useUtilities, sub-meter readings & rate modals
 │   │
-│   ├── lib/                             # Utilities & API layer
-│   │   ├── axios.ts                     # Configured Axios instance
-│   │   ├── cn.ts                        # clsx + twMerge helper
-│   │   └── types.ts                     # TypeScript interfaces
+│   ├── lib/                             # Core utilities, context & API layer
+│   │   ├── services/                    # Typed API clients (only layer importing axios)
+│   │   │   ├── auth.ts
+│   │   │   ├── billing.ts
+│   │   │   ├── dashboard.ts
+│   │   │   ├── documents.ts
+│   │   │   ├── excess-charges.ts
+│   │   │   ├── maintenance.ts
+│   │   │   ├── properties.ts
+│   │   │   ├── reports.ts
+│   │   │   ├── settings.ts
+│   │   │   ├── tenants.ts
+│   │   │   └── utilities.ts
+│   │   ├── __tests__/                   # Automated unit & architecture guard tests
+│   │   │   ├── architecture.test.ts
+│   │   │   ├── cache.test.ts
+│   │   │   └── formatters.test.ts
+│   │   ├── auth-context.tsx             # Global authentication state provider
+│   │   ├── axios.ts                     # Configured Axios instance & interceptors
+│   │   ├── cache.ts                     # Lightweight in-memory GET response cache
+│   │   ├── cn.ts                        # clsx + tailwind-merge helper
+│   │   ├── errors.ts                    # Axios/API error message extractor
+│   │   ├── formatters.ts                # Currency, date, invoice number & timezone-safe helpers
+│   │   ├── image.ts                     # Client-side image compression before upload
+│   │   ├── print.ts                     # Printable invoice statement helper
+│   │   └── types.ts                     # Shared TypeScript domain interfaces
 │   │
 │   ├── pages/                           # Route-based page components
-│   │   ├── guest/                       # Public (unauthenticated)
-│   │   │   ├── login/
-│   │   │   │   └── index.tsx
-│   │   │   └── register/
-│   │   │       └── index.tsx
-│   │   ├── admin/                       # Landlord dashboard
-│   │   │   ├── layout.tsx               # Sidebar + <Outlet />
-│   │   │   ├── dashboard/
-│   │   │   │   └── index.tsx
-│   │   │   ├── tenants/
-│   │   │   │   └── index.tsx
-│   │   │   ├── utilities/
-│   │   │   │   └── index.tsx
-│   │   │   ├── billing/
-│   │   │   │   └── index.tsx
-│   │   │   └── maintenance/
-│   │   │       └── index.tsx
-│   │   └── tenant/                      # Tenant portal
-│   │       ├── layout.tsx               # Sidebar + <Outlet />
-│   │       ├── dashboard/
-│   │       │   └── index.tsx
-│   │       ├── billing/
-│   │       │   └── index.tsx
-│   │       ├── maintenance/
-│   │       │   └── index.tsx
-│   │       └── documents/
-│   │           └── index.tsx
+│   │   ├── guest/
+│   │   │   ├── login/index.tsx
+│   │   │   └── register/index.tsx
+│   │   ├── admin/
+│   │   │   ├── layout.tsx
+│   │   │   ├── dashboard/index.tsx
+│   │   │   ├── properties/index.tsx
+│   │   │   ├── tenants/index.tsx
+│   │   │   ├── utilities/index.tsx
+│   │   │   ├── billing/index.tsx
+│   │   │   ├── invoices/index.tsx
+│   │   │   ├── reports/index.tsx
+│   │   │   ├── maintenance/index.tsx
+│   │   │   └── documents/index.tsx
+│   │   └── tenant/
+│   │       ├── layout.tsx
+│   │       ├── dashboard/index.tsx
+│   │       ├── billing/index.tsx
+│   │       ├── maintenance/index.tsx
+│   │       └── documents/index.tsx
 │   │
 │   ├── styles/
-│   │   └── global.css                   # Tailwind imports + design tokens
+│   │   └── global.css                   # Tailwind v4 imports & theme design tokens
 │   │
-│   ├── App.tsx                          # React Router root
-│   └── main.tsx                         # Entry point
+│   ├── App.tsx                          # React Router root with lazy-loaded routes
+│   ├── main.tsx                         # React DOM entry point
+│   └── vite-env.d.ts                    # Vite TypeScript ambient types
 │
-├── public/                              # Static assets served as-is
-├── index.html                           # HTML shell
+├── index.html                           # HTML shell & PWA metadata
 ├── package.json
-├── vite.config.ts                       # Vite + Tailwind + @ alias
+├── package-lock.json
 ├── tsconfig.json
 ├── tsconfig.app.json
 ├── tsconfig.node.json
-├── eslint.config.js
-├── Dockerfile
-├── docker-compose.yaml
+├── vercel.json                          # SPA fallback rewrites for Vercel
+├── vite.config.ts
+├── vitest.config.ts
 └── .env.example
 ```
 

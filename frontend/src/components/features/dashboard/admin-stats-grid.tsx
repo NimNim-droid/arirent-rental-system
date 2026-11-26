@@ -10,6 +10,7 @@ interface AdminStatsGridProps {
   statsLoading: boolean;
   propsLoading: boolean;
   properties: Property[];
+  isFiltered?: boolean;
   occupancyOverall: number;
 }
 
@@ -18,16 +19,20 @@ export function AdminStatsGrid({
   statsLoading,
   propsLoading,
   properties,
+  isFiltered = false,
   occupancyOverall,
 }: AdminStatsGridProps) {
   const navigate = useNavigate();
+  const availableUnits =
+    stats?.vacant_rooms ??
+    Math.max(0, (stats?.total_rooms ?? 0) - (stats?.occupied_rooms ?? 0));
 
   return (
     <div className="space-y-3">
       <h2 className="text-xs font-medium text-muted">Portfolio Overview</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatsCard
-          title="Monthly Collections"
+          title="Total Collections"
           value={
             statsLoading ? (
               <Skeleton className="h-6 w-28" />
@@ -35,7 +40,7 @@ export function AdminStatsGrid({
               formatCurrency(stats?.total_revenue ?? 0)
             )
           }
-          subtitle="Registered payments this period"
+          subtitle="Confirmed & partial payments"
           icon={<Banknote className="h-4 w-4" />}
           onClick={() => navigate("/admin/billing")}
         />
@@ -56,7 +61,7 @@ export function AdminStatsGrid({
                 } units occupied`
           }
           icon={<Home className="h-4 w-4" />}
-          onClick={() => navigate("/admin/tenants")}
+          onClick={() => navigate("/admin/properties")}
         />
         <StatsCard
           title="Available Units"
@@ -64,21 +69,18 @@ export function AdminStatsGrid({
             statsLoading ? (
               <Skeleton className="h-6 w-16" />
             ) : (
-              String(
-                Math.max(
-                  0,
-                  (stats?.total_rooms ?? 0) - (stats?.occupied_rooms ?? 0)
-                )
-              )
+              String(availableUnits)
             )
           }
           subtitle={
             propsLoading
               ? "Loading properties..."
-              : `${properties.length} managed properties`
+              : isFiltered && properties.length === 1
+              ? properties[0].name
+              : `${properties.length} managed ${properties.length === 1 ? "property" : "properties"}`
           }
           icon={<Users className="h-4 w-4" />}
-          onClick={() => navigate("/admin/tenants")}
+          onClick={() => navigate("/admin/properties")}
         />
       </div>
     </div>

@@ -37,13 +37,16 @@ export function AdminAttentionBanner({ stats, loading }: AdminAttentionBannerPro
   const urgentTickets = stats.recent_maintenance.filter(
     (t) => t.status !== "resolved" && t.status !== "archived"
   );
+  const pendingInquiries = stats.pending_inquiries ?? 0;
   const hasAttention =
+    pendingInquiries > 0 ||
     stats.pending_applications > 0 ||
     stats.pending_payments > 0 ||
     urgentTickets.length > 0;
 
   if (hasAttention) {
     const totalAttention =
+      (pendingInquiries > 0 ? 1 : 0) +
       (stats.pending_applications > 0 ? 1 : 0) +
       (stats.pending_payments > 0 ? 1 : 0) +
       (urgentTickets.length > 0 ? 1 : 0);
@@ -59,6 +62,35 @@ export function AdminAttentionBanner({ stats, loading }: AdminAttentionBannerPro
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {pendingInquiries > 0 && (
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-info-border bg-info-bg/40 p-4 transition-colors hover:bg-info-bg/60">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="info" dot>
+                    New Inquiries
+                  </Badge>
+                  <span className="font-mono text-xs font-bold text-fg tabular-nums">
+                    {pendingInquiries}
+                  </span>
+                </div>
+                <h3 className="mt-2 text-sm font-bold text-fg">
+                  Viewing Requests
+                </h3>
+                <p className="mt-0.5 text-xs text-muted">
+                  Confirm visit schedules with prospective tenants
+                </p>
+              </div>
+              <Link to="/admin/inquiries" className="shrink-0 pt-0.5">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="border-info-border text-info-fg text-xs"
+                >
+                  Schedule &rarr;
+                </Button>
+              </Link>
+            </div>
+          )}
           {stats.pending_applications > 0 && (
             <div className="flex items-start justify-between gap-3 rounded-xl border border-warning-border bg-warning-bg/40 p-4 transition-colors hover:bg-warning-bg/60">
               <div className="min-w-0">

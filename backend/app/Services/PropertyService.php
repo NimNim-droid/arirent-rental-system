@@ -4,16 +4,23 @@ namespace App\Services;
 
 use App\Models\Property;
 use App\Models\Room;
+use App\Repositories\Contracts\ListingPhotoRepositoryInterface;
 use App\Repositories\Contracts\PropertyRepositoryInterface;
 use App\Repositories\Contracts\RoomRepositoryInterface;
+use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Support\PublicFile;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class PropertyService
 {
     public function __construct(
         protected PropertyRepositoryInterface $propertyRepo,
-        protected RoomRepositoryInterface $roomRepo
+        protected RoomRepositoryInterface $roomRepo,
+        protected TenantRepositoryInterface $tenantRepo,
+        protected ListingPhotoRepositoryInterface $photoRepo
     ) {}
 
     /**
@@ -27,11 +34,11 @@ class PropertyService
     }
 
     /**
-     * Get property by ID with rooms.
+     * Get property by ID with rooms and photos.
      */
     public function getProperty(int $id): ?Property
     {
-        return $this->propertyRepo->find($id, ['rooms']);
+        return $this->propertyRepo->find($id, ['photos', 'rooms.photos']);
     }
 
     /**
@@ -54,10 +61,9 @@ class PropertyService
     {
         $property = $this->propertyRepo->update($id, $attributes);
 
-        Cache::forget('all_properties_with_counts');
-        Cache::forget('admin_stats_all');
+        $this->forgetPropertyCaches($id);
 
-        return $property;
+        return $property->load('photos');
     }
 
     /**
@@ -78,11 +84,15 @@ class PropertyService
             throw new \RuntimeException('Cannot delete property with occupied rooms. Please vacate or reassign tenants first.');
         }
 
+        $photos = $this->photoRepo->getByProperty($id);
+        foreach ($photos as $photo) {
+            PublicFile::delete($photo->path);
+        }
+
         $this->roomRepo->deleteByPropertyId($id);
         $deleted = $this->propertyRepo->delete($id);
 
-        Cache::forget('all_properties_with_counts');
-        Cache::forget('admin_stats_all');
+        $this->forgetPropertyCaches($id);
 
         return $deleted;
     }
@@ -97,28 +107,66 @@ class PropertyService
 
     /**
      * Create a new room.
+     *
+     * @throws \RuntimeException
      */
     public function createRoom(array $attributes): Room
     {
+        if (($attributes['status'] ?? 'vacant') === 'occupied') {
+            throw new \RuntimeException('A new room cannot be marked Occupied until an active tenant is assigned to it.');
+        }
+
         $room = $this->roomRepo->create($attributes);
 
-        Cache::forget('all_properties_with_counts');
-        Cache::forget('admin_stats_all');
+        $this->forgetPropertyCaches((int) $room->property_id);
 
-        return $room;
+        return $room->load('photos');
     }
 
     /**
-     * Update room details.
+     * Update room details while keeping room status synchronized with assigned tenants.
+     *
+     * @throws ModelNotFoundException
+     * @throws \RuntimeException
      */
     public function updateRoom(int $id, array $attributes): Room
     {
-        $room = $this->roomRepo->update($id, $attributes);
+        $existing = $this->roomRepo->find($id);
+        if (! $existing) {
+            throw new ModelNotFoundException('Room not found.');
+        }
 
-        Cache::forget('all_properties_with_counts');
-        Cache::forget('admin_stats_all');
+        $nextStatus = $attributes['status'] ?? $existing->status;
+        if ($nextStatus !== $existing->status) {
+            $activeTenant = $this->tenantRepo->findActiveInRoom((int) $existing->property_id, (string) $existing->room_number);
 
-        return $room;
+            if ($nextStatus === 'occupied' && ! $activeTenant) {
+                throw new \RuntimeException('A room can only be marked Occupied when an active tenant is assigned to it.');
+            }
+
+            if ($nextStatus === 'vacant' && $activeTenant) {
+                throw new \RuntimeException("Room {$existing->room_number} is currently occupied by {$activeTenant->name}. Vacate or reassign the tenant first.");
+            }
+        }
+
+        $newRoomNumber = isset($attributes['room_number']) ? trim((string) $attributes['room_number']) : null;
+        $roomRenamed = $newRoomNumber !== null && $newRoomNumber !== '' && $newRoomNumber !== (string) $existing->room_number;
+
+        return DB::transaction(function () use ($id, $attributes, $existing, $roomRenamed, $newRoomNumber) {
+            $room = $this->roomRepo->update($id, $attributes);
+
+            if ($roomRenamed) {
+                $occupant = $this->tenantRepo->findOccupyingInRoom((int) $existing->property_id, (string) $existing->room_number);
+                if ($occupant) {
+                    $this->tenantRepo->update($occupant->id, ['room' => $newRoomNumber]);
+                    Cache::forget("tenant_dashboard_{$occupant->id}");
+                }
+            }
+
+            $this->forgetPropertyCaches((int) $room->property_id);
+
+            return $room;
+        });
     }
 
     /**
@@ -129,7 +177,7 @@ class PropertyService
      */
     public function deleteRoom(int $id): bool
     {
-        $room = $this->roomRepo->find($id);
+        $room = $this->roomRepo->find($id, ['photos']);
         if (! $room) {
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Room not found.');
         }
@@ -138,11 +186,22 @@ class PropertyService
             throw new \RuntimeException('Cannot delete an occupied room. Please vacate the tenant first.');
         }
 
+        $propertyId = (int) $room->property_id;
+        foreach ($room->photos as $photo) {
+            PublicFile::delete($photo->path);
+        }
+
         $deleted = $this->roomRepo->delete($id);
 
-        Cache::forget('all_properties_with_counts');
-        Cache::forget('admin_stats_all');
+        $this->forgetPropertyCaches($propertyId);
 
         return $deleted;
+    }
+
+    protected function forgetPropertyCaches(int $propertyId): void
+    {
+        Cache::forget('all_properties_with_counts');
+        Cache::forget('admin_stats_all');
+        Cache::forget("admin_stats_{$propertyId}");
     }
 }

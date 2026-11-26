@@ -9,21 +9,16 @@ import type { MaintenanceTicket } from "@/lib/types";
 interface TenantServiceModalProps {
   open: boolean;
   onClose: () => void;
-  serviceCategory: "repairs" | "housekeeping";
   onSuccess: () => void | Promise<void>;
 }
 
 export function TenantServiceModal({
   open,
   onClose,
-  serviceCategory,
   onSuccess,
 }: TenantServiceModalProps) {
-  const isRepairs = serviceCategory === "repairs";
-
-  const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>(
-    isRepairs ? "plumbing" : "general"
-  );
+  const [issueType, setIssueType] = useState<MaintenanceTicket["type"]>("plumbing");
+  const [priority, setPriority] = useState<MaintenanceTicket["priority"]>("normal");
   const [description, setDescription] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -33,13 +28,14 @@ export function TenantServiceModal({
 
   useEffect(() => {
     if (open) {
-      setIssueType(isRepairs ? "plumbing" : "general");
+      setIssueType("plumbing");
+      setPriority("normal");
       setDescription("");
       setPhotoFile(null);
       setPhotoPreview(null);
       setError("");
     }
-  }, [open, isRepairs]);
+  }, [open]);
 
   // Clean up object URL on unmount or photo change
   useEffect(() => {
@@ -92,8 +88,8 @@ export function TenantServiceModal({
 
     try {
       const formData = new FormData();
-      formData.append("type", isRepairs ? issueType : "general");
-      formData.append("priority", "normal");
+      formData.append("type", issueType);
+      formData.append("priority", priority);
       formData.append("description", description.trim());
       if (photoFile) {
         formData.append("photo", photoFile);
@@ -120,12 +116,10 @@ export function TenantServiceModal({
         {/* Header */}
         <div className="space-y-0.5">
           <h2 className="text-lg font-bold tracking-tight text-fg">
-            {isRepairs ? "Report a problem" : "Request Housekeeping"}
+            Report a problem
           </h2>
           <p className="text-xs text-muted">
-            {isRepairs
-              ? "Tell us what's wrong in your unit."
-              : "Book a cleaning or general assistance."}
+            Tell us what&apos;s wrong in your unit.
           </p>
         </div>
 
@@ -137,29 +131,56 @@ export function TenantServiceModal({
         )}
 
         {/* Quick Category Chips */}
-        {isRepairs && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {[
-              { value: "plumbing", label: "Plumbing" },
-              { value: "electrical", label: "Electrical" },
-              { value: "appliances", label: "Aircon" },
-              { value: "general", label: "Other" },
-            ].map((chip) => (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => setIssueType(chip.value as MaintenanceTicket["type"])}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
-                  issueType === chip.value
-                    ? "bg-[#C8A04A] border-[#C8A04A] text-[#2A2008] shadow-soft"
-                    : "bg-card border-edge text-muted hover:text-fg hover:bg-hover"
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {[
+            { value: "plumbing", label: "Plumbing" },
+            { value: "electrical", label: "Electrical" },
+            { value: "appliances", label: "Aircon" },
+            { value: "general", label: "Other" },
+          ].map((chip) => (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => setIssueType(chip.value as MaintenanceTicket["type"])}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
+                issueType === chip.value
+                  ? "bg-[#C8A04A] border-[#C8A04A] text-[#2A2008] shadow-soft"
+                  : "bg-card border-edge text-muted hover:text-fg hover:bg-hover"
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Priority Selector (Normal / Urgent) */}
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-edge bg-inset p-1.5">
+          <span className="pl-2.5 text-xs font-semibold text-muted">Priority</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPriority("normal")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                priority === "normal"
+                  ? "bg-card text-fg shadow-soft border border-edge"
+                  : "text-muted hover:text-fg"
+              }`}
+            >
+              Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setPriority("urgent")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                priority === "urgent"
+                  ? "bg-danger-bg text-danger-fg border border-danger-border shadow-soft"
+                  : "text-muted hover:text-fg"
+              }`}
+            >
+              Urgent
+            </button>
           </div>
-        )}
+        </div>
 
         {/* What's happening textarea */}
         <div>

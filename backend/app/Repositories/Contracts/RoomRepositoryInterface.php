@@ -12,7 +12,13 @@ interface RoomRepositoryInterface
 
     public function find(int $id, array $relations = []): ?Room;
 
+    public function findForUpdate(int $id): ?Room;
+
+    public function findPublicRoom(int $id): ?Room;
+
     public function findByPropertyAndNumber(int $propertyId, string $roomNumber): ?Room;
+
+    public function findByPropertyAndNumberForUpdate(int $propertyId, string $roomNumber): ?Room;
 
     public function create(array $attributes): Room;
 

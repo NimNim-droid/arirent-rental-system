@@ -1,7 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Wrench,
-  Sparkles,
   Plus,
   CheckCircle2,
   AlertTriangle,
@@ -17,8 +16,6 @@ import {
   TicketDetailModal,
 } from "@/components/features/maintenance";
 
-type ServiceTab = "repairs" | "housekeeping";
-
 export default function TenantMaintenance() {
   const {
     tickets,
@@ -30,45 +27,21 @@ export default function TenantMaintenance() {
     loadTickets,
   } = useTenantMaintenance();
 
-  const [activeTab, setActiveTab] = useState<ServiceTab>("repairs");
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<
-    "repairs" | "housekeeping"
-  >("repairs");
-
-  // Repairs: plumbing, electrical, appliances (or anything not classified as general housekeeping)
-  const repairTickets = useMemo(
-    () => tickets.filter((t) => t.type !== "general"),
-    [tickets]
-  );
-
-  // Housekeeping / General
-  const housekeepingTickets = useMemo(
-    () => tickets.filter((t) => t.type === "general"),
-    [tickets]
-  );
-
-  const displayedTickets =
-    activeTab === "repairs" ? repairTickets : housekeepingTickets;
-
-  const handleOpenRequest = (category: "repairs" | "housekeeping") => {
-    setSelectedCategory(category);
-    setModalOpen(true);
-  };
 
   return (
     <div className="mx-auto w-full max-w-md space-y-5 lg:max-w-4xl">
       {/* Desktop Page Title (mobile has header bar) */}
       <div className="hidden lg:flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-fg">Services</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">Maintenance</h1>
           <p className="text-xs text-muted mt-0.5">
-            Submit repairs, request housekeeping, or contact property maintenance
+            Submit repair or maintenance requests for your unit
           </p>
         </div>
         <button
           type="button"
-          onClick={() => handleOpenRequest("repairs")}
+          onClick={() => setModalOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-xs font-semibold text-white shadow-soft hover:bg-accent-strong transition-all cursor-pointer"
         >
           <Plus className="h-4 w-4" /> New Request
@@ -98,92 +71,51 @@ export default function TenantMaintenance() {
         </div>
       )}
 
-      {/* ================= 1. Add Requests Here ================= */}
+      {/* ================= 1. Report Maintenance Issue ================= */}
       <section
         aria-label="Add requests"
         className="rounded-3xl border border-edge bg-card p-4 sm:p-5 shadow-card space-y-4"
       >
         <div>
-          <h2 className="text-base font-extrabold text-fg tracking-tight">
-            Add requests here
+          <h2 className="text-base font-bold text-fg tracking-tight">
+            Request Maintenance
           </h2>
           <p className="text-xs text-muted mt-0.5">
-            Select the service type you would like to request
+            Report plumbing, electrical, appliance, or general unit issues
           </p>
         </div>
 
-        {/* 2 Big Action Tiles: Repairs & Housekeeping */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => handleOpenRequest("repairs")}
-            className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-edge bg-hover/40 p-4 sm:p-5 transition-all duration-150 hover:border-accent/40 hover:bg-accent-soft/30 active:scale-95 cursor-pointer text-center"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card border border-edge text-accent shadow-card group-hover:scale-110 transition-transform">
-              <Wrench className="h-6 w-6" />
-            </div>
-            <span className="text-xs sm:text-sm font-bold text-fg group-hover:text-accent transition-colors">
-              Repairs
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="group flex w-full items-center gap-3.5 rounded-2xl border border-edge bg-inset/70 p-4 transition-all duration-150 hover:border-accent-border hover:bg-accent-soft/40 active:scale-[0.99] cursor-pointer text-left"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent border border-accent-border/60 group-hover:scale-105 transition-transform">
+            <Wrench className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <span className="block text-xs sm:text-sm font-bold text-fg group-hover:text-accent transition-colors">
+              Report a Maintenance Issue
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenRequest("housekeeping")}
-            className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-edge bg-hover/40 p-4 sm:p-5 transition-all duration-150 hover:border-accent/40 hover:bg-accent-soft/30 active:scale-95 cursor-pointer text-center"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-card border border-edge text-accent shadow-card group-hover:scale-110 transition-transform">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <span className="text-xs sm:text-sm font-bold text-fg group-hover:text-accent transition-colors">
-              Housekeeping
+            <span className="block text-[11px] text-muted">
+              Plumbing, electrical, aircon, or general repairs
             </span>
-          </button>
-        </div>
+          </div>
+          <Plus className="h-4 w-4 shrink-0 text-muted group-hover:text-accent transition-colors" />
+        </button>
 
         {/* Emergency Hotline (24/7) Banner */}
         <EmergencyHotlineBanner />
       </section>
 
-      {/* ================= 2. Segmented Tabs ================= */}
-      <div className="flex border-b border-edge">
-        <button
-          type="button"
-          onClick={() => setActiveTab("repairs")}
-          className={`relative pb-2.5 px-4 text-sm font-bold transition-colors cursor-pointer ${
-            activeTab === "repairs" ? "text-accent" : "text-muted hover:text-fg"
-          }`}
-        >
-          Repair requests
-          {repairTickets.length > 0 && (
-            <span className="ml-1.5 rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-              {repairTickets.length}
-            </span>
-          )}
-          {activeTab === "repairs" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("housekeeping")}
-          className={`relative pb-2.5 px-4 text-sm font-bold transition-colors cursor-pointer ${
-            activeTab === "housekeeping"
-              ? "text-accent"
-              : "text-muted hover:text-fg"
-          }`}
-        >
-          Housekeeping requests
-          {housekeepingTickets.length > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-[#f97316] text-[10px] font-bold text-white">
-              {housekeepingTickets.length}
-            </span>
-          )}
-          {activeTab === "housekeeping" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
-          )}
-        </button>
+      {/* ================= 2. My Requests Header ================= */}
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-bold tracking-tight text-fg">
+          My Requests
+        </h2>
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-inset border border-edge px-2 text-[11px] font-bold tabular-nums text-muted">
+          {tickets.length}
+        </span>
       </div>
 
       {/* ================= 3. Tickets List ================= */}
@@ -192,22 +124,16 @@ export default function TenantMaintenance() {
           <Skeleton className="h-24 w-full rounded-2xl" />
           <Skeleton className="h-24 w-full rounded-2xl" />
         </div>
-      ) : displayedTickets.length === 0 ? (
-        <EmptyState
-          title={
-            activeTab === "repairs"
-              ? "No repair requests"
-              : "No housekeeping requests"
-          }
-          description={
-            activeTab === "repairs"
-              ? "Submit a repair request anytime for plumbing, electrical, or appliances."
-              : "Request housekeeping or common area maintenance for your unit."
-          }
-        />
+      ) : tickets.length === 0 ? (
+        <div className="rounded-3xl border border-edge bg-card p-6 shadow-card">
+          <EmptyState
+            title="No maintenance requests"
+            description="Submit a request anytime for plumbing, electrical, appliances, or general unit repairs."
+          />
+        </div>
       ) : (
         <div className="space-y-3">
-          {displayedTickets.map((ticket) => (
+          {tickets.map((ticket) => (
             <TenantServiceCard
               key={ticket.id}
               ticket={ticket}
@@ -221,7 +147,6 @@ export default function TenantMaintenance() {
       <TenantServiceModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        serviceCategory={selectedCategory}
         onSuccess={loadTickets}
       />
 

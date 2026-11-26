@@ -91,8 +91,7 @@ class PaymentService
                     'reject_reason' => null,
                 ]);
 
-                Cache::forget('admin_stats_all');
-                Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+                $this->forgetBillingCaches((int) $bill->tenant_id);
 
                 return $bill;
             });
@@ -179,8 +178,7 @@ class PaymentService
                 ]);
             }
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+            $this->forgetBillingCaches((int) $bill->tenant_id);
 
             return $bill;
         });
@@ -257,10 +255,19 @@ class PaymentService
 
             $this->tenantRepo->decrementBalance((int) $bill->tenant_id, $amount);
 
-            Cache::forget('admin_stats_all');
-            Cache::forget("tenant_dashboard_{$bill->tenant_id}");
+            $this->forgetBillingCaches((int) $bill->tenant_id);
 
             return $bill;
         });
+    }
+
+    protected function forgetBillingCaches(int $tenantId): void
+    {
+        Cache::forget('admin_stats_all');
+        Cache::forget("tenant_dashboard_{$tenantId}");
+        $tenant = $this->tenantRepo->find($tenantId);
+        if ($tenant && $tenant->property_id) {
+            Cache::forget("admin_stats_{$tenant->property_id}");
+        }
     }
 }
