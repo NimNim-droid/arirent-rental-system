@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPropertiesCatalogUrl,
   computeListingTotals,
+  countActiveListingFilters,
   extractFeaturedVacantRooms,
   extractPrimaryLandlordContact,
   filterPropertiesByQuickMode,
   normalizeExternalUrl,
+  parseCatalogTabParam,
+  parseQuickModeParam,
   sanitizePhoneHref,
 } from "@/components/features/listings/listing-helpers";
 import type { PublicProperty, PublicRoom } from "@/lib/types";
@@ -143,5 +147,36 @@ describe("listing-helpers", () => {
     expect(contact?.propertyId).toBe("p2");
     expect(contact?.contactName).toBe("Ana Reyes");
     expect(contact?.messengerUrl).toBe("https://m.me/arirentcedar");
+  });
+
+  it("parses URL params, builds catalog URLs, and counts active filters accurately", () => {
+    expect(parseQuickModeParam("vacant")).toBe("vacant");
+    expect(parseQuickModeParam("invalid")).toBe("all");
+    expect(parseCatalogTabParam("rooms")).toBe("rooms");
+    expect(parseCatalogTabParam(null)).toBe("buildings");
+
+    expect(
+      buildPropertiesCatalogUrl({
+        q: "Makati",
+        mode: "vacant",
+        city: "all",
+        maxRent: "12000",
+        tab: "rooms",
+      })
+    ).toBe("/properties?q=Makati&mode=vacant&max_rent=12000&tab=rooms");
+
+    expect(buildPropertiesCatalogUrl({ mode: "all", city: "all", tab: "buildings" })).toBe(
+      "/properties"
+    );
+
+    expect(
+      countActiveListingFilters({
+        quickMode: "solo",
+        searchInput: "Maple",
+        city: "Makati",
+        maxRent: "",
+        capacity: "1",
+      })
+    ).toBe(4);
   });
 });

@@ -1,29 +1,69 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { listingsService } from "@/lib/services/listings";
 import { getErrorMessage } from "@/lib/errors";
 import type { PublicProperty } from "@/lib/types";
 import {
   computeListingTotals,
+  countActiveListingFilters,
   extractFeaturedVacantRooms,
   extractPrimaryLandlordContact,
   filterPropertiesByQuickMode,
+  parseQuickModeParam,
   type ListingQuickMode,
 } from "../listing-helpers";
 
-export function usePublicListings() {
+interface UsePublicListingsOptions {
+  /** Hydrate initial filters from URL query parameters (used on /properties catalog). */
+  syncFromUrl?: boolean;
+}
+
+export function usePublicListings(options: UsePublicListingsOptions = {}) {
+  const { syncFromUrl = false } = options;
+  const [searchParams] = useSearchParams();
+
   const [listings, setListings] = useState<PublicProperty[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [quickMode, setQuickMode] = useState<ListingQuickMode>("all");
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [city, setCity] = useState("all");
-  const [maxRent, setMaxRent] = useState("");
-  const [capacity, setCapacity] = useState("");
+  const [quickMode, setQuickMode] = useState<ListingQuickMode>(() =>
+    syncFromUrl ? parseQuickModeParam(searchParams.get("mode")) : "all"
+  );
+  const [searchInput, setSearchInput] = useState(() =>
+    syncFromUrl ? searchParams.get("q") ?? "" : ""
+  );
+  const [debouncedQuery, setDebouncedQuery] = useState(() =>
+    syncFromUrl ? searchParams.get("q") ?? "" : ""
+  );
+  const [city, setCity] = useState(() =>
+    syncFromUrl ? searchParams.get("city") ?? "all" : "all"
+  );
+  const [maxRent, setMaxRent] = useState(() =>
+    syncFromUrl ? searchParams.get("max_rent") ?? "" : ""
+  );
+  const [capacity, setCapacity] = useState(() =>
+    syncFromUrl ? searchParams.get("capacity") ?? "" : ""
+  );
 
   const [visitProperty, setVisitProperty] = useState<PublicProperty | null>(null);
+
+  // Sync URL updates when navigating between shortcuts into /properties
+  useEffect(() => {
+    if (!syncFromUrl) return;
+    const nextMode = parseQuickModeParam(searchParams.get("mode"));
+    const nextQ = searchParams.get("q") ?? "";
+    const nextCity = searchParams.get("city") ?? "all";
+    const nextMaxRent = searchParams.get("max_rent") ?? "";
+    const nextCapacity = searchParams.get("capacity") ?? "";
+
+    setQuickMode(nextMode);
+    setSearchInput(nextQ);
+    setDebouncedQuery(nextQ);
+    setCity(nextCity);
+    setMaxRent(nextMaxRent);
+    setCapacity(nextCapacity);
+  }, [syncFromUrl, searchParams]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchInput), 220);
@@ -58,10 +98,18 @@ export function usePublicListings() {
     [listings, quickMode]
   );
 
-  const featuredRooms = useMemo(
-    () => extractFeaturedVacantRooms(visibleListings, 6),
-    [visibleListings]
-  );
+  const allVacantRooms = useMemo(() => {
+    const rooms = extractFeaturedVacantRooms(visibleListings);
+    if (quickMode === "solo") {
+      return rooms.filter((item) => item.room.capacity === 1);
+    }
+    if (quickMode === "shared") {
+      return rooms.filter((item) => item.room.capacity >= 2);
+    }
+    return rooms;
+  }, [visibleListings, quickMode]);
+
+  const featuredRooms = useMemo(() => allVacantRooms.slice(0, 6), [allVacantRooms]);
 
   const totals = useMemo(
     () => computeListingTotals(listings, cities.length),
@@ -73,12 +121,19 @@ export function usePublicListings() {
     [listings]
   );
 
-  const hasActiveFilters =
-    quickMode !== "all" ||
-    debouncedQuery.trim() !== "" ||
-    city !== "all" ||
-    maxRent !== "" ||
-    capacity !== "";
+  const activeFilterCount = useMemo(
+    () =>
+      countActiveListingFilters({
+        quickMode,
+        searchInput: debouncedQuery,
+        city,
+        maxRent,
+        capacity,
+      }),
+    [quickMode, debouncedQuery, city, maxRent, capacity]
+  );
+
+  const hasActiveFilters = activeFilterCount > 0;
 
   const clearFilters = useCallback(() => {
     setQuickMode("all");
@@ -93,6 +148,7 @@ export function usePublicListings() {
     listings,
     visibleListings,
     featuredRooms,
+    allVacantRooms,
     cities,
     loading,
     error,
@@ -106,6 +162,7 @@ export function usePublicListings() {
     setMaxRent,
     capacity,
     setCapacity,
+    activeFilterCount,
     hasActiveFilters,
     clearFilters,
     fetchListings,

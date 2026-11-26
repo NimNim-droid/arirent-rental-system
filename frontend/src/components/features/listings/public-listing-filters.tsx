@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import type { ListingQuickMode } from "./listing-helpers";
+import {
+  OCCUPANCY_OPTIONS,
+  RENT_BUDGET_OPTIONS,
+  type ListingQuickMode,
+} from "./listing-helpers";
 
 const QUICK_TABS: Array<{
   id: ListingQuickMode;
@@ -22,22 +26,6 @@ const QUICK_TABS: Array<{
   { id: "vacant", label: "Vacant Ready", icon: CheckCircle2 },
   { id: "solo", label: "Solo Units", icon: User },
   { id: "shared", label: "2+ Occupants", icon: Users },
-];
-
-const BUDGET_OPTIONS = [
-  { label: "Any monthly budget", value: "" },
-  { label: "Up to ₱6,000 / mo", value: "6000" },
-  { label: "Up to ₱9,000 / mo", value: "9000" },
-  { label: "Up to ₱12,000 / mo", value: "12000" },
-  { label: "Up to ₱15,000 / mo", value: "15000" },
-  { label: "Up to ₱20,000 / mo", value: "20000" },
-];
-
-const CAPACITY_OPTIONS = [
-  { label: "Any capacity", value: "" },
-  { label: "Solo (1+ person)", value: "1" },
-  { label: "2+ occupants", value: "2" },
-  { label: "3+ occupants", value: "3" },
 ];
 
 interface PublicListingFiltersProps {
@@ -56,6 +44,7 @@ interface PublicListingFiltersProps {
   resultCount: number;
   onClearFilters: () => void;
   onSubmitSearch?: () => void;
+  floating?: boolean;
 }
 
 export function PublicListingFilters({
@@ -74,6 +63,7 @@ export function PublicListingFilters({
   resultCount,
   onClearFilters,
   onSubmitSearch,
+  floating = true,
 }: PublicListingFiltersProps) {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -81,7 +71,12 @@ export function PublicListingFilters({
   };
 
   return (
-    <div className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6 -mt-12 sm:-mt-14">
+    <div
+      className={cn(
+        "relative z-20",
+        floating && "mx-auto max-w-6xl px-4 sm:px-6 -mt-12 sm:-mt-14"
+      )}
+    >
       {/* Attached Quick-Mode Tab Strip */}
       <div
         role="tablist"
@@ -176,7 +171,7 @@ export function PublicListingFilters({
               onChange={(e) => onMaxRentChange(e.target.value)}
               className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem] [background-position:right_0.65rem_center] bg-no-repeat"
             >
-              {BUDGET_OPTIONS.map((opt) => (
+              {RENT_BUDGET_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -198,7 +193,7 @@ export function PublicListingFilters({
               onChange={(e) => onCapacityChange(e.target.value)}
               className="w-full h-10 rounded-xl border border-edge bg-inset/60 px-3 pr-8 text-sm sm:text-[13px] text-fg focus:border-accent focus:bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1rem] [background-position:right_0.65rem_center] bg-no-repeat"
             >
-              {CAPACITY_OPTIONS.map((opt) => (
+              {OCCUPANCY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>

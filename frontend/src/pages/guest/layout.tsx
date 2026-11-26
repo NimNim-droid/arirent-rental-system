@@ -4,35 +4,41 @@ import { ArrowRight, Building2, LogIn, Menu, Phone, X } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { PublicMobileBottomNav } from "@/components/features/listings";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/cn";
 
 interface PublicNavLink {
   label: string;
-  href: string;
+  to: string;
+  isHashLink?: boolean;
+  matchPath?: string;
   matchHash?: string;
 }
 
 const NAV_LINKS: PublicNavLink[] = [
-  { label: "Home", href: "/", matchHash: "" },
-  { label: "Properties", href: "/#properties", matchHash: "#properties" },
-  { label: "Rooms", href: "/#featured-units", matchHash: "#featured-units" },
-  { label: "How It Works", href: "/#how-leasing-works", matchHash: "#how-leasing-works" },
-  { label: "About Us", href: "/#about-us", matchHash: "#about-us" },
-  { label: "Contact", href: "/#contact", matchHash: "#contact" },
+  { label: "Home", to: "/", matchPath: "/", matchHash: "" },
+  { label: "Properties", to: "/properties", matchPath: "/properties" },
+  { label: "Rooms", to: "/properties?mode=vacant&tab=rooms" },
+  { label: "How It Works", to: "/#how-leasing-works", isHashLink: true, matchHash: "#how-leasing-works" },
+  { label: "About Us", to: "/#about-us", isHashLink: true, matchHash: "#about-us" },
+  { label: "Contact", to: "/#contact", isHashLink: true, matchHash: "#contact" },
 ];
 
 export default function PublicLayout() {
   const { user } = useAuth();
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, search } = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const portalPath = user?.role === "admin" ? "/admin/dashboard" : "/tenant/dashboard";
   const portalLabel = user?.role === "admin" ? "Manager Portal" : "Tenant Portal";
 
+  // Show the public bottom nav on Home and Properties catalog (detail pages show MobileListingActionBar instead)
+  const showMobileBottomNav = pathname === "/" || pathname === "/properties";
+
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [pathname, hash]);
+  }, [pathname, hash, search]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -44,21 +50,35 @@ export default function PublicLayout() {
   }, [mobileMenuOpen]);
 
   const isNavItemActive = (item: PublicNavLink) => {
-    if (pathname.startsWith("/properties") || pathname.startsWith("/rooms")) {
-      return item.matchHash === "#properties";
+    if (item.label === "Rooms") {
+      return pathname === "/properties" && search.includes("tab=rooms");
     }
-    if (pathname !== "/") return false;
-    return hash === (item.matchHash ?? "");
+    if (item.label === "Properties") {
+      return (
+        (pathname === "/properties" && !search.includes("tab=rooms")) ||
+        pathname.startsWith("/properties/") ||
+        pathname.startsWith("/rooms/")
+      );
+    }
+    if (item.isHashLink) {
+      return pathname === "/" && hash === item.matchHash;
+    }
+    return pathname === "/" && hash === "";
   };
 
   return (
-    <div className="min-h-screen min-h-dvh bg-app text-fg flex flex-col">
+    <div
+      className={cn(
+        "min-h-screen min-h-dvh bg-app text-fg flex flex-col",
+        showMobileBottomNav && "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0"
+      )}
+    >
       {/* Sticky Website Navigation Bar */}
       <header
         className="sticky top-0 z-30 border-b border-edge bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/88"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           {/* Brand */}
           <Link
             to="/"
@@ -78,9 +98,9 @@ export default function PublicLayout() {
                   : "text-fg-soft hover:text-fg hover:bg-hover/60"
               );
 
-              if (item.href === "/") {
+              if (item.isHashLink) {
                 return (
-                  <Link key={item.label} to="/" className={classes}>
+                  <a key={item.label} href={item.to} className={classes}>
                     {item.label}
                     {active && (
                       <span
@@ -88,12 +108,12 @@ export default function PublicLayout() {
                         className="absolute inset-x-3 -bottom-[17px] h-0.5 rounded-full bg-accent"
                       />
                     )}
-                  </Link>
+                  </a>
                 );
               }
 
               return (
-                <a key={item.label} href={item.href} className={classes}>
+                <Link key={item.label} to={item.to} className={classes}>
                   {item.label}
                   {active && (
                     <span
@@ -101,7 +121,7 @@ export default function PublicLayout() {
                       className="absolute inset-x-3 -bottom-[17px] h-0.5 rounded-full bg-accent"
                     />
                   )}
-                </a>
+                </Link>
               );
             })}
           </nav>
@@ -160,28 +180,28 @@ export default function PublicLayout() {
                     : "text-fg-soft hover:bg-hover hover:text-fg"
                 );
 
-                if (item.href === "/") {
+                if (item.isHashLink) {
                   return (
-                    <Link
+                    <a
                       key={item.label}
-                      to="/"
+                      href={item.to}
                       onClick={() => setMobileMenuOpen(false)}
                       className={classes}
                     >
                       <span>{item.label}</span>
-                    </Link>
+                    </a>
                   );
                 }
 
                 return (
-                  <a
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
                     className={classes}
                   >
                     <span>{item.label}</span>
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -225,7 +245,7 @@ export default function PublicLayout() {
       </main>
 
       {/* Multi-Column Editorial Footer */}
-      <footer className="border-t border-edge bg-card mt-16">
+      <footer className="border-t border-edge bg-card mt-14 lg:mt-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8">
             <div className="sm:col-span-2 lg:col-span-5 space-y-3">
@@ -240,14 +260,17 @@ export default function PublicLayout() {
               <p className="text-[11px] font-bold uppercase tracking-wider text-fg">Explore</p>
               <ul className="space-y-2 text-xs text-muted">
                 <li>
-                  <a href="/#properties" className="hover:text-accent transition-colors">
+                  <Link to="/properties" className="hover:text-accent transition-colors">
                     Managed Buildings
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/#featured-units" className="hover:text-accent transition-colors">
+                  <Link
+                    to="/properties?mode=vacant&tab=rooms"
+                    className="hover:text-accent transition-colors"
+                  >
                     Available Rooms
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a href="/#how-leasing-works" className="hover:text-accent transition-colors">
@@ -304,6 +327,9 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar */}
+      {showMobileBottomNav && <PublicMobileBottomNav />}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import TenantLayout from "@/pages/tenant/layout";
 
 // Lazy-loaded public listing & guest pages
 const PublicListingsPage = lazy(() => import("@/pages/guest/listings"));
+const PublicPropertiesPage = lazy(() => import("@/pages/guest/properties"));
 const PublicPropertyDetailPage = lazy(() => import("@/pages/guest/property-detail"));
 const PublicRoomDetailPage = lazy(() => import("@/pages/guest/room-detail"));
 const LoginPage = lazy(() => import("@/pages/guest/login"));
@@ -35,11 +36,27 @@ const TenantMaintenance = lazy(() => import("@/pages/tenant/maintenance"));
 const TenantDocuments = lazy(() => import("@/pages/tenant/documents"));
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
+    if (hash) {
+      const targetId = hash.slice(1);
+      const scroll = () => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          return true;
+        }
+        return false;
+      };
+      if (!scroll()) {
+        const timer = setTimeout(scroll, 120);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  }, [pathname]);
+  }, [pathname, hash]);
 
   return null;
 }
@@ -59,6 +76,7 @@ export default function App() {
           {/* Public Property Showcase & Viewing Routes */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<PublicListingsPage />} />
+            <Route path="/properties" element={<PublicPropertiesPage />} />
             <Route path="/properties/:id" element={<PublicPropertyDetailPage />} />
             <Route path="/rooms/:id" element={<PublicRoomDetailPage />} />
           </Route>

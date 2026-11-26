@@ -1,4 +1,6 @@
-import { Building2, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { ArrowRight, Building2, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,11 +11,14 @@ import {
   LeasingStepsSection,
   PublicAboutSection,
   PublicContactSection,
+  PublicFilterSheet,
   PublicHeroSection,
   PublicListingFilters,
+  PublicMobileHome,
   PublicPropertyCard,
   PublicStatsStrip,
   ScheduleVisitModal,
+  buildPropertiesCatalogUrl,
   usePublicListings,
 } from "@/components/features/listings";
 
@@ -25,6 +30,9 @@ function scrollToSection(id: string) {
 }
 
 export default function PublicListingsPage() {
+  const navigate = useNavigate();
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
   const {
     listings,
     visibleListings,
@@ -42,6 +50,7 @@ export default function PublicListingsPage() {
     setMaxRent,
     capacity,
     setCapacity,
+    activeFilterCount,
     hasActiveFilters,
     clearFilters,
     fetchListings,
@@ -53,52 +62,72 @@ export default function PublicListingsPage() {
 
   return (
     <div>
-      {/* 1. Architectural Hero Banner */}
-      <PublicHeroSection
-        totalBuildings={totals.totalBuildings}
-        totalVacant={totals.totalVacant}
+      {/* ================= Mobile Phone App-Style Home (< lg) ================= */}
+      <PublicMobileHome
+        listings={visibleListings}
+        featuredRooms={featuredRooms}
         loading={loading}
-        onExploreClick={() => scrollToSection("properties")}
-      />
-
-      {/* 2. Floating Elevated Search & Filter Dock */}
-      <PublicListingFilters
-        quickMode={quickMode}
-        onQuickModeChange={setQuickMode}
+        totalVacant={totals.totalVacant}
         searchInput={searchInput}
         onSearchChange={setSearchInput}
+        activeFilterCount={activeFilterCount}
+        onOpenFilterSheet={() => setFilterSheetOpen(true)}
         city={city}
-        onCityChange={setCity}
-        cities={cities}
         maxRent={maxRent}
-        onMaxRentChange={setMaxRent}
         capacity={capacity}
-        onCapacityChange={setCapacity}
-        hasActiveFilters={hasActiveFilters}
-        resultCount={visibleListings.length}
-        onClearFilters={clearFilters}
-        onSubmitSearch={() => scrollToSection("properties")}
       />
 
+      {/* ================= Desktop Architectural Hero & Floating Search (>= lg) ================= */}
+      <div className="hidden lg:block">
+        <PublicHeroSection
+          totalBuildings={totals.totalBuildings}
+          totalVacant={totals.totalVacant}
+          loading={loading}
+          onExploreClick={() => scrollToSection("properties")}
+        />
+
+        <PublicListingFilters
+          quickMode={quickMode}
+          onQuickModeChange={setQuickMode}
+          searchInput={searchInput}
+          onSearchChange={setSearchInput}
+          city={city}
+          onCityChange={setCity}
+          cities={cities}
+          maxRent={maxRent}
+          onMaxRentChange={setMaxRent}
+          capacity={capacity}
+          onCapacityChange={setCapacity}
+          hasActiveFilters={hasActiveFilters}
+          resultCount={visibleListings.length}
+          onClearFilters={clearFilters}
+          onSubmitSearch={() => scrollToSection("properties")}
+        />
+      </div>
+
       {/* Main Content Container */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-12 sm:pt-16 space-y-16 sm:space-y-20">
-        {/* 3. Managed Properties Grid */}
-        <section id="properties" aria-label="Managed properties" className="scroll-mt-20 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8 lg:pt-16 space-y-12 lg:space-y-20">
+        {/* Desktop Managed Properties Grid (Mobile uses horizontal swipe carousel + /properties list) */}
+        <section
+          id="properties"
+          aria-label="Managed properties"
+          className="hidden lg:block scroll-mt-20 space-y-6"
+        >
+          <div className="flex items-end justify-between gap-4">
             <div className="space-y-1">
               <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
                 Browse by Property
               </p>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
+              <h2 className="text-3xl font-extrabold tracking-tight text-fg">
                 Explore Managed <span className="text-accent">Buildings</span>
               </h2>
-              <p className="text-xs sm:text-sm text-muted">
+              <p className="text-sm text-muted">
                 Inspect verified locations, amenities, and open units directly managed by AriRent.
               </p>
             </div>
 
-            {!loading && !error && (
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
+              {!loading && !error && (
                 <Badge
                   variant={totals.totalVacant > 0 ? "success" : "neutral"}
                   dot
@@ -107,16 +136,18 @@ export default function PublicListingsPage() {
                   <span className="tabular-nums">{totals.totalVacant}</span> vacant{" "}
                   {totals.totalVacant === 1 ? "unit" : "units"}
                 </Badge>
-                <Badge variant="neutral" className="rounded-full px-3 py-1">
-                  <span className="tabular-nums">{visibleListings.length}</span>{" "}
-                  {visibleListings.length === 1 ? "building" : "buildings"}
-                </Badge>
-              </div>
-            )}
+              )}
+              <Link to="/properties">
+                <Button variant="secondary" size="md" className="h-9 rounded-xl">
+                  <span>View All Properties</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               {Array.from({ length: 4 }).map((_, idx) => (
                 <Card key={idx} className="overflow-hidden rounded-2xl">
                   <Skeleton className="h-56 w-full rounded-none border-0" />
@@ -166,7 +197,7 @@ export default function PublicListingsPage() {
               />
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               {visibleListings.map((property) => (
                 <PublicPropertyCard
                   key={property.id}
@@ -178,25 +209,56 @@ export default function PublicListingsPage() {
           )}
         </section>
 
-        {/* 4. Available Units Showcase (3-Column Grid) */}
-        <FeaturedUnitsSection rooms={featuredRooms} loading={loading} />
+        {/* Desktop 3-Column Vacant Rooms Showcase */}
+        <div className="hidden lg:block">
+          <FeaturedUnitsSection rooms={featuredRooms} loading={loading} />
+        </div>
 
-        {/* 5. Royal Blue Live Metrics Banner */}
+        {/* Shared Across Mobile & Desktop: Live Metrics Strip */}
         <PublicStatsStrip totals={totals} loading={loading} />
 
-        {/* 6. Step-by-Step Leasing Process */}
+        {/* Step-by-Step Leasing Process */}
         <LeasingStepsSection />
 
-        {/* 7. About AriRent */}
+        {/* About AriRent */}
         <PublicAboutSection />
 
-        {/* 8. Contact Management & Viewing Quick-Booker */}
+        {/* Contact Management & Viewing Quick-Booker */}
         <PublicContactSection
           contact={primaryContact}
           properties={listings}
           onScheduleVisit={setVisitProperty}
         />
       </div>
+
+      {/* Mobile Filter Sheet — Applying jumps straight into /properties compact list */}
+      <PublicFilterSheet
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        quickMode={quickMode}
+        onQuickModeChange={setQuickMode}
+        city={city}
+        onCityChange={setCity}
+        cities={cities}
+        maxRent={maxRent}
+        onMaxRentChange={setMaxRent}
+        capacity={capacity}
+        onCapacityChange={setCapacity}
+        resultCount={visibleListings.length}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+        onApply={() =>
+          navigate(
+            buildPropertiesCatalogUrl({
+              q: searchInput,
+              mode: quickMode,
+              city,
+              maxRent,
+              capacity,
+            })
+          )
+        }
+      />
 
       {/* Viewing Appointment Modal */}
       {visitProperty && (

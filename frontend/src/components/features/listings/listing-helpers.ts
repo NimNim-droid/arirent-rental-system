@@ -1,6 +1,23 @@
 import type { PublicProperty, PublicRoom } from "@/lib/types";
 
 export type ListingQuickMode = "all" | "vacant" | "solo" | "shared";
+export type PublicCatalogTab = "buildings" | "rooms";
+
+export const RENT_BUDGET_OPTIONS = [
+  { label: "Any monthly budget", value: "" },
+  { label: "Up to ₱6,000 / mo", value: "6000" },
+  { label: "Up to ₱9,000 / mo", value: "9000" },
+  { label: "Up to ₱12,000 / mo", value: "12000" },
+  { label: "Up to ₱15,000 / mo", value: "15000" },
+  { label: "Up to ₱20,000 / mo", value: "20000" },
+] as const;
+
+export const OCCUPANCY_OPTIONS = [
+  { label: "Any capacity", value: "" },
+  { label: "Solo (1+ person)", value: "1" },
+  { label: "2+ occupants", value: "2" },
+  { label: "3+ occupants", value: "3" },
+] as const;
 
 export interface FeaturedPublicRoom {
   room: PublicRoom;
@@ -27,6 +44,63 @@ export interface PrimaryLandlordContact {
   messengerUrl: string | null;
   address: string;
   city: string;
+}
+
+export interface ListingFilterSnapshot {
+  quickMode: ListingQuickMode;
+  searchInput: string;
+  city: string;
+  maxRent: string;
+  capacity: string;
+}
+
+const VALID_QUICK_MODES = new Set<ListingQuickMode>(["all", "vacant", "solo", "shared"]);
+
+export function parseQuickModeParam(value: string | null): ListingQuickMode {
+  if (value && VALID_QUICK_MODES.has(value as ListingQuickMode)) {
+    return value as ListingQuickMode;
+  }
+  return "all";
+}
+
+export function parseCatalogTabParam(value: string | null): PublicCatalogTab {
+  return value === "rooms" ? "rooms" : "buildings";
+}
+
+/**
+ * Builds a clean /properties catalog link preserving only active filters.
+ */
+export function buildPropertiesCatalogUrl(params: {
+  q?: string;
+  mode?: ListingQuickMode;
+  city?: string;
+  maxRent?: string;
+  capacity?: string;
+  tab?: PublicCatalogTab;
+}): string {
+  const search = new URLSearchParams();
+  if (params.q?.trim()) search.set("q", params.q.trim());
+  if (params.mode && params.mode !== "all") search.set("mode", params.mode);
+  if (params.city && params.city !== "all") search.set("city", params.city);
+  if (params.maxRent) search.set("max_rent", params.maxRent);
+  if (params.capacity) search.set("capacity", params.capacity);
+  if (params.tab && params.tab !== "buildings") search.set("tab", params.tab);
+
+  const query = search.toString();
+  return query ? `/properties?${query}` : "/properties";
+}
+
+/**
+ * Counts active filter criteria for compact mobile filter badge indicators.
+ */
+export function countActiveListingFilters(filters: ListingFilterSnapshot): number {
+  let count = 0;
+  if (filters.quickMode !== "all") count += 1;
+  if (filters.searchInput.trim() !== "") count += 1;
+  if (filters.city !== "all") count += 1;
+  if (filters.maxRent !== "") count += 1;
+  if (filters.capacity !== "") count += 1;
+  return count;
 }
 
 /**
@@ -79,7 +153,7 @@ export function filterPropertiesByQuickMode(
  */
 export function extractFeaturedVacantRooms(
   properties: PublicProperty[],
-  limit = 6
+  limit?: number
 ): FeaturedPublicRoom[] {
   const candidates: FeaturedPublicRoom[] = [];
 
@@ -103,7 +177,7 @@ export function extractFeaturedVacantRooms(
     return a.room.rent - b.room.rent;
   });
 
-  return candidates.slice(0, limit);
+  return limit !== undefined ? candidates.slice(0, limit) : candidates;
 }
 
 /**
