@@ -154,10 +154,10 @@
     "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Balanced font weights for natural visual hierarchy */
-  --font-weight-bold: 600;
-  --font-weight-extrabold: 700;
-  --font-weight-black: 800;
+  /* Clear typographic hierarchy: semibold (600) vs bold (700) vs extrabold (800) */
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
 
   /* Smooth, tactile radii for modern cards and controls */
   --radius-sm: 0.375rem;

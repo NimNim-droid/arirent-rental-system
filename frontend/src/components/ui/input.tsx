@@ -38,7 +38,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             type={resolvedType}
             className={cn(
-              "w-full rounded-md border border-edge bg-card px-3 py-1.5 h-8 text-[13px] text-fg placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-hover disabled:text-faint transition-colors duration-150",
+              "w-full rounded-md border border-edge bg-card px-3 py-1.5 h-10 sm:h-8 text-base sm:text-[13px] text-fg placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:bg-hover disabled:text-faint transition-colors duration-150",
               icon && "pl-8",
               isPassword && "pr-9",
               error && "border-danger-fg/60 focus:border-danger-fg focus:ring-danger-fg/15",

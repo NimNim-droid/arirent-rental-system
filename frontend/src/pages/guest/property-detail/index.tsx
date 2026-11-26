@@ -73,7 +73,7 @@ export default function PublicPropertyDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 pb-24 sm:pt-8 lg:pb-10 space-y-8">
-      <div className="flex items-center justify-between gap-3 text-xs text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <div className="flex items-center gap-1.5 min-w-0">
           <Link to="/properties" className="hover:text-accent transition-colors inline-flex items-center gap-1 shrink-0 font-medium">
             <ArrowLeft className="h-3.5 w-3.5" />

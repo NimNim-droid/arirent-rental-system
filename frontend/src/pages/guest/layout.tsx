@@ -167,11 +167,19 @@ export default function PublicLayout() {
           </div>
         </div>
 
-        {/* Mobile Phone Slide-Down Menu */}
+        {/* Mobile Phone Slide-Down Menu — shows only secondary links when bottom nav owns primary tabs */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-edge bg-card px-4 py-4 shadow-pop animate-fade-in">
             <nav aria-label="Mobile navigation" className="flex flex-col space-y-1">
-              {NAV_LINKS.map((item) => {
+              {(showMobileBottomNav
+                ? NAV_LINKS.filter(
+                    (item) =>
+                      item.label === "Rooms" ||
+                      item.label === "How It Works" ||
+                      item.label === "About Us"
+                  )
+                : NAV_LINKS
+              ).map((item) => {
                 const active = isNavItemActive(item);
                 const classes = cn(
                   "flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors",
@@ -213,7 +221,7 @@ export default function PublicLayout() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="col-span-2"
                 >
-                  <Button size="lg" variant="primary" className="w-full h-10 rounded-xl font-semibold">
+                  <Button size="lg" variant="primary" className="w-full h-11 rounded-xl font-semibold">
                     <span>Open {portalLabel}</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -221,13 +229,13 @@ export default function PublicLayout() {
               ) : (
                 <>
                   <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    <Button size="lg" variant="secondary" className="w-full h-10 rounded-xl font-semibold">
+                    <Button size="lg" variant="secondary" className="w-full h-11 rounded-xl font-semibold">
                       <LogIn className="h-4 w-4" />
                       <span>Sign In</span>
                     </Button>
                   </Link>
                   <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                    <Button size="lg" variant="primary" className="w-full h-10 rounded-xl font-semibold">
+                    <Button size="lg" variant="primary" className="w-full h-11 rounded-xl font-semibold">
                       <span>Apply Now</span>
                       <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -245,10 +253,10 @@ export default function PublicLayout() {
       </main>
 
       {/* Multi-Column Editorial Footer */}
-      <footer className="border-t border-edge bg-card mt-14 lg:mt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8">
-            <div className="sm:col-span-2 lg:col-span-5 space-y-3">
+      <footer className="border-t border-edge bg-card mt-12 lg:mt-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-7 sm:py-12">
+          <div className="grid grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8">
+            <div className="col-span-2 lg:col-span-5 space-y-2.5">
               <Logo variant="full" size="sm" subtitle="Residential Leasing" />
               <p className="text-xs text-muted leading-relaxed max-w-sm">
                 Direct landlord-managed residential rentals with transparent monthly rates,
@@ -256,7 +264,7 @@ export default function PublicLayout() {
               </p>
             </div>
 
-            <div className="lg:col-span-3 space-y-2.5">
+            <div className="col-span-1 lg:col-span-3 space-y-2.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-fg">Explore</p>
               <ul className="space-y-2 text-xs text-muted">
                 <li>

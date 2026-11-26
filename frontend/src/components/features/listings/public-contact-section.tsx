@@ -47,8 +47,8 @@ export function PublicContactSection({
         <p className="text-[11px] font-bold uppercase tracking-widest text-accent">
           Contact &amp; Viewing Inquiries
         </p>
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
-          Have Questions? <span className="text-accent">Talk to Management</span>
+        <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-fg">
+          Talk to Property Management
         </h2>
         <p className="text-xs sm:text-sm text-muted">
           Reach our leasing office directly or select a building below to schedule an in-person
@@ -187,10 +187,10 @@ export function PublicContactSection({
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       type="button"
-                      size="sm"
-                      variant="primary"
+                      size="md"
+                      variant="outline"
                       onClick={() => onScheduleVisit(property)}
-                      className="h-8 rounded-lg w-full sm:w-auto font-semibold"
+                      className="h-9 rounded-xl w-full sm:w-auto font-semibold bg-accent-soft/60 hover:bg-accent hover:text-white"
                     >
                       <Calendar className="h-3.5 w-3.5" />
                       <span>Book Visit</span>

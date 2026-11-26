@@ -32,8 +32,8 @@ export function PublicStatsStrip({ totals, loading }: PublicStatsStripProps) {
 
   return (
     <section aria-label="AriRent leasing summary">
-      <div className="rounded-2xl bg-[#1d4ed8] dark:bg-[#17284c] px-5 py-6 sm:px-8 sm:py-7 text-white shadow-card ring-1 ring-white/10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+      <div className="rounded-2xl bg-[#1d4ed8] dark:bg-[#17284c] px-4 py-5 sm:px-8 sm:py-7 text-white shadow-card ring-1 ring-white/10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {items.map((item) => {
             const Icon = item.icon;
             return (

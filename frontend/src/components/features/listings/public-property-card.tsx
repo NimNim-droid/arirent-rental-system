@@ -38,13 +38,13 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
           {/* Top-left Status Badge */}
           <div className="absolute left-3.5 top-3.5 flex items-center gap-1.5">
             {property.available_rooms_count > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white shadow-soft">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-200" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-success-border/80 bg-card/95 px-3 py-1 text-[11px] font-semibold text-success-fg shadow-soft backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-success-fg" />
                 {property.available_rooms_count} Vacant{" "}
                 {property.available_rooms_count === 1 ? "Unit" : "Units"}
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-slate-900/75 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+              <span className="inline-flex items-center rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
                 All Units Leased
               </span>
             )}
@@ -173,8 +173,8 @@ export function PublicPropertyCard({ property, onScheduleVisit }: PublicProperty
           <Link to={`/properties/${property.id}`} className="w-full sm:w-auto">
             <Button
               size="md"
-              variant="primary"
-              className="h-9 rounded-xl w-full justify-center font-semibold"
+              variant="outline"
+              className="h-9 rounded-xl w-full justify-center font-semibold bg-accent-soft/60 hover:bg-accent hover:text-white"
             >
               <span>View Units ({property.listed_rooms_count})</span>
               <ArrowRight className="h-3.5 w-3.5" />

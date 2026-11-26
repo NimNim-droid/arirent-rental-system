@@ -53,8 +53,7 @@ export function PublicHeroSection({
           {/* Editorial headline */}
           <div className="space-y-3">
             <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-fg leading-[1.12]">
-              Find a Verified Room{" "}
-              <span className="text-accent">Ready to Move In</span>
+              Find a Verified Room Ready to Move In
             </h1>
             <p className="text-sm sm:text-base text-fg-soft leading-relaxed max-w-lg">
               Compare real monthly rates and move-in terms upfront, inspect rooms in person

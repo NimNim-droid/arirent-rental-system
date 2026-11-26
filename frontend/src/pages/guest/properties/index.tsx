@@ -95,7 +95,7 @@ export default function PublicPropertiesPage() {
                 aria-selected={active}
                 onClick={() => setQuickMode(pill.id)}
                 className={cn(
-                  "shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                  "shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors cursor-pointer",
                   active
                     ? "bg-accent text-white shadow-soft"
                     : "border border-edge bg-card text-fg-soft hover:text-fg"
@@ -107,24 +107,36 @@ export default function PublicPropertiesPage() {
           })}
         </div>
 
-        {/* Compact Search + Filter Button Row */}
+        {/* Compact Search (16px to prevent iOS auto-zoom) + Filter Button Row */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-faint" />
             <input
-              type="search"
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search building, street, or city..."
               aria-label="Search properties"
-              className="w-full h-10 rounded-xl border border-edge bg-card pl-9 pr-3 text-sm text-fg shadow-soft placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="w-full h-11 rounded-xl border border-edge bg-card pl-9 pr-9 text-base sm:text-sm text-fg shadow-soft placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
+            {searchInput.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSearchInput("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-hover hover:text-fg cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <button
             type="button"
             onClick={() => setFilterSheetOpen(true)}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-edge bg-card px-3 text-xs font-semibold text-fg shadow-soft hover:border-accent-border hover:text-accent active:scale-95 transition-all cursor-pointer"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-edge bg-card px-3.5 text-xs font-semibold text-fg shadow-soft hover:border-accent-border hover:text-accent active:scale-95 transition-all cursor-pointer"
           >
             <SlidersHorizontal className="h-3.5 w-3.5 text-accent" />
             <span>Filter</span>
@@ -189,7 +201,7 @@ export default function PublicPropertiesPage() {
               Property Directory
             </p>
             <h1 className="text-3xl font-extrabold tracking-tight text-fg">
-              Browse Managed <span className="text-accent">Properties &amp; Units</span>
+              Browse Managed Properties &amp; Units
             </h1>
             <p className="text-sm text-muted">
               Compare buildings or scan all currently vacant rooms ready for in-person viewing.
@@ -372,8 +384,8 @@ export default function PublicPropertiesPage() {
                         className="h-full w-full"
                       />
                     )}
-                    <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-soft">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-200" />
+                    <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-success-border/80 bg-card/95 px-2.5 py-0.5 text-[11px] font-semibold text-success-fg shadow-soft backdrop-blur-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-success-fg" />
                       Vacant
                     </span>
                     <span className="absolute right-3 top-3 rounded-full bg-card/92 px-2.5 py-0.5 text-[11px] font-semibold text-fg shadow-soft backdrop-blur-sm">

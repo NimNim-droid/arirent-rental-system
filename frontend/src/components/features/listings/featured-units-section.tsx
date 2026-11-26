@@ -21,7 +21,7 @@ export function FeaturedUnitsSection({ rooms, loading }: FeaturedUnitsSectionPro
             Available Units
           </p>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">
-            Vacant Rooms <span className="text-accent">Ready to View</span>
+            Vacant Rooms Ready to View
           </h2>
           <p className="text-xs sm:text-sm text-muted">
             Inspect full room specs, inclusions, and move-in terms before booking a visit.
@@ -63,8 +63,8 @@ export function FeaturedUnitsSection({ rooms, loading }: FeaturedUnitsSectionPro
                   />
                 )}
 
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-soft">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-200" />
+                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-success-border/80 bg-card/95 px-2.5 py-0.5 text-[11px] font-semibold text-success-fg shadow-soft backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success-fg" />
                   Vacant
                 </span>
 

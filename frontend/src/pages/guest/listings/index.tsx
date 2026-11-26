@@ -71,6 +71,8 @@ export default function PublicListingsPage() {
         searchInput={searchInput}
         onSearchChange={setSearchInput}
         activeFilterCount={activeFilterCount}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
         onOpenFilterSheet={() => setFilterSheetOpen(true)}
         city={city}
         maxRent={maxRent}
@@ -119,7 +121,7 @@ export default function PublicListingsPage() {
                 Browse by Property
               </p>
               <h2 className="text-3xl font-extrabold tracking-tight text-fg">
-                Explore Managed <span className="text-accent">Buildings</span>
+                Explore Managed Buildings
               </h2>
               <p className="text-sm text-muted">
                 Inspect verified locations, amenities, and open units directly managed by AriRent.
